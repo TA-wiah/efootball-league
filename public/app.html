@@ -4,11 +4,11 @@
 <title>Competition Manager</title>
 <meta name="description" content="Create and run leagues and tournaments: teams, fixtures, results, standings and your staff, in one place.">
 <style>
-:root{--bg:#080e30;--card:#182664;--card2:#0c1646;--line:#2d418c;--gold:#ffcd46;--tx:#f5f8ff;--soft:#96afeb;--ok:#6dff9c;--bad:#ff5d73}
+:root{--bg:#12002b;--card:#250a45;--card2:#1a0636;--line:#46226e;--gold:#00ff85;--tx:#f7f3ff;--soft:#b8a6dc;--ok:#6dff9c;--bad:#ff2882}
 *{box-sizing:border-box}
-body{margin:0;background:linear-gradient(#080e30,#0a2450) fixed;background-color:#080e30;color:var(--tx);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;min-height:100vh;line-height:1.45}
+body{margin:0;background:linear-gradient(#12002b,#1d0640) fixed;background-color:#12002b;color:var(--tx);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;min-height:100vh;line-height:1.45}
 a{color:var(--gold)}
-.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top,0px));background:rgba(8,14,48,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top,0px));background:rgba(14,3,34,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
 .brand{display:flex;align-items:center;gap:8px;color:var(--tx);text-decoration:none;font-weight:900;letter-spacing:.5px}.brand .ic{color:var(--gold);width:24px;height:24px}
 .top nav{margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;font-size:14px}
 .top nav a{color:var(--soft);text-decoration:none;font-weight:700}.top nav a:hover{color:var(--tx)}.who{color:var(--soft);font-size:13px}
@@ -16,8 +16,8 @@ a{color:var(--gold)}
 h1{font-size:26px;margin:6px 0 4px}h2{font-size:18px;margin:0 0 10px}
 .sub{color:var(--soft);margin:0 0 16px}
 .card{background:var(--card);border-radius:14px;padding:16px;margin-bottom:14px}
-.gh{background:var(--gold);color:#080e30;border-radius:10px;padding:8px 12px;font-weight:800;margin:-4px -4px 12px;letter-spacing:.5px;font-size:14px}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 16px;border:0;border-radius:12px;background:var(--gold);color:#080e30;font-weight:800;font-size:15px;cursor:pointer;text-decoration:none;font-family:inherit}
+.gh{display:flex;align-items:center;gap:10px;color:var(--gold);font-weight:800;font-size:12px;letter-spacing:1.3px;text-transform:uppercase;margin:0 0 14px;padding-bottom:12px;border-bottom:1px solid var(--line)}.gh:before{content:"";width:6px;height:6px;border-radius:2px;background:var(--gold);box-shadow:0 0 0 4px rgba(0,255,133,.15)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 16px;border:0;border-radius:12px;background:var(--gold);color:#12002b;font-weight:800;font-size:15px;cursor:pointer;text-decoration:none;font-family:inherit}
 .btn.g{background:var(--card2);color:var(--soft);border:1px solid var(--line)}.btn.bad{background:#6b1a35;color:#fff}.btn.sm{padding:7px 11px;font-size:13px;border-radius:9px}.btn.block{display:flex;width:100%}
 .btn:disabled{opacity:.55;cursor:default}.btn:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 label{display:block;color:var(--soft);font-size:12px;font-weight:700;margin:10px 0 0}
@@ -28,8 +28,8 @@ textarea{resize:vertical;min-height:80px}
 .note{color:var(--soft);font-size:13px}
 .err{background:#4a1427;border:1px solid var(--bad);color:#ffd5dc;border-radius:10px;padding:10px;font-size:14px;margin-top:12px}
 .okm{background:#123d2a;border:1px solid var(--ok);color:#d4ffe4;border-radius:10px;padding:10px;font-size:14px;margin-top:12px;word-break:break-word}
-.pill{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.4px;padding:3px 8px;border-radius:20px;background:#2d418c;color:var(--tx);white-space:nowrap;vertical-align:middle}
-.pill.owner{background:var(--gold);color:#080e30}.pill.organizer{background:#ff9f43;color:#2a1600}.pill.admin{background:#4aa3ff;color:#04203f}.pill.editor{background:#6dff9c;color:#06301a}.pill.moderator{background:#c18cff;color:#250a44}.pill.viewer{background:#2d418c}
+.pill{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.4px;padding:3px 8px;border-radius:20px;background:#46226e;color:var(--tx);white-space:nowrap;vertical-align:middle}
+.pill.owner{background:var(--gold);color:#12002b}.pill.organizer{background:#ff9f43;color:#2a1600}.pill.admin{background:#4aa3ff;color:#04203f}.pill.editor{background:#6dff9c;color:#06301a}.pill.moderator{background:#c18cff;color:#250a44}.pill.viewer{background:#46226e}
 .pill.pending{background:#6b4a05;color:#ffe9b0}.pill.accepted{background:#1d5c3c;color:#d4ffe4}.pill.expired{background:#3a3f5c;color:#c8d0e1}.pill.revoked{background:#5a1a2d;color:#ffd5dc}.pill.soon{background:transparent;border:1px solid var(--line);color:var(--soft);font-size:10px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
 .oc{display:block;background:var(--card);border-radius:14px;padding:16px;text-decoration:none;color:var(--tx);border:1px solid transparent;transition:border-color .2s,transform .15s}.oc:hover{border-color:var(--gold);transform:translateY(-2px)}
@@ -39,22 +39,22 @@ textarea{resize:vertical;min-height:80px}
 .layout{display:grid;grid-template-columns:220px 1fr;gap:16px;align-items:start}.layout>*{min-width:0}
 .side{position:sticky;top:70px;background:var(--card);border-radius:14px;padding:8px}
 .side>a,.side>span{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:9px 10px;border-radius:9px;color:var(--soft);text-decoration:none;font-weight:700;font-size:14px}
-.side>a.on{background:var(--gold);color:#080e30}.side>a:hover:not(.on){background:var(--card2);color:var(--tx)}.side>span{opacity:.55;cursor:default}
+.side>a.on{background:var(--gold);color:#12002b}.side>a:hover:not(.on){background:var(--card2);color:var(--tx)}.side>span{opacity:.55;cursor:default}
 @media(max-width:760px){.side>span{display:none}.who{display:none}.brand span{font-size:15px}.layout{grid-template-columns:1fr}.side{position:static;display:flex;overflow-x:auto;gap:4px;padding:6px}.side>a,.side>span{white-space:nowrap;flex:none}}
 .tbl{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px}th{color:var(--soft);font-size:12px;font-weight:700;text-align:left}th,td{padding:9px 6px;vertical-align:middle}tr+tr td{border-top:1px solid var(--line)}
 td select{margin:0;padding:7px;font-size:13px;min-width:120px}
 .who-cell b{display:block}.who-cell small{color:var(--soft)}
 .feed div{padding:7px 0;border-top:1px solid var(--line);font-size:13px;color:var(--soft)}.feed div:first-child{border-top:0}.feed b{color:var(--tx)}
-.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}.chip{border:1px solid var(--line);background:var(--card2);color:var(--soft);border-radius:20px;padding:6px 12px;font-weight:700;font-size:13px;cursor:pointer}.chip.on{background:var(--gold);color:#080e30;border-color:var(--gold)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}.chip{border:1px solid var(--line);background:var(--card2);color:var(--soft);border-radius:20px;padding:6px 12px;font-weight:700;font-size:13px;cursor:pointer}.chip.on{background:var(--gold);color:#12002b;border-color:var(--gold)}
 .link{display:grid;grid-template-columns:1fr auto auto;gap:6px;margin-top:8px}.link input{margin:0;font-size:13px}
 details summary{cursor:pointer;color:var(--gold);font-weight:800;padding:4px 0}
 .mx td,.mx th{text-align:center;font-size:12px}.mx td:first-child,.mx th:first-child{text-align:left}.mx .y{color:var(--ok);font-weight:900}.mx .n{color:#4b5a91}
 .ic{width:1.1em;height:1.1em;vertical-align:-.18em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
-.auth{max-width:440px;margin:24px auto}.tabs2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px}.tabs2 a{text-align:center;padding:10px;border-radius:10px;background:var(--card2);color:var(--soft);text-decoration:none;font-weight:800}.tabs2 a.on{background:var(--gold);color:#080e30}
+.auth{max-width:440px;margin:24px auto}.tabs2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px}.tabs2 a{text-align:center;padding:10px;border-radius:10px;background:var(--card2);color:var(--soft);text-decoration:none;font-weight:800}.tabs2 a.on{background:var(--gold);color:#12002b}
 .toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:20;max-width:min(92vw,520px);background:#123d2a;border:1px solid var(--ok);color:#d4ffe4;border-radius:12px;padding:12px 16px;font-weight:700;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.5)}.toast.bad{background:#4a1427;border-color:var(--bad);color:#ffd5dc}.toast[hidden]{display:none}
 .empty{text-align:center;padding:30px 16px}.empty .ic{width:44px;height:44px;color:var(--gold)}
-.pill.draft{background:#3a3f5c}.pill.active,.pill.finished{background:#1d5c3c;color:#d4ffe4}.pill.completed,.pill.scheduled{background:#2d418c}.pill.live{background:#ff5d73;color:#fff}.pill.postponed{background:#6b4a05;color:#ffe9b0}.pill.cancelled{background:#5a1a2d;color:#ffd5dc}
-.crest{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;object-fit:cover;flex:none;color:#fff;font-size:10px;font-weight:900;border:2px solid rgba(255,255,255,.85);background:#2d418c;overflow:hidden}img.crest{background:#fff}
+.pill.draft{background:#3a3f5c}.pill.active,.pill.finished{background:#1d5c3c;color:#d4ffe4}.pill.completed,.pill.scheduled{background:#46226e}.pill.live{background:#ff2882;color:#fff}.pill.postponed{background:#6b4a05;color:#ffe9b0}.pill.cancelled{background:#5a1a2d;color:#ffd5dc}
+.crest{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;object-fit:cover;flex:none;color:#fff;font-size:10px;font-weight:900;border:2px solid rgba(255,255,255,.85);background:#46226e;overflow:hidden}img.crest{background:#fff}
 .md{color:var(--gold);font-size:12px;font-weight:800;letter-spacing:1px;margin:16px 0 4px;text-transform:uppercase}
 .mrow{display:grid;grid-template-columns:150px 1fr auto 1fr;gap:10px;align-items:center;padding:10px 8px;border-radius:10px;color:var(--tx);text-decoration:none;border-top:1px solid var(--line)}.mrow:hover{background:var(--card2)}
 .mrow .mt{display:flex;flex-direction:column;font-size:11px;color:var(--soft)}.mh{display:flex;align-items:center;gap:6px;justify-content:flex-end;font-weight:700;text-align:right;min-width:0}.ma{display:flex;align-items:center;gap:6px;font-weight:700;min-width:0}.mh span,.ma span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -70,16 +70,26 @@ table.st td,table.st th{text-align:center;padding:8px 4px}.st .tl{text-align:lef
 .inline input,.inline select{margin:0;padding:7px;font-size:13px}td.inline{min-width:70px}
 .ch{display:flex;align-items:center;gap:10px}.big-crest{width:56px;height:56px}
 .search{max-width:320px}
+/* ---------- dashboard sidebar extras & share box ---------- */
+.agh-static{font-size:11px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--soft);padding:12px 10px 4px}
+.asb-who{padding:0 10px 10px;font-weight:700;font-size:14px;border-bottom:1px solid var(--line);margin-bottom:6px}
+.agi a .ic{margin-right:4px}.agi .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--gold);margin-right:8px;vertical-align:1px}
+.agi .sub{margin:2px 0 8px 14px;padding-left:8px;border-left:1px solid var(--line)}.agi .sub a{font-size:13px;padding:6px 10px}
+.orghead{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:4px 0 16px}.orghead h1{margin:0}
+.sharebox{background:linear-gradient(135deg,rgba(0,255,133,.10),rgba(4,245,255,.06));border:1px solid rgba(0,255,133,.45);border-radius:16px;padding:16px 18px;margin:14px 0}
+.sharebox.warn{background:rgba(255,176,32,.08);border-color:rgba(255,176,32,.45)}
+.sbx-h{display:flex;align-items:center;gap:8px;font-weight:900;font-size:16px;color:var(--tx)}.sbx-h .ic{color:var(--gold);width:20px;height:20px}
+.sharebox .link input{font-size:15px;font-weight:700;color:var(--gold);background:rgba(0,0,0,.25)}
 /* ---------- super admin panel ---------- */
 .w.wide{max-width:none;padding:0}
 .ashell{display:grid;grid-template-columns:268px minmax(0,1fr);min-height:calc(100vh - 58px)}
-.asb{position:sticky;top:58px;height:calc(100vh - 58px);overflow-y:auto;background:#0a1440;border-right:1px solid var(--line);padding:14px 10px 30px;scrollbar-width:thin}
+.asb{position:sticky;top:58px;height:calc(100vh - 58px);overflow-y:auto;background:#1d0640;border-right:1px solid var(--line);padding:14px 10px 30px;scrollbar-width:thin}
 .asb-h{display:flex;align-items:center;gap:8px;font-weight:900;font-size:13px;letter-spacing:1px;text-transform:uppercase;color:var(--gold);padding:6px 10px 14px}
 .ag{margin-bottom:2px}.agh{width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:0;color:var(--tx);font:inherit;font-weight:800;font-size:13px;padding:9px 10px;border-radius:9px;cursor:pointer;text-align:left}
 .agh:hover{background:var(--card2)}.agh .chev{transition:transform .2s;color:var(--soft)}.ag.open .agh .chev{transform:rotate(90deg)}
 .agi{display:none;padding:2px 0 6px 10px}.ag.open .agi{display:block}
 .agi a{display:block;padding:7px 10px;border-radius:8px;color:var(--soft);text-decoration:none;font-size:13px;font-weight:600;border-left:2px solid transparent}
-.agi a:hover{color:var(--tx);background:rgba(255,255,255,.04)}.agi a.on{color:var(--gold);background:rgba(255,205,70,.08);border-left-color:var(--gold)}
+.agi a:hover{color:var(--tx);background:rgba(255,255,255,.04)}.agi a.on{color:var(--gold);background:rgba(0,255,133,.08);border-left-color:var(--gold)}
 .asb-f{border-top:1px solid var(--line);margin-top:12px;padding-top:12px}.asb-f a{display:block;padding:7px 10px;color:var(--soft);text-decoration:none;font-size:13px;font-weight:600}.asb-f a:hover{color:var(--tx)}
 .amain{min-width:0;padding:18px 26px 60px}
 .abar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px}
@@ -90,7 +100,7 @@ table.st td,table.st th{text-align:center;padding:8px 4px}.st .tl{text-align:lef
 .kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:18px}
 .kpi{display:block;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;text-decoration:none;color:var(--tx);transition:border-color .15s,transform .15s}
 a.kpi:hover{border-color:var(--gold);transform:translateY(-2px)}.kpi span{display:block;color:var(--soft);font-size:12px;font-weight:700;letter-spacing:.3px}.kpi b{display:block;font-size:28px;font-weight:900;margin-top:4px;font-variant-numeric:tabular-nums}
-.kpi.warn b{color:var(--gold)}.kpi.bad b{color:var(--bad)}
+.kpi.warn b{color:#ffb020}.kpi.bad b{color:var(--bad)}
 .agrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px}.toolbar label{margin:0;min-width:150px}.toolbar input,.toolbar select{margin-top:4px;padding:9px 10px;font-size:14px}
 .toolbar .grow{flex:1;min-width:220px}
@@ -101,16 +111,16 @@ a.kpi:hover{border-color:var(--gold);transform:translateY(-2px)}.kpi span{displa
 .pager{display:flex;align-items:center;gap:10px;justify-content:flex-end;margin-top:12px;font-size:13px;color:var(--soft)}
 .bulk{display:flex;gap:8px;align-items:center;margin-left:auto}.bulk select{margin:0;padding:8px;font-size:13px;width:auto}
 .sb{display:inline-block;font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;white-space:nowrap;letter-spacing:.2px}
-.sb.green{background:rgba(95,227,154,.15);color:#a8f0c8}.sb.red{background:rgba(255,107,129,.16);color:#ffb3bf}.sb.amber{background:rgba(255,205,70,.15);color:#ffe08a}.sb.blue{background:rgba(74,163,255,.16);color:#a9d2ff}.sb.grey{background:rgba(150,175,235,.14);color:var(--soft)}
+.sb.green{background:rgba(95,227,154,.15);color:#a8f0c8}.sb.red{background:rgba(255,40,130,.16);color:#ffb3bf}.sb.amber{background:rgba(255,176,32,.16);color:#ffd27a}.sb.blue{background:rgba(4,245,255,.14);color:#8ff9ff}.sb.grey{background:rgba(196,170,255,.14);color:var(--soft)}
 .chart{margin:0;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
 .chart figcaption{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}.chart figcaption b{font-size:14px}.chart figcaption span{color:var(--soft);font-size:13px}.chart figcaption strong{font-size:22px;color:var(--tx)}
-.chart svg{width:100%;height:auto;display:block}.chart .bar{fill:#b97f0f}.chart .hit:hover+.bar,.chart g:hover .bar{fill:#d99a17}.chart .ax{fill:var(--soft);font-size:10px}.chart .gl{stroke:rgba(150,175,235,.14);stroke-width:1}
+.chart svg{width:100%;height:auto;display:block}.chart .bar{fill:#00a85e}.chart .hit:hover+.bar,.chart g:hover .bar{fill:#00c26d}.chart .ax{fill:var(--soft);font-size:10px}.chart .gl{stroke:rgba(196,170,255,.14);stroke-width:1}
 .chart details{margin-top:6px;font-size:13px}.chart details table{font-size:12px}.chart details td,.chart details th{padding:3px 6px;text-align:left}
-#ctip{position:fixed;z-index:50;pointer-events:none;background:#0b1543;border:1px solid var(--line2,#3a4c94);color:var(--tx);font-size:12px;padding:6px 9px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.5);display:none;font-variant-numeric:tabular-nums}
+#ctip{position:fixed;z-index:50;pointer-events:none;background:#1a0636;border:1px solid var(--line2,#3a4c94);color:var(--tx);font-size:12px;padding:6px 9px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.5);display:none;font-variant-numeric:tabular-nums}
 .ranges{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
 .kv{display:grid;grid-template-columns:minmax(120px,38%) 1fr;gap:8px 14px;font-size:14px}.kv dt{color:var(--soft)}.kv dd{margin:0;word-break:break-word}
 .modal{position:fixed;inset:0;z-index:40;background:rgba(3,6,20,.72);display:grid;place-items:center;padding:16px}
-.mbox{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;max-width:440px;width:100%;box-shadow:0 30px 60px -20px rgba(0,0,0,.8)}.mbox h2{margin:0 0 8px}.mbox p{color:var(--tx2,#c9d6ff);margin:0 0 6px}
+.mbox{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;max-width:440px;width:100%;box-shadow:0 30px 60px -20px rgba(0,0,0,.8)}.mbox h2{margin:0 0 8px}.mbox p{color:var(--tx2,#e2d6ff);margin:0 0 6px}
 .btn.bad{background:#b03a52;color:#fff}
 .oldnew{font-size:12px;color:var(--soft);word-break:break-word}.oldnew del{color:#ffb3bf;text-decoration:none}.oldnew ins{color:#a8f0c8;text-decoration:none}
 .adm-link{color:var(--gold)!important}
@@ -163,7 +173,7 @@ function go(path,replace){history[replace?"replaceState":"pushState"](null,"",pa
 document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("a[data-nav]");if(a&&!e.ctrlKey&&!e.metaKey&&!e.shiftKey&&e.button===0){e.preventDefault();go(a.getAttribute("href"))}});
 window.addEventListener("popstate",route);
 function topnav(){$("topnav").innerHTML=(ME?
-  (ME.superAdmin?'<a href="/admin" data-nav class="adm-link">'+ic("shield")+' Admin panel</a>':'')+'<a href="'+(ME.superAdmin?"/app?view=orgs":"/app")+'" data-nav>My organizations'+(INV?' <span class="pill pending">'+INV+'</span>':'')+'</a>'+(ME.leagueAccess?'<a href="/classic">League site</a>':'')+'<a href="/app/support" data-nav>Help</a><span class="who">'+esc(ME.username)+'</span><button class="btn g sm" id="logout">Log out</button>'
+  (ME.superAdmin?'<a href="/admin" data-nav class="adm-link">'+ic("shield")+' Admin panel</a>':'')+(INV?'<a href="'+(ME.superAdmin?"/app?view=orgs":"/app")+'" data-nav>Invitations <span class="pill pending">'+INV+'</span></a>':'')+'<span class="who">'+esc(ME.username)+'</span><button class="btn g sm" id="logout">Log out</button>'
   :(function(){var n=/^\/invite\//.test(location.pathname)?"?next="+encodeURIComponent(location.pathname):"";
      return'<a href="/competitions">Competitions</a><a class="btn sm" href="/app/login'+n+'" data-nav>Log in</a>'})());
   var lo=$("logout");if(lo)lo.onclick=function(){api("/api/auth/logout","POST",{}).then(loadMe).then(function(){toast("Logged out");go("/app/login")})}}
@@ -197,10 +207,24 @@ function authView(mode){var q=new URLSearchParams(location.search),next=q.toStri
     var req=mode==="signup"?api("/api/auth/signup","POST",{username:u,email:$("e").value.trim(),password:p}):api("/api/auth/login","POST",{user:u,password:p});
     req.then(function(r){busy(b,false);if(!r.ok){$("msg").innerHTML=errBox(r);return}return loadMe().then(function(){toast(mode==="signup"?"Welcome, "+ME.username+"!":"Logged in");go(safeNext(),true)})})}}
 
+// ---------- the logged-in layout: sidebar + content (for every user) ----------
+function U(inner,o){o=o||{};var L=function(h,label,on){return'<a href="'+h+'" data-nav class="'+(on?"on":"")+'"'+(on?' aria-current="page"':'')+'>'+label+'</a>'};
+  var mine=ME.superAdmin?"/app?view=orgs":"/app";
+  var menu='<div class="ag open"><div class="agh-static">Menu</div><div class="agi">'+L(mine,ic("users")+" My organizations",o.key==="orgs")+L("/app/new",ic("plus")+" New organization",o.key==="new")+
+    L("/app/support",ic("mail")+" Help &amp; support",o.key==="support")+(ME.superAdmin?L("/admin",ic("shield")+" Admin panel"):"")+'</div></div>';
+  var orgs=ORGS.length?'<div class="ag open"><div class="agh-static">Your organizations</div><div class="agi">'+ORGS.map(function(g){var on=o.org===g.slug;
+    return L("/app/org/"+g.slug,'<span class="dot"></span>'+esc(g.name),on&&o.section==="overview")+(on?'<div class="sub">'+SECTIONS.filter(function(s){return s[0]!=="overview"&&(!s[2]||has(s[2]))}).map(function(s){
+      return L("/app/org/"+g.slug+"/"+s[0],esc(s[1]),s[0]===o.section)}).join("")+'</div>':"")}).join("")+'</div></div>':"";
+  return'<div class="ashell"><aside class="asb" id="asb" aria-label="Dashboard menu"><div class="asb-h">'+ic("trophy")+' Dashboard</div><div class="asb-who">'+esc(ME.username)+(ME.superAdmin?' <span class="sb amber">Super admin</span>':'')+'</div>'+menu+orgs+
+    '<div class="asb-f"><a href="/competitions">Public competitions</a><a href="/">Public home page</a>'+(ME.leagueAccess?'<a href="/classic">Original league site</a>':'')+'</div></aside>'+
+    '<div class="amain"><div class="abar"><button type="button" class="btn g sm amenu" id="amenu" aria-controls="asb">☰ Menu</button>'+(o.crumbs||"")+'</div>'+inner+'</div></div>'}
+function UM(inner,o){main(U(inner,o),true);var m=$("amenu");if(m)m.onclick=function(){var s=$("asb");s.classList.add("show");var c=document.createElement("div");c.className="ascrim";c.onclick=function(){s.classList.remove("show");c.remove()};document.body.appendChild(c)};
+  document.querySelectorAll("#asb a").forEach(function(a){a.addEventListener("click",function(){var c=document.querySelector(".ascrim");if(c)c.remove()})})}
+
 // ---------- my organizations ----------
 function dashboard(){document.title="My organizations · Competition Manager";
-  main((SITE.notice?'<div class="okm" style="margin:0 0 14px">'+esc(SITE.notice)+'</div>':'')+ANN.map(function(a){return'<div class="'+(a.level==="warning"?"err":"okm")+'" style="margin:0 0 12px"><b>'+esc(a.title)+'</b>'+(a.body?'<div style="margin-top:4px;white-space:pre-wrap">'+esc(a.body)+'</div>':'')+'</div>'}).join("")+
-    '<h1>My organizations</h1><p class="sub">An organization is your league, school, club, academy or company. Each one has its own competitions, teams and staff.</p><div id="invs"></div><div id="orgs"><div class="card note">Loading…</div></div>');
+  UM((SITE.notice?'<div class="okm" style="margin:0 0 14px">'+esc(SITE.notice)+'</div>':'')+ANN.map(function(a){return'<div class="'+(a.level==="warning"?"err":"okm")+'" style="margin:0 0 12px"><b>'+esc(a.title)+'</b>'+(a.body?'<div style="margin-top:4px;white-space:pre-wrap">'+esc(a.body)+'</div>':'')+'</div>'}).join("")+
+    '<h1>My organizations</h1><p class="sub">An organization is your league, school, club, academy or company. Each one has its own competitions, teams and staff.</p><div id="invs"></div><div id="orgs"><div class="card note">Loading…</div></div>',{key:"orgs"});
   Promise.all([loadMe(),loadRoles(),api("/api/me/invitations")]).then(function(res){topnav();var inv=res[2].data.invitations||[];
     $("invs").innerHTML=inv.length?'<div class="card"><div class="gh">INVITATIONS FOR YOU</div>'+inv.map(function(i){return'<div class="actions" style="align-items:center;margin:6px 0;justify-content:space-between"><div><b>'+esc(i.org.name)+'</b> '+pill(i.role,i.roleLabel)+'<div class="note">Invited by '+esc(i.invitedBy||"someone")+' · expires '+date(i.expires)+'</div></div><button class="btn sm" data-acc="'+i.id+'">Accept</button></div>'}).join("")+'</div>':"";
     $("orgs").innerHTML='<div class="grid">'+ORGS.map(function(o){return'<a class="oc" href="/app/org/'+esc(o.slug)+'" data-nav><b>'+esc(o.name)+'</b>'+pill(o.role,o.roleLabel)+'<div style="margin-top:8px"><small>'+ic("users")+' '+o.members+' member'+(o.members===1?"":"s")+(o.country||o.region?' · '+esc([o.region,o.country].filter(Boolean).join(", ")):"")+'</small></div></a>'}).join("")+
@@ -210,10 +234,10 @@ function dashboard(){document.title="My organizations · Competition Manager";
       if(!r.ok){busy(b,false);toast(r.data.error||"Couldn't accept",true);return}toast("You joined "+r.data.org.name);loadMe().then(function(){go("/app/org/"+r.data.org.slug)})})}})})}
 
 function createOrgView(){var team=new URLSearchParams(location.search).get("intent")==="team";document.title=(team?"Register your team":"New organization")+" · Competition Manager";
-  main('<form class="card" id="cf" style="max-width:640px" novalidate><div class="gh">'+(team?"REGISTER YOUR TEAM":"CREATE AN ORGANIZATION")+'</div><p class="note" style="margin-top:0">'+(team?'Create a home for your club, e.g. “Kasoa Stars FC”. Then add your team and squad under Teams, and share it with league organizers so they can invite you.':'For example “Kasoa Community League”, “St. Mary\'s School Sports” or “Accra Corporate Cup”.')+' You\'ll be its <b>owner</b> and can invite others afterwards.</p>'+
+  UM('<h1>'+(team?"Register your team":"New organization")+'</h1><form class="card" id="cf" style="max-width:640px" novalidate><div class="gh">'+(team?"REGISTER YOUR TEAM":"CREATE AN ORGANIZATION")+'</div><p class="note" style="margin-top:0">'+(team?'Create a home for your club, e.g. “Kasoa Stars FC”. Then add your team and squad under Teams, and share it with league organizers so they can invite you.':'For example “Kasoa Community League”, “St. Mary\'s School Sports” or “Accra Corporate Cup”.')+' You\'ll be its <b>owner</b> and can invite others afterwards.</p>'+
   '<label for="n">Name<input id="n" maxlength="80" required></label><label for="d">Description (optional)<textarea id="d" maxlength="2000" placeholder="What is it? Who plays?"></textarea></label>'+
   '<div class="row"><label for="c">Country<input id="c" maxlength="60" placeholder="Ghana"></label><label for="r">Region / city<input id="r" maxlength="60" placeholder="Central"></label></div>'+
-  '<div class="actions"><button class="btn" id="go">Create organization</button><a class="btn g" href="/app" data-nav>Cancel</a></div><div id="msg"></div></form>');
+  '<div class="actions"><button class="btn" id="go">Create organization</button><a class="btn g" href="/app" data-nav>Cancel</a></div><div id="msg"></div></form>',{key:"new"});
   $("n").focus();
   $("cf").onsubmit=function(e){e.preventDefault();var b=$("go");busy(b,true,"Creating…");
     api("/api/orgs","POST",{name:$("n").value,description:$("d").value,country:$("c").value,region:$("r").value}).then(function(r){busy(b,false);
@@ -232,11 +256,9 @@ function orgView(slug,section,rest){
   Promise.all([api("/api/orgs/"+slug),loadRoles()]).then(function(res){var r=res[0];
     if(!r.ok){main('<div class="card empty"><h2>Organization not found</h2><p class="note">It doesn\'t exist, or you\'re not a member. Ask its owner for an invitation.</p><a class="btn" href="/app" data-nav>My organizations</a></div>');return}
     ORG=r.data;var o=ORG.org,base="/app/org/"+o.slug,navOn=section==="match"?"matches":section;document.title=o.name+" · Competition Manager";
-    var nav=SECTIONS.filter(function(s){return!s[2]||has(s[2])}).map(function(s){
-      return'<a href="'+base+(s[0]==="overview"?"":"/"+s[0])+'" data-nav class="'+(s[0]===navOn?"on":"")+'"'+(s[0]===navOn?' aria-current="page"':'')+'>'+esc(s[1])+'</a>'}).join("");
-    main('<div style="margin-bottom:14px"><a href="/app" data-nav class="note" style="color:var(--soft)">← My organizations</a><h1>'+esc(o.name)+'</h1><div class="note">'+pill(ORG.me.role,ORG.me.roleLabel)+(o.region||o.country?' · '+esc([o.region,o.country].filter(Boolean).join(", ")):"")+'</div></div>'+
-      '<div class="layout"><nav class="side" aria-label="Organization sections">'+nav+'</nav><section id="sec"></section></div>');
-    var on=document.querySelector(".side .on");if(on&&on.scrollIntoView)on.scrollIntoView({block:"nearest",inline:"center"});
+    var label=(SECTIONS.filter(function(s){return s[0]===navOn})[0]||[0,""])[1];
+    UM('<div class="orghead"><div><h1>'+esc(o.name)+'</h1><div class="note">'+pill(ORG.me.role,ORG.me.roleLabel)+(o.region||o.country?' · '+esc([o.region,o.country].filter(Boolean).join(", ")):"")+'</div></div></div><section id="sec"></section>',
+      {org:o.slug,section:navOn,crumbs:'<nav class="crumbs" aria-label="Breadcrumb"><a href="'+(ME.superAdmin?"/app?view=orgs":"/app")+'" data-nav>My organizations</a><span>/</span><a href="'+base+'" data-nav>'+esc(o.name)+'</a>'+(navOn!=="overview"?'<span>/</span><b style="color:var(--tx)">'+esc(label)+'</b>':'')+'</nav>'});
     var S={overview:overview,members:membersSec,invitations:invitationsSec,settings:settingsSec,competitions:competitionsSec,teams:teamsSec,players:playersSec,
       fixtures:function(){matchesSec("upcoming")},results:function(){matchesSec("results")},matches:function(){matchesSec("all")},tables:tablesSec,announcements:announcementsSec,match:matchPage}[section];
     if(!S||(section==="invitations"&&!has("members.invite"))){$("sec").innerHTML='<div class="card empty"><h2>Page not found</h2></div>';return}
@@ -254,7 +276,7 @@ function opts(map,val){return Object.keys(map).map(function(k){return'<option va
 function crest(t,size){size=size||28;var st='width:'+size+'px;height:'+size+'px';if(!t)return'<span class="crest" style="'+st+'">?</span>';
   if(t.logo)return'<img class="crest" src="'+esc(t.logo)+'" alt="" style="'+st+'">';var h=0,n=t.name||"";for(var i=0;i<n.length;i++)h=(h*31+n.charCodeAt(i))%360;
   return'<span class="crest" style="'+st+';background:hsl('+h+',55%,38%)">'+esc((t.shortName||n).replace(/[^A-Za-z0-9]/g,"").slice(0,3).toUpperCase())+'</span>'}
-function cCrest(c,size){size=size||36;return c.logo?'<img class="crest" src="'+esc(c.logo)+'" alt="" style="width:'+size+'px;height:'+size+'px">':'<span class="crest" style="width:'+size+'px;height:'+size+'px;background:#33260a;color:var(--gold)">'+ic("trophy")+'</span>'}
+function cCrest(c,size){size=size||36;return c.logo?'<img class="crest" src="'+esc(c.logo)+'" alt="" style="width:'+size+'px;height:'+size+'px">':'<span class="crest" style="width:'+size+'px;height:'+size+'px;background:#0f4d33;color:var(--gold)">'+ic("trophy")+'</span>'}
 function when(iso){if(!iso)return"Date to be set";var d=new Date(iso);return d.toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"short"})+" · "+d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"})}
 function toLocal(iso){if(!iso)return"";var d=new Date(iso),p=function(x){return String(x).padStart(2,"0")};return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+"T"+p(d.getHours())+":"+p(d.getMinutes())}
 function fromLocal(v){return v?new Date(v).toISOString():null}
@@ -278,6 +300,14 @@ function val(id){var e=$(id);return e?e.value:undefined}
 // "Public page" + "Copy public link" for anything visitors can open without logging in.
 function publicLinks(path,label){var url=location.origin+path;return'<div class="actions" style="margin-top:10px"><a class="btn g sm" href="'+esc(path)+'" target="_blank" rel="noopener">'+ic("link")+' '+esc(label||"Public page")+' ↗</a><button type="button" class="btn sm" data-copylink="'+esc(url)+'">'+ic("copy")+' Copy public link</button></div>'}
 document.addEventListener("click",function(e){var b=e.target.closest&&e.target.closest("[data-copylink]");if(b)copy(b.dataset.copylink,b)});
+// The big "Share with your community" box: the public link people can send to anyone.
+function shareBox(path,name,extra){var url=location.origin+path,t=encodeURIComponent(name),u=encodeURIComponent(url);
+  return'<section class="sharebox" aria-label="Public link"><div class="sbx-h">'+ic("share")+' Share with your community</div>'+
+    '<p class="note">Anyone can open this link on their phone. No account needed. It always shows the latest table, fixtures and results.</p>'+
+    '<div class="link"><input readonly value="'+esc(url)+'" aria-label="Public link" class="sbx-url"><button type="button" class="btn sm" data-copylink="'+esc(url)+'">'+ic("copy")+' Copy link</button><a class="btn g sm" href="'+esc(path)+'" target="_blank" rel="noopener">Open ↗</a></div>'+
+    '<div class="actions" style="margin-top:10px"><a class="btn g sm" href="https://wa.me/?text='+t+'%20'+u+'" target="_blank" rel="noopener">WhatsApp</a><a class="btn g sm" href="https://www.facebook.com/sharer/sharer.php?u='+u+'" target="_blank" rel="noopener">Facebook</a>'+
+    '<a class="btn g sm" href="https://twitter.com/intent/tweet?url='+u+'&text='+t+'" target="_blank" rel="noopener">X</a><a class="btn g sm" href="https://t.me/share/url?url='+u+'&text='+t+'" target="_blank" rel="noopener">Telegram</a></div>'+(extra||"")+'</section>'}
+document.addEventListener("focusin",function(e){if(e.target.classList&&e.target.classList.contains("sbx-url"))e.target.select()});
 
 // ---------- overview ----------
 function overview(){var o=ORG.org,st=ORG.stats,mine=(ROLES.permissions||[]).filter(function(p){return has(p.key)});
@@ -289,7 +319,7 @@ function overview(){var o=ORG.org,st=ORG.stats,mine=(ROLES.permissions||[]).filt
       '<div class="card"><div class="gh">NEXT MATCHES</div>'+matchList(s.nextMatches||[],{comp:1,by:"date",empty:"No upcoming matches with a date."})+'</div>'+
       '<div class="card"><div class="gh">RECENT RESULTS</div>'+matchList(s.recentResults||[],{comp:1,by:"date",empty:"No results yet."})+'</div>'+
       (o.description?'<div class="card"><div class="gh">ABOUT</div><p style="margin:0;white-space:pre-wrap">'+esc(o.description)+'</p></div>':'')+
-      '<div class="card"><div class="gh">YOUR PUBLIC PAGE</div><p class="note" style="margin-top:0">Fans can follow your public competitions, tables, fixtures and results here without an account.</p>'+publicLinks("/organization/"+o.slug,"Public organization page")+'</div>'+
+      shareBox("/organization/"+o.slug,o.name,'<p class="note" style="margin:12px 0 0">This is the public page of your organization, listing all its public competitions. Each competition also has its own link: open it under <a href="'+app0("/competitions")+'" data-nav>Competitions</a>.</p>')+
       '<div class="card"><div class="gh">WHAT YOU CAN DO HERE</div><p class="note" style="margin-top:0">As '+esc(ORG.me.roleLabel)+':</p><ul style="margin:0;padding-left:20px">'+mine.map(function(p){return'<li>'+esc(p.label)+'</li>'}).join("")+'</ul></div>'+
       '<div class="card"><div class="gh">RECENT ACTIVITY</div><div class="feed">'+(ORG.events.length?ORG.events.map(function(e){return'<div>'+ago(e.ts)+' · <b>'+esc(e.actor||"—")+'</b> '+esc(e.action)+'</div>'}).join(""):'<div>Nothing yet.</div>')+'</div></div>'})}
 
@@ -329,8 +359,10 @@ var CTABS=[["overview","Overview"],["teams","Teams"],["fixtures","Fixtures & res
 function competitionDetail(cslug,tab){api(api0("/competitions/"+cslug)).then(function(r){if(!r.ok)return fail(r);var C=r.data.competition,E=r.data.entries;
   var tabs=CTABS.filter(function(t){return t[0]!=="settings"||has("competitions.manage")||has("content.edit")});
   $("sec").innerHTML='<div class="card"><div class="ch">'+cCrest(C,52)+'<div><h2 style="margin:0">'+esc(C.name)+'</h2><div class="note">'+esc([C.season,KIND_L[C.kind],FMT_L[C.format].split(":")[0]].filter(Boolean).join(" · "))+' · <span class="pill '+C.status+'">'+esc(ST_L[C.status])+'</span></div></div></div>'+
-    (C.visibility==="private"?'<p class="note" style="margin-bottom:0">Private: only members can see it. Change “Who can see it” in Settings to share it publicly.</p>':publicLinks("/competition/"+C.slug,"Public page"))+
+    (C.visibility==="private"?'<section class="sharebox warn"><div class="sbx-h">'+ic("link")+' This competition is private</div><p class="note">Only members of your organization can see it, so there is no public link yet.</p>'+(has("competitions.manage")?'<button type="button" class="btn sm" id="mkpub">Make it public and get the link</button>':'<p class="note">Ask an organizer to make it public.</p>')+'</section>'
+      :shareBox("/competition/"+C.slug,C.name,'<p class="note" style="margin:12px 0 0">Direct links: <a href="/competition/'+esc(C.slug)+'/table" target="_blank" rel="noopener">League table</a> · <a href="/competition/'+esc(C.slug)+'/fixtures" target="_blank" rel="noopener">Fixtures</a> · <a href="/competition/'+esc(C.slug)+'/results" target="_blank" rel="noopener">Results</a> · <a href="/competition/'+esc(C.slug)+'/teams" target="_blank" rel="noopener">Teams</a></p>'))+
     '<div class="subtabs">'+tabs.map(function(t){return'<a class="chip'+(t[0]===tab?" on":"")+'" href="'+app0("/competitions/"+C.slug+(t[0]==="overview"?"":"/"+t[0]))+'" data-nav>'+esc(t[1])+'</a>'}).join("")+'</div></div><div id="ctab">'+LOADING+'</div>';
+  if($("mkpub"))$("mkpub").onclick=function(){api(api0("/competitions/"+C.slug),"PATCH",{visibility:"public"}).then(function(x){if(!x.ok){toast(x.data.error,true);return}toast("It's public now. Copy your link below.");competitionDetail(C.slug,tab)})};
   ({overview:compOverview,teams:compTeams,fixtures:compFixtures,table:compTable,scorers:compScorers,settings:compSettings}[tab]||compOverview)(C,E,r.data.criteria)})}
 function compOverview(C,E){var info=[["Format",FMT_L[C.format]],["Season",C.season],["Dates",(C.startDate||"?")+" → "+(C.endDate||"?")],["Teams",C.teams+(C.maxTeams?" of "+C.maxTeams:"")],["Matches played",C.finished+" of "+C.matches],["Points",C.pointsWin+" for a win, "+C.pointsDraw+" for a draw, "+C.pointsLoss+" for a loss"],["Visibility",VIS_L[C.visibility]],["Where",[C.region,C.country].filter(Boolean).join(", ")]];
   $("ctab").innerHTML=(C.description?'<div class="card"><div class="gh">ABOUT</div><p style="margin:0;white-space:pre-wrap">'+esc(C.description)+'</p></div>':'')+
@@ -919,9 +951,9 @@ function aSupport(){var kind=P("kind");alist({title:{complaint:"User complaints"
 
 // ---------- help & support (every user) ----------
 function supportView(){document.title="Help & support · Competition Manager";
-  main('<h1>Help & support</h1><p class="sub">Questions, problems or requests for the platform team.</p><div class="layout" style="grid-template-columns:1fr"><form class="card" id="spf" novalidate style="max-width:680px"><div class="gh">CONTACT THE PLATFORM TEAM</div>'+
+  UM('<h1>Help & support</h1><p class="sub">Questions, problems or requests for the platform team.</p><div><form class="card" id="spf" novalidate style="max-width:680px"><div class="gh">CONTACT THE PLATFORM TEAM</div>'+
     '<label for="spk">Type<select id="spk"><option value="support">Question or problem</option><option value="complaint">Complaint</option><option value="organizer_request">Organizer request (e.g. feature my competition)</option></select></label>'+
-    '<label for="sps">Subject<input id="sps" maxlength="140"></label><label for="spb">Message<textarea id="spb" maxlength="5000" rows="5"></textarea></label><div class="actions"><button class="btn">Send</button></div><div id="spm"></div></form><div id="spl"></div></div>');
+    '<label for="sps">Subject<input id="sps" maxlength="140"></label><label for="spb">Message<textarea id="spb" maxlength="5000" rows="5"></textarea></label><div class="actions"><button class="btn">Send</button></div><div id="spm"></div></form><div id="spl"></div></div>',{key:"support"});
   var load=function(){api("/api/support").then(function(r){var t=(r.data&&r.data.tickets)||[];$("spl").innerHTML='<div class="card" style="max-width:680px"><div class="gh">YOUR REQUESTS</div>'+(r.data&&r.data.supportEmail?'<p class="note">You can also email '+esc(r.data.supportEmail)+'.</p>':'')+
     (t.length?t.map(function(x){return'<div style="border-top:1px solid var(--line);padding:10px 0"><b>'+esc(x.subject)+'</b> '+sb(x.status)+'<div class="note">'+esc(x.kindLabel)+' · '+date(x.created)+'</div>'+(x.reply?'<div class="okm">'+esc(x.reply)+'</div>':'')+'</div>'}).join(""):'<p class="note">No requests yet.</p>')+'</div>'})};
   $("spf").onsubmit=function(e){e.preventDefault();api("/api/support","POST",{kind:$("spk").value,subject:$("sps").value,body:$("spb").value}).then(function(r){if(!r.ok){$("spm").innerHTML=errBox(r);return}toast("Sent. We'll get back to you.");$("sps").value=$("spb").value="";$("spm").innerHTML="";load()})};load()}
