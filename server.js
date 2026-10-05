@@ -286,8 +286,25 @@ function recordDraw(by, kind, result) {
 const ok = { ok: true };
 const generic = 'Wrong username or password.';
 
+// ---------- starting league ----------
+// The players, groups and settings a brand-new league starts with live in seed.json (not in the page's code).
+// They're copied into the database on first start; after that the database is the only source of truth.
+const SEED_FILE = E.SEED_FILE || path.join(DIR, 'seed.json');
+function seed() {
+  let s = {};
+  try { s = JSON.parse(fs.readFileSync(SEED_FILE, 'utf8')); } catch (e) { if (e.code !== 'ENOENT') console.error(`Could not read ${SEED_FILE}:`, e.message); }
+  s = { r: {}, k: {}, st: {}, ev: {}, aw: { bd: '', c: [] }, ...s };
+  if (!validState(s)) {
+    if (s.g) console.error(`${SEED_FILE} is not a valid league (1–8 groups A–H, up to 6 names of 1–40 characters each). Using a blank league.`);
+    s = { r: {}, k: {}, st: {}, ev: {}, aw: { bd: '', c: [] }, g: { A: ['Player 1', 'Player 2', 'Player 3', 'Player 4'], B: ['Player 5', 'Player 6', 'Player 7', 'Player 8'] } };
+  }
+  return s;
+}
+if (!db.prepare('SELECT 1 AS x FROM state WHERE id=1').get()) { writeState(seed()); console.log(`New league created from ${path.basename(SEED_FILE)}.`); }
+
 // ---------- routes ----------
 const routes = {
+  'GET /api/seed': (req, res, { me }) => me ? send(res, 200, seed()) : send(res, 401, { error: 'login required' }),
   'GET /api/state': (req, res) => send(res, 200, readState()),
   'GET /api/health': (req, res) => { db.prepare('SELECT 1 AS x').get(); send(res, 200, { ok: true }); },
   'GET /api/me': (req, res, { me }) => send(res, 200, me

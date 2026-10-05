@@ -1,0 +1,8 @@
+{
+  "ui": { "t": "CHAMPIONS LEAGUE", "s": "eFOOTBALL LEAGUE", "lb": "Organizer sign in" },
+  "cfg": { "a": 2, "w": 0, "mp": 0, "kdr": 1 },
+  "g": {
+    "A": ["Philiss", "Atalynix", "Mz man", "xxbeta"],
+    "B": ["Junior_billyhill", "Kai_Heinz07", "Rockyjnr_xX", "OSTEENRBA"]
+  }
+}

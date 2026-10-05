@@ -3,6 +3,13 @@
 Groups, fixtures, knockouts, top scorers, assists, Ballon d'Or and awards.
 Plain HTML + JS front end, Node server, SQLite `.db` file. **No npm install needed.**
 
+## Where the league data lives
+Everything (players, groups, scores, match details, awards, settings, draws and admins) is stored in the database
+(`data/league.db`), and editors change it from the site. Nothing about your league is written in the code.
+- `seed.json` is the **starting league**: the groups, player names and settings a brand-new database begins with.
+  It is only read when the database is empty, and when an editor taps "Reset everything to the starting league".
+  Edit it before your first start (1–8 groups named A–H, up to 6 names each). Set `SEED_FILE` to use another file.
+
 ## Settings (.env)
 All settings can go in a `.env` file next to `server.js`. Copy `.env.example` to `.env`; every option is explained
 inside. `.env` is ignored by git and Docker, so your passwords stay private. Variables set in the terminal win over the file.
@@ -150,3 +157,4 @@ change. Editors who are just looking get other editors' changes automatically wi
 - `Dockerfile`: for hosts that run containers (mount a volume at `/data`)
 - `test/api.test.js`: automated tests (`npm test`)
 - `.env.example`: every setting explained; copy it to `.env`
+- `seed.json`: the starting league for a new database

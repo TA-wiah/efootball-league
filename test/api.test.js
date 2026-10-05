@@ -48,6 +48,16 @@ test('health check and public pages', async () => {
   assert.match(await r.text(), /<script nonce="/);
 });
 
+test('a new database starts from seed.json, and admins can fetch it for a reset', async () => {
+  const seedFile = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'seed.json'), 'utf8'));
+  const state = await (await fetch(B + '/api/state')).json();
+  assert.deepEqual(state.g, seedFile.g);
+  assert.equal(state.ui.t, seedFile.ui.t);
+  assert.equal((await fetch(B + '/api/seed')).status, 401, 'only admins');
+  const s = await login();
+  assert.deepEqual((await (await call(s, 'GET', '/api/seed')).json()).g, seedFile.g);
+});
+
 test('login: wrong password is generic, right one works', async () => {
   const bad = await login(USER, 'nope');
   assert.equal(bad.status, 401);
