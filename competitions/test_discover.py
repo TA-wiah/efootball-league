@@ -75,7 +75,7 @@ class DiscoverTest(Helpers, TestCase):
         html = self.text("/search?q=kasoa")
         self.assertIn("Kasoa Sunday League", html)
         self.assertIn("/team/kasoa-stars", html)
-        self.assertIn("/organization/kasoa-community-league", html)
+        self.assertIn("/org/kasoa-community-league", html)
         vs = self.text("/search?q=Kasoa%20vs%20Winneba")
         self.assertTrue(re.search(r"/match/(kasoa-stars-vs-winneba-lions|winneba-lions-vs-kasoa-stars)", vs),
                         "finds the match whichever team was at home")

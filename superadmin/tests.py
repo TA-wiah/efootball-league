@@ -94,9 +94,9 @@ class SuperAdminTest(Helpers, TestCase):
         slug = self.new_org(self.owner, "New Cup Org")
         o = self.root.get("/api/admin/organizations?status=pending").json()["items"]
         self.assertEqual([x["slug"] for x in o], [slug])
-        self.assertEqual(Client().get(f"/organization/{slug}").status_code, 404)
+        self.assertEqual(Client().get(f"/org/{slug}").status_code, 404)
         self.assertEqual(self.root.call("post", f"/api/admin/organizations/{o[0]['id']}/approve").status_code, 200)
-        self.assertEqual(Client().get(f"/organization/{slug}").status_code, 200)
+        self.assertEqual(Client().get(f"/org/{slug}").status_code, 200)
         self.root.call("patch", "/api/admin/settings", {"section": "site", "changes": {"allow_signups": False}})
         r = Browser().call("post", "/api/auth/signup", {"username": "late", "email": "late@example.com", "password": PW})
         self.assertEqual(r.status_code, 403)

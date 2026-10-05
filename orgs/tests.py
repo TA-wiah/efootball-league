@@ -136,7 +136,11 @@ class PlatformTest(Helpers, TestCase):
         self.assertFalse(can("moderator", "results.enter"))
         self.assertEqual([r for r in ROLES if can("viewer", r)], [])
         self.assertFalse(any(can("viewer", p) for p in ["members.invite", "results.enter", "content.edit"]))
-        self.assertEqual(assignable_roles("admin"), ["editor", "moderator", "viewer"])
+        self.assertEqual(assignable_roles("admin"), ["organizer", "team_manager", "coach", "scorekeeper", "editor", "moderator", "player", "viewer"])
+        self.assertEqual(assignable_roles("organizer"), ["team_manager", "coach", "scorekeeper", "editor", "moderator", "player", "viewer"])
+        self.assertTrue(can("scorekeeper", "results.enter") and not can("scorekeeper", "teams.manage"))
+        self.assertTrue(can("coach", "teams.manage_assigned") and not can("coach", "teams.manage"))
+        self.assertTrue(can("admin", "org.settings") and not can("organizer", "org.settings"))
         self.assertNotIn("owner", assignable_roles("owner"))
 
     def test_each_role_enforced_by_the_server(self):
@@ -150,19 +154,22 @@ class PlatformTest(Helpers, TestCase):
             allowed = role in ("organizer", "admin")
             self.assertEqual(b.get(f"/api/orgs/{slug}/invitations").status_code, 200 if allowed else 403, role)
             self.assertEqual(b.call("post", f"/api/orgs/{slug}/invitations", {"role": "viewer"}).status_code, 200 if allowed else 403, role)
-            self.assertEqual(b.call("patch", f"/api/orgs/{slug}", {"name": "X"}).status_code, 403, role)
+            self.assertEqual(b.call("patch", f"/api/orgs/{slug}", {"region": "X"}).status_code, 200 if role == "admin" else 403, role)
             self.assertEqual(b.call("delete", f"/api/orgs/{slug}", {"confirm": "Kasoa Community League"}).status_code, 403, role)
             self.assertEqual(b.get(f"/api/orgs/{slug}/members").status_code, 200, role)
-        # rank rules: an admin can't touch an organizer or promote anyone to admin+
-        admin = people["admin"]
-        self.assertEqual(admin.call("patch", f"/api/orgs/{slug}/members/{self.member_id(admin, slug, 'organizer1')}", {"role": "viewer"}).status_code, 403)
+        # rank rules: an admin manages everyone below them but can't create another admin;
+        # a competition manager invites staff but can't change members
+        admin, org1 = people["admin"], people["organizer"]
         self.assertEqual(admin.call("patch", f"/api/orgs/{slug}/members/{self.member_id(admin, slug, 'viewer1')}", {"role": "admin"}).status_code, 403)
         self.assertEqual(admin.call("patch", f"/api/orgs/{slug}/members/{self.member_id(admin, slug, 'viewer1')}", {"role": "editor"}).status_code, 200)
-        self.assertEqual(admin.call("post", f"/api/orgs/{slug}/invitations", {"role": "organizer"}).status_code, 403)
-        # nobody but the owner can remove the owner, and the owner can't be demoted
-        org1 = people["organizer"]
-        self.assertEqual(org1.call("delete", f"/api/orgs/{slug}/members/{self.member_id(org1, slug, 'boss')}").status_code, 403)
-        self.assertEqual(org1.call("delete", f"/api/orgs/{slug}/members/{self.member_id(org1, slug, 'admin1')}").status_code, 200)
+        self.assertEqual(admin.call("post", f"/api/orgs/{slug}/invitations", {"role": "admin"}).status_code, 403)
+        self.assertEqual(admin.call("post", f"/api/orgs/{slug}/invitations", {"role": "organizer"}).status_code, 200)
+        self.assertEqual(org1.call("post", f"/api/orgs/{slug}/invitations", {"role": "organizer"}).status_code, 403)
+        self.assertEqual(org1.call("post", f"/api/orgs/{slug}/invitations", {"role": "coach"}).status_code, 200)
+        self.assertEqual(org1.call("patch", f"/api/orgs/{slug}/members/{self.member_id(org1, slug, 'viewer1')}", {"role": "player"}).status_code, 403)
+        # nobody but the owner can remove the owner
+        self.assertEqual(admin.call("delete", f"/api/orgs/{slug}/members/{self.member_id(admin, slug, 'boss')}").status_code, 403)
+        self.assertEqual(admin.call("delete", f"/api/orgs/{slug}/members/{self.member_id(admin, slug, 'organizer1')}").status_code, 200)
         # emails are only shown to staff
         emails = {m["username"]: m["email"] for m in people["viewer"].get(f"/api/orgs/{slug}/members").json()["members"]}
         self.assertIsNone(emails["boss"])
@@ -176,7 +183,7 @@ class PlatformTest(Helpers, TestCase):
         self.assertEqual(owner.call("post", f"/api/orgs/{slug}/leave").status_code, 400, "owner must transfer first")
         self.assertEqual(owner.call("post", f"/api/orgs/{slug}/transfer", {"memberId": self.member_id(owner, slug, "ama")}).status_code, 200)
         self.assertEqual(Membership.objects.get(org__slug=slug, user__username="ama").role, "owner")
-        self.assertEqual(Membership.objects.get(org__slug=slug, user__username="boss").role, "organizer")
+        self.assertEqual(Membership.objects.get(org__slug=slug, user__username="boss").role, "admin")
         self.assertEqual(owner.call("delete", f"/api/orgs/{slug}", {"confirm": "Kasoa League"}).status_code, 403, "no longer the owner")
         self.assertEqual(owner.call("post", f"/api/orgs/{slug}/leave").status_code, 200)
         self.assertEqual(ama.call("delete", f"/api/orgs/{slug}", {"confirm": "wrong"}).status_code, 400)
@@ -240,3 +247,99 @@ class PlatformTest(Helpers, TestCase):
             self.assertIn("script-src 'nonce-", r["Content-Security-Policy"])
         self.assertEqual(Client().get("/").status_code, 200, "the original league page still works")
         self.assertEqual(Admin.objects.count(), 0)
+
+
+class PortalTest(Helpers, TestCase):
+    """The organization portal: cards, setup wizard fields, branding, custom permissions, team access, public website."""
+
+    def test_cards_wizard_fields_and_slug_check(self):
+        boss = self.signup("boss")
+        self.assertEqual(boss.get("/api/org-slug?slug=kasoa-fc").json()["available"], True)
+        r = boss.call("post", "/api/orgs", {"name": "Kasoa FC", "kind": "club", "slug": "kasoa-fc", "brandColor": "#2F7BFF",
+                                            "timezone": "Africa/Accra", "website": {"tagline": "Up the Kasoa", "show_players": False}})
+        self.assertEqual(r.status_code, 200, r.json())
+        org = r.json()["org"]
+        self.assertEqual((org["slug"], org["kind"], org["brandColor"], org["timezone"]), ("kasoa-fc", "club", "#2f7bff", "Africa/Accra"))
+        self.assertFalse(org["website"]["show_players"])
+        self.assertTrue(org["website"]["show_teams"], "defaults fill the rest")
+        self.assertEqual(boss.get("/api/org-slug?slug=kasoa-fc").json()["available"], False)
+        self.assertEqual(boss.call("post", "/api/orgs", {"name": "Other", "slug": "kasoa-fc"}).status_code, 409)
+        for bad in [{"slug": "Bad Slug!"}, {"brandColor": "red; x:y"}, {"timezone": "Mars/Base"}, {"website": {"script": "x"}},
+                    {"website": {"show_teams": "yes"}}]:
+            self.assertEqual(boss.call("post", "/api/orgs", {"name": "Other", **bad}).status_code, 400, bad)
+        self.assertEqual(Browser().get("/api/org-slug?slug=x").status_code, 401)
+        card = boss.get("/api/auth/me").json()["orgs"][0]
+        for k in ("competitions", "teams", "players", "members", "staff", "lastActivity", "perms", "kindLabel"):
+            self.assertIn(k, card)
+        self.assertEqual((card["members"], card["kindLabel"]), (1, "Club"))
+
+    def test_owner_configures_permissions(self):
+        boss, sk, ed = self.signup("boss"), self.signup("skeeper"), self.signup("editor7")
+        slug = self.new_org(boss)
+        self.invite_and_join(boss, slug, sk, "scorekeeper")
+        self.invite_and_join(boss, slug, ed, "editor")
+        self.assertEqual(sk.call("post", f"/api/orgs/{slug}/teams", {"name": "Lions"}).status_code, 403)
+        self.assertEqual(sk.call("patch", f"/api/orgs/{slug}/permissions", {"permissions": {"teams.manage": ["scorekeeper"]}}).status_code, 403)
+        r = boss.call("patch", f"/api/orgs/{slug}/permissions", {"permissions": {"teams.manage": ["scorekeeper"]}})
+        self.assertEqual(r.status_code, 200, r.json())
+        self.assertEqual(sk.call("post", f"/api/orgs/{slug}/teams", {"name": "Lions"}).status_code, 200, "granted by the owner")
+        self.assertEqual(ed.call("post", f"/api/orgs/{slug}/teams", {"name": "Tigers"}).status_code, 403, "and taken from editors")
+        for bad in [{"permissions": {"org.delete": ["admin"]}}, {"permissions": {"teams.manage": ["king"]}}, {"permissions": "x"}]:
+            self.assertEqual(boss.call("patch", f"/api/orgs/{slug}/permissions", bad).status_code, 400, bad)
+        boss.call("patch", f"/api/orgs/{slug}/permissions", {"permissions": {"teams.manage": []}})
+        self.assertEqual(boss.call("post", f"/api/orgs/{slug}/teams", {"name": "Owner FC"}).status_code, 200, "owner always can")
+        boss.call("patch", f"/api/orgs/{slug}/permissions", {"reset": True})
+        self.assertEqual(ed.call("post", f"/api/orgs/{slug}/teams", {"name": "Tigers"}).status_code, 200, "back to defaults")
+        self.assertIn("teams.manage", ed.get(f"/api/orgs/{slug}").json()["me"]["perms"])
+
+    def test_team_managers_only_touch_their_teams(self):
+        boss, tm = self.signup("boss"), self.signup("tmanager")
+        slug = self.new_org(boss)
+        lions = boss.call("post", f"/api/orgs/{slug}/teams", {"name": "Lions"}).json()["team"]["id"]
+        tigers = boss.call("post", f"/api/orgs/{slug}/teams", {"name": "Tigers"}).json()["team"]["id"]
+        other = self.signup("xavier")
+        oslug = self.new_org(other, "Other League")
+        foreign = other.call("post", f"/api/orgs/{oslug}/teams", {"name": "Foreign"}).json()["team"]["id"]
+        self.invite_and_join(boss, slug, tm, "team_manager")
+        mid = self.member_id(boss, slug, "tmanager")
+        self.assertEqual(boss.call("patch", f"/api/orgs/{slug}/members/{mid}", {"teams": [foreign]}).status_code, 400)
+        self.assertEqual(tm.call("patch", f"/api/orgs/{slug}/members/{mid}", {"teams": [lions, tigers]}).status_code, 403)
+        self.assertEqual(boss.call("patch", f"/api/orgs/{slug}/members/{mid}", {"teams": [lions]}).status_code, 200)
+        self.assertEqual(tm.call("patch", f"/api/orgs/{slug}/teams/{lions}", {"city": "Kasoa"}).status_code, 200)
+        self.assertEqual(tm.call("patch", f"/api/orgs/{slug}/teams/{tigers}", {"city": "Kasoa"}).status_code, 403)
+        r = tm.call("post", f"/api/orgs/{slug}/teams/{lions}/players", {"name": "Kofi", "number": 9})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(tm.call("post", f"/api/orgs/{slug}/teams/{tigers}/players", {"name": "Ama"}).status_code, 403)
+        pid = boss.call("post", f"/api/orgs/{slug}/teams/{tigers}/players", {"name": "Ama"}).json()["player"]["id"]
+        self.assertEqual(tm.call("delete", f"/api/orgs/{slug}/players/{pid}").status_code, 403)
+        self.assertEqual(tm.call("delete", f"/api/orgs/{slug}/players/{r.json()['player']['id']}").status_code, 200)
+        self.assertEqual(tm.call("delete", f"/api/orgs/{slug}/teams/{lions}").status_code, 403, "can't delete teams")
+        self.assertEqual(tm.call("post", f"/api/orgs/{slug}/teams", {"name": "New"}).status_code, 403, "or create them")
+        self.assertEqual(tm.get(f"/api/orgs/{slug}").json()["me"]["teams"], [lions])
+
+    def test_branding_logo_and_public_website(self):
+        boss, ed = self.signup("boss"), self.signup("editor7")
+        slug = self.new_org(boss)
+        self.invite_and_join(boss, slug, ed, "editor")
+        png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+        self.assertEqual(ed.call("post", f"/api/orgs/{slug}/logo", {"image": png}).status_code, 403)
+        r = boss.call("post", f"/api/orgs/{slug}/logo", {"image": png})
+        self.assertEqual(r.status_code, 200, r.json())
+        logo = Client().get(r.json()["logo"])
+        self.assertEqual((logo.status_code, logo["Content-Type"]), (200, "image/png"))
+        self.assertEqual(Client().get("/media/org/999/logo").status_code, 404)
+        self.assertEqual(boss.call("patch", f"/api/orgs/{slug}", {"brandColor": "#123", "website": {}}).status_code, 400)
+        self.assertEqual(boss.call("patch", f"/api/orgs/{slug}", {"brandColor": "#c8102e", "website": {"tagline": "<b>Hi</b>", "show_teams": False}}).status_code, 200)
+        boss.call("post", f"/api/orgs/{slug}/teams", {"name": "Secret Lions"})
+        page = Client().get(f"/org/{slug}")
+        self.assertEqual(page.status_code, 200)
+        html = page.content.decode()
+        self.assertIn("&lt;b&gt;Hi&lt;/b&gt;", html, "escaped")
+        self.assertIn("#c8102e", html)
+        self.assertNotIn("Secret Lions", html, "teams hidden by the website settings")
+        self.assertEqual(Client().get("/org/nope").status_code, 404)
+        self.assertIn("public", page["Cache-Control"], "visitors get a short cache")
+        self.assertIn("no-store", boss.get(f"/org/{slug}")["Cache-Control"], "organizers always see their latest changes")
+        old = Client().get(f"/organization/{slug}")
+        self.assertEqual((old.status_code, old["Location"]), (301, f"/org/{slug}"), "old links keep working")
+

@@ -4,11 +4,11 @@
 <title>Competition Manager</title>
 <meta name="description" content="Create and run leagues and tournaments: teams, fixtures, results, standings and your staff, in one place.">
 <style>
-:root{--bg:#12002b;--card:#250a45;--card2:#1a0636;--line:#46226e;--gold:#00ff85;--tx:#f7f3ff;--soft:#b8a6dc;--ok:#6dff9c;--bad:#ff2882}
+:root{--bg:#050d1f;--bg2:#0a1a3a;--card:#0e1f45;--card2:#0a1735;--line:#1f3566;--line2:#2c4a85;--gold:#5b9cff;--btn:#2563eb;--btn2:#1d4ed8;--tx:#f5f8ff;--tx2:#d5e0f7;--soft:#9fb2d6;--ok:#5fe39a;--bad:#ff4d6d}
 *{box-sizing:border-box}
-body{margin:0;background:linear-gradient(#12002b,#1d0640) fixed;background-color:#12002b;color:var(--tx);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;min-height:100vh;line-height:1.45}
+body{margin:0;background:radial-gradient(900px 400px at 85% -10%,rgba(37,99,235,.20),transparent 60%),linear-gradient(#050d1f,#0a1a3a) fixed;background-color:#050d1f;color:var(--tx);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;min-height:100vh;line-height:1.45}
 a{color:var(--gold)}
-.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top,0px));background:rgba(14,3,34,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top,0px));background:rgba(5,13,31,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
 .brand{display:flex;align-items:center;gap:8px;color:var(--tx);text-decoration:none;font-weight:900;letter-spacing:.5px}.brand .ic{color:var(--gold);width:24px;height:24px}
 .top nav{margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;font-size:14px}
 .top nav a{color:var(--soft);text-decoration:none;font-weight:700}.top nav a:hover{color:var(--tx)}.who{color:var(--soft);font-size:13px}
@@ -16,9 +16,9 @@ a{color:var(--gold)}
 h1{font-size:26px;margin:6px 0 4px}h2{font-size:18px;margin:0 0 10px}
 .sub{color:var(--soft);margin:0 0 16px}
 .card{background:var(--card);border-radius:14px;padding:16px;margin-bottom:14px}
-.gh{display:flex;align-items:center;gap:10px;color:var(--gold);font-weight:800;font-size:12px;letter-spacing:1.3px;text-transform:uppercase;margin:0 0 14px;padding-bottom:12px;border-bottom:1px solid var(--line)}.gh:before{content:"";width:6px;height:6px;border-radius:2px;background:var(--gold);box-shadow:0 0 0 4px rgba(0,255,133,.15)}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 16px;border:0;border-radius:12px;background:var(--gold);color:#12002b;font-weight:800;font-size:15px;cursor:pointer;text-decoration:none;font-family:inherit}
-.btn.g{background:var(--card2);color:var(--soft);border:1px solid var(--line)}.btn.bad{background:#6b1a35;color:#fff}.btn.sm{padding:7px 11px;font-size:13px;border-radius:9px}.btn.block{display:flex;width:100%}
+.gh{display:flex;align-items:center;gap:10px;color:var(--gold);font-weight:800;font-size:12px;letter-spacing:1.3px;text-transform:uppercase;margin:0 0 14px;padding-bottom:12px;border-bottom:1px solid var(--line)}.gh:before{content:"";width:6px;height:6px;border-radius:2px;background:var(--gold);box-shadow:0 0 0 4px rgba(59,130,246,.15)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 16px;border:0;border-radius:12px;background:var(--btn);color:#fff;font-weight:800;font-size:15px;cursor:pointer;text-decoration:none;font-family:inherit}
+.btn.g{background:var(--card2);color:var(--soft);border:1px solid var(--line)}.btn.bad{background:#9b1c35;color:#fff}.btn.sm{padding:7px 11px;font-size:13px;border-radius:9px}.btn.block{display:flex;width:100%}
 .btn:disabled{opacity:.55;cursor:default}.btn:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 label{display:block;color:var(--soft);font-size:12px;font-weight:700;margin:10px 0 0}
 input,select,textarea{width:100%;margin-top:4px;padding:11px;border:1px solid var(--line);border-radius:9px;background:var(--card2);color:var(--tx);font:inherit;font-size:15px}
@@ -28,8 +28,8 @@ textarea{resize:vertical;min-height:80px}
 .note{color:var(--soft);font-size:13px}
 .err{background:#4a1427;border:1px solid var(--bad);color:#ffd5dc;border-radius:10px;padding:10px;font-size:14px;margin-top:12px}
 .okm{background:#123d2a;border:1px solid var(--ok);color:#d4ffe4;border-radius:10px;padding:10px;font-size:14px;margin-top:12px;word-break:break-word}
-.pill{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.4px;padding:3px 8px;border-radius:20px;background:#46226e;color:var(--tx);white-space:nowrap;vertical-align:middle}
-.pill.owner{background:var(--gold);color:#12002b}.pill.organizer{background:#ff9f43;color:#2a1600}.pill.admin{background:#4aa3ff;color:#04203f}.pill.editor{background:#6dff9c;color:#06301a}.pill.moderator{background:#c18cff;color:#250a44}.pill.viewer{background:#46226e}
+.pill{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.4px;padding:3px 8px;border-radius:20px;background:#1f3566;color:var(--tx);white-space:nowrap;vertical-align:middle}
+.pill.owner{background:var(--btn);color:#fff}.pill.organizer{background:#ff9f43;color:#2a1600}.pill.admin{background:#4aa3ff;color:#04203f}.pill.editor{background:#6dff9c;color:#06301a}.pill.moderator{background:#c18cff;color:#0a1735}.pill.viewer{background:#1f3566}
 .pill.pending{background:#6b4a05;color:#ffe9b0}.pill.accepted{background:#1d5c3c;color:#d4ffe4}.pill.expired{background:#3a3f5c;color:#c8d0e1}.pill.revoked{background:#5a1a2d;color:#ffd5dc}.pill.soon{background:transparent;border:1px solid var(--line);color:var(--soft);font-size:10px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
 .oc{display:block;background:var(--card);border-radius:14px;padding:16px;text-decoration:none;color:var(--tx);border:1px solid transparent;transition:border-color .2s,transform .15s}.oc:hover{border-color:var(--gold);transform:translateY(-2px)}
@@ -39,22 +39,22 @@ textarea{resize:vertical;min-height:80px}
 .layout{display:grid;grid-template-columns:220px 1fr;gap:16px;align-items:start}.layout>*{min-width:0}
 .side{position:sticky;top:70px;background:var(--card);border-radius:14px;padding:8px}
 .side>a,.side>span{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:9px 10px;border-radius:9px;color:var(--soft);text-decoration:none;font-weight:700;font-size:14px}
-.side>a.on{background:var(--gold);color:#12002b}.side>a:hover:not(.on){background:var(--card2);color:var(--tx)}.side>span{opacity:.55;cursor:default}
+.side>a.on{background:var(--btn);color:#fff}.side>a:hover:not(.on){background:var(--card2);color:var(--tx)}.side>span{opacity:.55;cursor:default}
 @media(max-width:760px){.side>span{display:none}.who{display:none}.brand span{font-size:15px}.layout{grid-template-columns:1fr}.side{position:static;display:flex;overflow-x:auto;gap:4px;padding:6px}.side>a,.side>span{white-space:nowrap;flex:none}}
 .tbl{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px}th{color:var(--soft);font-size:12px;font-weight:700;text-align:left}th,td{padding:9px 6px;vertical-align:middle}tr+tr td{border-top:1px solid var(--line)}
 td select{margin:0;padding:7px;font-size:13px;min-width:120px}
 .who-cell b{display:block}.who-cell small{color:var(--soft)}
 .feed div{padding:7px 0;border-top:1px solid var(--line);font-size:13px;color:var(--soft)}.feed div:first-child{border-top:0}.feed b{color:var(--tx)}
-.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}.chip{border:1px solid var(--line);background:var(--card2);color:var(--soft);border-radius:20px;padding:6px 12px;font-weight:700;font-size:13px;cursor:pointer}.chip.on{background:var(--gold);color:#12002b;border-color:var(--gold)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}.chip{border:1px solid var(--line);background:var(--card2);color:var(--soft);border-radius:20px;padding:6px 12px;font-weight:700;font-size:13px;cursor:pointer}.chip.on{background:var(--btn);color:#fff;border-color:var(--gold)}
 .link{display:grid;grid-template-columns:1fr auto auto;gap:6px;margin-top:8px}.link input{margin:0;font-size:13px}
 details summary{cursor:pointer;color:var(--gold);font-weight:800;padding:4px 0}
 .mx td,.mx th{text-align:center;font-size:12px}.mx td:first-child,.mx th:first-child{text-align:left}.mx .y{color:var(--ok);font-weight:900}.mx .n{color:#4b5a91}
 .ic{width:1.1em;height:1.1em;vertical-align:-.18em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
-.auth{max-width:440px;margin:24px auto}.tabs2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px}.tabs2 a{text-align:center;padding:10px;border-radius:10px;background:var(--card2);color:var(--soft);text-decoration:none;font-weight:800}.tabs2 a.on{background:var(--gold);color:#12002b}
+.auth{max-width:440px;margin:24px auto}.tabs2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px}.tabs2 a{text-align:center;padding:10px;border-radius:10px;background:var(--card2);color:var(--soft);text-decoration:none;font-weight:800}.tabs2 a.on{background:var(--btn);color:#fff}
 .toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:20;max-width:min(92vw,520px);background:#123d2a;border:1px solid var(--ok);color:#d4ffe4;border-radius:12px;padding:12px 16px;font-weight:700;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.5)}.toast.bad{background:#4a1427;border-color:var(--bad);color:#ffd5dc}.toast[hidden]{display:none}
-.empty{text-align:center;padding:30px 16px}.empty .ic{width:44px;height:44px;color:var(--gold)}
-.pill.draft{background:#3a3f5c}.pill.active,.pill.finished{background:#1d5c3c;color:#d4ffe4}.pill.completed,.pill.scheduled{background:#46226e}.pill.live{background:#ff2882;color:#fff}.pill.postponed{background:#6b4a05;color:#ffe9b0}.pill.cancelled{background:#5a1a2d;color:#ffd5dc}
-.crest{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;object-fit:cover;flex:none;color:#fff;font-size:10px;font-weight:900;border:2px solid rgba(255,255,255,.85);background:#46226e;overflow:hidden}img.crest{background:#fff}
+.empty{text-align:center;padding:30px 16px}.empty>.ic{width:44px;height:44px;color:var(--gold)}
+.pill.draft{background:#3a3f5c}.pill.active,.pill.finished{background:#1d5c3c;color:#d4ffe4}.pill.completed,.pill.scheduled{background:#1f3566}.pill.live{background:#ff4d6d;color:#fff}.pill.postponed{background:#6b4a05;color:#ffe9b0}.pill.cancelled{background:#5a1a2d;color:#ffd5dc}
+.crest{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;object-fit:cover;flex:none;color:#fff;font-size:10px;font-weight:900;border:2px solid rgba(255,255,255,.85);background:#1f3566;overflow:hidden}img.crest{background:#fff}
 .md{color:var(--gold);font-size:12px;font-weight:800;letter-spacing:1px;margin:16px 0 4px;text-transform:uppercase}
 .mrow{display:grid;grid-template-columns:150px 1fr auto 1fr;gap:10px;align-items:center;padding:10px 8px;border-radius:10px;color:var(--tx);text-decoration:none;border-top:1px solid var(--line)}.mrow:hover{background:var(--card2)}
 .mrow .mt{display:flex;flex-direction:column;font-size:11px;color:var(--soft)}.mh{display:flex;align-items:center;gap:6px;justify-content:flex-end;font-weight:700;text-align:right;min-width:0}.ma{display:flex;align-items:center;gap:6px;font-weight:700;min-width:0}.mh span,.ma span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -76,20 +76,20 @@ table.st td,table.st th{text-align:center;padding:8px 4px}.st .tl{text-align:lef
 .agi a .ic{margin-right:4px}.agi .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--gold);margin-right:8px;vertical-align:1px}
 .agi .sub{margin:2px 0 8px 14px;padding-left:8px;border-left:1px solid var(--line)}.agi .sub a{font-size:13px;padding:6px 10px}
 .orghead{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:4px 0 16px}.orghead h1{margin:0}
-.sharebox{background:linear-gradient(135deg,rgba(0,255,133,.10),rgba(4,245,255,.06));border:1px solid rgba(0,255,133,.45);border-radius:16px;padding:16px 18px;margin:14px 0}
+.sharebox{background:linear-gradient(135deg,rgba(59,130,246,.10),rgba(4,245,255,.06));border:1px solid rgba(59,130,246,.45);border-radius:16px;padding:16px 18px;margin:14px 0}
 .sharebox.warn{background:rgba(255,176,32,.08);border-color:rgba(255,176,32,.45)}
 .sbx-h{display:flex;align-items:center;gap:8px;font-weight:900;font-size:16px;color:var(--tx)}.sbx-h .ic{color:var(--gold);width:20px;height:20px}
 .sharebox .link input{font-size:15px;font-weight:700;color:var(--gold);background:rgba(0,0,0,.25)}
 /* ---------- super admin panel ---------- */
 .w.wide{max-width:none;padding:0}
 .ashell{display:grid;grid-template-columns:268px minmax(0,1fr);min-height:calc(100vh - 58px)}
-.asb{position:sticky;top:58px;height:calc(100vh - 58px);overflow-y:auto;background:#1d0640;border-right:1px solid var(--line);padding:14px 10px 30px;scrollbar-width:thin}
+.asb{position:sticky;top:58px;height:calc(100vh - 58px);overflow-y:auto;background:#0a1a3a;border-right:1px solid var(--line);padding:14px 10px 30px;scrollbar-width:thin}
 .asb-h{display:flex;align-items:center;gap:8px;font-weight:900;font-size:13px;letter-spacing:1px;text-transform:uppercase;color:var(--gold);padding:6px 10px 14px}
 .ag{margin-bottom:2px}.agh{width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:0;color:var(--tx);font:inherit;font-weight:800;font-size:13px;padding:9px 10px;border-radius:9px;cursor:pointer;text-align:left}
 .agh:hover{background:var(--card2)}.agh .chev{transition:transform .2s;color:var(--soft)}.ag.open .agh .chev{transform:rotate(90deg)}
 .agi{display:none;padding:2px 0 6px 10px}.ag.open .agi{display:block}
 .agi a{display:block;padding:7px 10px;border-radius:8px;color:var(--soft);text-decoration:none;font-size:13px;font-weight:600;border-left:2px solid transparent}
-.agi a:hover{color:var(--tx);background:rgba(255,255,255,.04)}.agi a.on{color:var(--gold);background:rgba(0,255,133,.08);border-left-color:var(--gold)}
+.agi a:hover{color:var(--tx);background:rgba(255,255,255,.04)}.agi a.on{color:var(--gold);background:rgba(59,130,246,.08);border-left-color:var(--gold)}
 .asb-f{border-top:1px solid var(--line);margin-top:12px;padding-top:12px}.asb-f a{display:block;padding:7px 10px;color:var(--soft);text-decoration:none;font-size:13px;font-weight:600}.asb-f a:hover{color:var(--tx)}
 .amain{min-width:0;padding:18px 26px 60px}
 .abar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px}
@@ -111,16 +111,16 @@ a.kpi:hover{border-color:var(--gold);transform:translateY(-2px)}.kpi span{displa
 .pager{display:flex;align-items:center;gap:10px;justify-content:flex-end;margin-top:12px;font-size:13px;color:var(--soft)}
 .bulk{display:flex;gap:8px;align-items:center;margin-left:auto}.bulk select{margin:0;padding:8px;font-size:13px;width:auto}
 .sb{display:inline-block;font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;white-space:nowrap;letter-spacing:.2px}
-.sb.green{background:rgba(95,227,154,.15);color:#a8f0c8}.sb.red{background:rgba(255,40,130,.16);color:#ffb3bf}.sb.amber{background:rgba(255,176,32,.16);color:#ffd27a}.sb.blue{background:rgba(4,245,255,.14);color:#8ff9ff}.sb.grey{background:rgba(196,170,255,.14);color:var(--soft)}
+.sb.green{background:rgba(95,227,154,.15);color:#a8f0c8}.sb.red{background:rgba(255,77,109,.16);color:#ffb3bf}.sb.amber{background:rgba(255,176,32,.16);color:#ffd27a}.sb.blue{background:rgba(4,245,255,.14);color:#8ff9ff}.sb.grey{background:rgba(140,170,255,.14);color:var(--soft)}
 .chart{margin:0;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
 .chart figcaption{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}.chart figcaption b{font-size:14px}.chart figcaption span{color:var(--soft);font-size:13px}.chart figcaption strong{font-size:22px;color:var(--tx)}
-.chart svg{width:100%;height:auto;display:block}.chart .bar{fill:#00a85e}.chart .hit:hover+.bar,.chart g:hover .bar{fill:#00c26d}.chart .ax{fill:var(--soft);font-size:10px}.chart .gl{stroke:rgba(196,170,255,.14);stroke-width:1}
+.chart svg{width:100%;height:auto;display:block}.chart .bar{fill:#3b82f6}.chart .hit:hover+.bar,.chart g:hover .bar{fill:#5b9cff}.chart .ax{fill:var(--soft);font-size:10px}.chart .gl{stroke:rgba(140,170,255,.14);stroke-width:1}
 .chart details{margin-top:6px;font-size:13px}.chart details table{font-size:12px}.chart details td,.chart details th{padding:3px 6px;text-align:left}
-#ctip{position:fixed;z-index:50;pointer-events:none;background:#1a0636;border:1px solid var(--line2,#3a4c94);color:var(--tx);font-size:12px;padding:6px 9px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.5);display:none;font-variant-numeric:tabular-nums}
+#ctip{position:fixed;z-index:50;pointer-events:none;background:#0a1735;border:1px solid var(--line2,#3a4c94);color:var(--tx);font-size:12px;padding:6px 9px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.5);display:none;font-variant-numeric:tabular-nums}
 .ranges{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
 .kv{display:grid;grid-template-columns:minmax(120px,38%) 1fr;gap:8px 14px;font-size:14px}.kv dt{color:var(--soft)}.kv dd{margin:0;word-break:break-word}
 .modal{position:fixed;inset:0;z-index:40;background:rgba(3,6,20,.72);display:grid;place-items:center;padding:16px}
-.mbox{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;max-width:440px;width:100%;box-shadow:0 30px 60px -20px rgba(0,0,0,.8)}.mbox h2{margin:0 0 8px}.mbox p{color:var(--tx2,#e2d6ff);margin:0 0 6px}
+.mbox{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;max-width:440px;width:100%;box-shadow:0 30px 60px -20px rgba(0,0,0,.8)}.mbox h2{margin:0 0 8px}.mbox p{color:var(--tx2,#d5e0f7);margin:0 0 6px}
 .btn.bad{background:#b03a52;color:#fff}
 .oldnew{font-size:12px;color:var(--soft);word-break:break-word}.oldnew del{color:#ffb3bf;text-decoration:none}.oldnew ins{color:#a8f0c8;text-decoration:none}
 .adm-link{color:var(--gold)!important}
@@ -128,6 +128,51 @@ a.kpi:hover{border-color:var(--gold);transform:translateY(-2px)}.kpi span{displa
 @media(max-width:900px){.ashell{grid-template-columns:1fr}.asb{position:fixed;left:0;top:0;bottom:0;height:100vh;width:min(86vw,300px);z-index:45;transform:translateX(-105%);transition:transform .2s;box-shadow:20px 0 40px rgba(0,0,0,.5)}
   .asb.show{transform:none}.amenu{display:inline-flex}.amain{padding:14px 16px 60px}.ags{min-width:0;width:100%;margin-left:0}.ahead h1{font-size:22px}
   .ascrim{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:44}}
+/* ---------- organization portal ---------- */
+.pill.team_manager{background:#0e7490;color:#fff}.pill.coach{background:#155e75;color:#e0f7ff}.pill.scorekeeper{background:#6d28d9;color:#fff}.pill.player{background:#334155;color:#e2e8f0}
+.ph{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:4px 0 18px}.ph h1{margin:0;font-size:28px;letter-spacing:-.4px}.ph p{margin:4px 0 0;color:var(--soft);max-width:660px}
+.ptools[hidden]{display:none}.ptools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px}.ptools input,.ptools select{margin:0;width:auto;padding:9px 12px;font-size:14px}.ptools .grow{flex:1;min-width:200px}@media(max-width:560px){.ptools select{flex:1}}
+.ogrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:14px}
+.ocard{position:relative;display:flex;flex-direction:column;gap:12px;background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0)),var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 16px 16px;transition:border-color .2s,transform .2s,box-shadow .2s}
+.ocard:hover{border-color:var(--line2);transform:translateY(-2px);box-shadow:0 18px 40px -20px rgba(0,0,0,.8)}
+.ocard:before{content:"";position:absolute;left:0;right:0;top:0;height:3px;border-radius:16px 16px 0 0;background:var(--oc,var(--btn))}
+.otop{display:flex;gap:12px;align-items:flex-start}.otop .nm{min-width:0;flex:1}.otop .nm b{display:block;font-size:17px;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.otop .nm .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.av{flex:none;display:grid;place-items:center;font-weight:900;overflow:hidden;border:1px solid rgba(255,255,255,.2)}.av img{width:100%;height:100%;object-fit:cover;background:#fff}
+.odesc{color:var(--soft);font-size:13px;margin:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.9em}
+.ostats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.ostats div{background:rgba(0,0,0,.18);border:1px solid var(--line);border-radius:10px;padding:8px 10px}.ostats b{display:block;font-size:18px;font-variant-numeric:tabular-nums}.ostats span{font-size:11px;color:var(--soft);font-weight:700}
+.ofoot{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--soft)}.ofoot .sp{flex:1}
+.obtns{display:flex;gap:8px}.obtns .btn{flex:1;white-space:nowrap}
+.dd{position:relative}.ddm{position:absolute;right:0;top:calc(100% + 6px);z-index:30;min-width:230px;background:#0b1836;border:1px solid var(--line2);border-radius:12px;padding:6px;box-shadow:0 20px 40px -12px rgba(0,0,0,.85)}
+.ddm[hidden]{display:none}.ddm a,.ddm button{display:flex;align-items:center;gap:8px;width:100%;padding:9px 10px;border:0;background:none;color:var(--tx2);font:inherit;font-size:14px;font-weight:600;text-align:left;text-decoration:none;border-radius:8px;cursor:pointer}
+.ddm a:hover,.ddm button:hover,.ddm a:focus-visible,.ddm button:focus-visible{background:rgba(255,255,255,.07);color:var(--tx)}.ddm .bad{color:#ff8fa3}.ddm hr{border:0;border-top:1px solid var(--line);margin:6px 0}
+.ddm .ddh{font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--soft);padding:6px 10px}.ddm a.on{background:rgba(59,130,246,.16);color:var(--tx)}.ddm.wide{min-width:290px;max-height:70vh;overflow-y:auto}
+.ddm .grow{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.switch{display:inline-flex;align-items:center;gap:8px;max-width:270px;padding:6px 10px;border:1px solid var(--line2);border-radius:10px;background:rgba(255,255,255,.03);color:var(--tx);font:inherit;font-weight:700;font-size:13px;cursor:pointer}.switch .grow{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.switch:hover{border-color:var(--gold)}
+@media(max-width:620px){.switch{max-width:150px}}
+.sk{background:linear-gradient(90deg,rgba(255,255,255,.035),rgba(255,255,255,.08),rgba(255,255,255,.035));background-size:200% 100%;animation:sk 1.2s linear infinite;border-radius:16px;min-height:250px;border:1px solid var(--line)}
+@keyframes sk{to{background-position:-200% 0}}
+.oside{display:flex;gap:10px;align-items:center;padding:2px 10px 14px;border-bottom:1px solid var(--line);margin-bottom:8px}.oside b{display:block;font-size:14px;line-height:1.25;margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.oside>div{min-width:0}
+.qa{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.kpi small{display:block;color:var(--soft);font-size:12px;margin-top:2px}
+.banner{background:rgba(255,176,32,.1);border:1px solid rgba(255,176,32,.45);color:#ffe2a8;border-radius:12px;padding:12px 14px;margin-bottom:14px;font-weight:600;font-size:14px}
+.wz{max-width:740px}.wzbar{display:flex;gap:4px;margin:0 0 10px}.wzbar i{flex:1;height:4px;border-radius:4px;background:var(--line)}.wzbar i.on{background:var(--btn)}.wzbar i.done{background:var(--gold)}
+.wzstep{color:var(--soft);font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}.wz h2{font-size:21px;margin:0 0 4px}
+.kinds{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-top:12px}
+.kinds button{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:14px;color:var(--tx);font:inherit;cursor:pointer;text-align:left}.kinds button b{display:block}.kinds button small{color:var(--soft);font-size:12px}
+.kinds button:hover{border-color:var(--line2)}.kinds button.on{border-color:var(--gold);background:rgba(59,130,246,.14);box-shadow:0 0 0 1px var(--gold) inset}
+.sw{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center}.sw button{width:38px;height:38px;border-radius:10px;border:2px solid transparent;cursor:pointer;padding:0}.sw button.on{border-color:#fff;box-shadow:0 0 0 2px var(--btn)}
+.sw input[type=color]{width:52px;height:40px;padding:2px;margin:0;cursor:pointer}
+.slugrow{display:flex;align-items:stretch;margin-top:4px}.slugrow span{padding:11px;border:1px solid var(--line);border-right:0;border-radius:9px 0 0 9px;background:rgba(0,0,0,.25);color:var(--soft);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%}.slugrow input{margin:0;border-radius:0 9px 9px 0}
+.prev{display:flex;gap:14px;align-items:center;padding:18px;border-radius:14px;border:1px solid var(--line2);margin-top:14px;position:relative;overflow:hidden}.prev b{font-size:18px}.prev:after{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;background:var(--pc)}
+.irow{display:grid;grid-template-columns:1fr 200px auto;gap:8px;align-items:end;margin-top:8px}.irow input,.irow select{margin:0}@media(max-width:560px){.irow{grid-template-columns:1fr}}
+.pe th,.pe td{text-align:center;padding:8px 6px}.pe td:first-child,.pe th:first-child{text-align:left;min-width:230px}.pe th{font-size:11px;white-space:nowrap}.pe input{width:17px;height:17px;margin:0;accent-color:var(--btn)}
+.pe tr.fixed td:first-child{color:var(--soft)}.pe td.chg{background:rgba(59,130,246,.12)}
+label.toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;margin:0;border-top:1px solid var(--line);color:var(--tx);font-size:14px;font-weight:600;cursor:pointer}label.toggle:first-of-type{border-top:0}
+label.toggle small{display:block;color:var(--soft);font-weight:500}label.toggle input{width:20px;height:20px;margin:0;flex:none;accent-color:var(--btn)}
+.bracket{display:flex;gap:14px;overflow-x:auto;padding-bottom:6px}.bracket .rnd{flex:none;width:240px;display:flex;flex-direction:column;gap:8px}.bracket h3{margin:0 0 2px;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--soft)}
+.bm{display:block;background:var(--card2);border:1px solid var(--line);border-left:3px solid var(--btn);border-radius:10px;padding:8px 10px;color:var(--tx);text-decoration:none;font-size:14px}.bm:hover{border-color:var(--line2)}
+.bm div{display:flex;justify-content:space-between;gap:8px}.bm b{font-variant-numeric:tabular-nums}.bm .w{font-weight:800}.bm small{color:var(--soft)}
+.nlist a{display:flex;gap:12px;align-items:flex-start;padding:12px 4px;border-top:1px solid var(--line);color:var(--tx);text-decoration:none}.nlist a:first-child{border-top:0}.nlist a:hover{background:rgba(255,255,255,.03)}.nlist .ic{width:20px;height:20px;color:var(--gold);margin-top:2px}.nlist small{display:block;color:var(--soft)}
 @media (prefers-reduced-motion:no-preference){#main>*{animation:rise .35s cubic-bezier(.2,.8,.2,1) both}.toast{animation:rise .3s both}}
 @keyframes rise{from{opacity:0;transform:translateY(12px)}}
 </style></head><body>
@@ -172,8 +217,37 @@ function busy(btn,on,txt){if(!btn)return;if(on){btn._t=btn.innerHTML;btn.disable
 function go(path,replace){history[replace?"replaceState":"pushState"](null,"",path);route()}
 document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("a[data-nav]");if(a&&!e.ctrlKey&&!e.metaKey&&!e.shiftKey&&e.button===0){e.preventDefault();go(a.getAttribute("href"))}});
 window.addEventListener("popstate",route);
-function topnav(){$("topnav").innerHTML=(ME?
-  (ME.superAdmin?'<a href="/admin" data-nav class="adm-link">'+ic("shield")+' Admin panel</a>':'')+(INV?'<a href="'+(ME.superAdmin?"/app?view=orgs":"/app")+'" data-nav>Invitations <span class="pill pending">'+INV+'</span></a>':'')+'<span class="who">'+esc(ME.username)+'</span><button class="btn g sm" id="logout">Log out</button>'
+// ---------- organization look: avatar, colours, dropdown menus ----------
+Object.assign(IC,{home:'<path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/>',pulse:'<path d="M3 12h4l3-8 4 16 3-8h4"/>',bell:'<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/>',
+  cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',check:'<path d="m5 12 5 5L20 7"/>',list:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+  bracket:'<path d="M4 5h5v6H4M4 13h5v6H4M9 8h4v8H9M13 12h7"/>',user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',whistle:'<circle cx="9" cy="14" r="5"/><path d="M13 11l8-5M9 14h.01M13 9V5h-3"/>',
+  badge:'<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M8 17h8"/>',building:'<path d="M4 21V5l8-3 8 3v16M9 21v-5h6v5M8 8h.01M12 8h.01M16 8h.01M8 12h.01M12 12h.01M16 12h.01"/>',
+  palette:'<path d="M12 3a9 9 0 1 0 0 18c1.5 0 2-1 2-2s-1-1.5-1-2.5 1-1.5 2-1.5h2a4 4 0 0 0 4-4c0-4.4-4-8-9-8z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/>',
+  sliders:'<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
+  key:'<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M14 9l2 2"/>',lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',file:'<path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4M9 13h6M9 17h6"/>',
+  megaphone:'<path d="M3 10v4h4l8 5V5L7 10z"/><path d="M18 9a4 4 0 0 1 0 6"/>',eye:'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',out:'<path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h11"/>',swap:'<path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/>'});
+function safeColor(c){return/^#[0-9a-f]{6}$/i.test(c||"")?c:"#2563eb"}
+// Readable text on a brand colour (WCAG contrast: white or near-black, whichever is stronger)
+function inkOn(c){c=safeColor(c);var l=[1,3,5].map(function(i){var v=parseInt(c.substr(i,2),16)/255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)});
+  var L=.2126*l[0]+.7152*l[1]+.0722*l[2];return 1.05/(L+.05)>=(L+.05)/.0563?"#fff":"#061024"}
+function avatar(g,size){size=size||40;var st='width:'+size+'px;height:'+size+'px;font-size:'+Math.round(size*.42)+'px;border-radius:'+Math.round(size*.28)+'px';
+  if(g&&g.logo)return'<span class="av" style="'+st+'"><img src="'+esc(g.logo)+'" alt=""></span>';var c=safeColor(g&&g.brandColor);
+  return'<span class="av" style="'+st+';background:'+c+';color:'+inkOn(c)+'" aria-hidden="true">'+esc(((g&&g.name)||"?").trim().charAt(0).toUpperCase())+'</span>'}
+function statusTag(s){return s==="pending"?'<span class="sb amber">Awaiting approval</span>':s==="suspended"?'<span class="sb red">Suspended</span>':'<span class="sb green">Active</span>'}
+function mineUrl(){return ME&&ME.superAdmin?"/app?view=orgs":"/app"}
+// Dropdowns: a [data-dd] button followed by its .ddm menu. Any other click, or Escape, closes open menus.
+document.addEventListener("click",function(e){var t=e.target.closest&&e.target.closest("[data-dd]");
+  document.querySelectorAll(".ddm:not([hidden])").forEach(function(m){if(!t||m!==t.nextElementSibling){m.hidden=true;var b=m.previousElementSibling;if(b)b.setAttribute("aria-expanded","false")}});
+  if(t){var m=t.nextElementSibling;m.hidden=!m.hidden;t.setAttribute("aria-expanded",String(!m.hidden));if(!m.hidden){var f=m.querySelector("a,button");if(f)f.focus()}}});
+document.addEventListener("keydown",function(e){if(e.key==="Escape")document.querySelectorAll(".ddm:not([hidden])").forEach(function(m){m.hidden=true;var b=m.previousElementSibling;if(b){b.setAttribute("aria-expanded","false");b.focus()}})});
+function topnav(){var cm=location.pathname.match(/^\/app\/org\/([a-z0-9-]+)/),cur=cm?ORGS.filter(function(g){return g.slug===cm[1]})[0]:null;
+  $("topnav").innerHTML=(ME?
+  (ORGS.length?'<div class="dd"><button type="button" class="switch" data-dd aria-haspopup="true" aria-expanded="false" title="Switch organization">'+(cur?avatar(cur,20):ic("swap"))+'<span class="grow">'+esc(cur?cur.name:"Organizations")+'</span><span aria-hidden="true">▾</span></button>'+
+    '<div class="ddm wide" hidden><div class="ddh">Switch organization</div>'+ORGS.map(function(g){return'<a href="/app/org/'+esc(g.slug)+'" data-nav class="'+(cur&&cur.slug===g.slug?"on":"")+'">'+avatar(g,26)+'<span class="grow">'+esc(g.name)+'</span>'+pill(g.role,g.roleLabel)+'</a>'}).join("")+
+    '<hr><a href="'+mineUrl()+'" data-nav>'+ic("users")+' All organizations</a><a href="/app/new" data-nav>'+ic("plus")+' Create organization</a></div></div>':'')+
+  (ME.superAdmin?'<a href="/admin" data-nav class="adm-link">'+ic("shield")+' Admin panel</a>':'')+(INV?'<a href="'+mineUrl()+'" data-nav>Invitations <span class="pill pending">'+INV+'</span></a>':'')+'<span class="who">'+esc(ME.username)+'</span><button class="btn g sm" id="logout">Log out</button>'
   :(function(){var n=/^\/invite\//.test(location.pathname)?"?next="+encodeURIComponent(location.pathname):"";
      return'<a href="/competitions">Competitions</a><a class="btn sm" href="/app/login'+n+'" data-nav>Log in</a>'})());
   var lo=$("logout");if(lo)lo.onclick=function(){api("/api/auth/logout","POST",{}).then(loadMe).then(function(){toast("Logged out");go("/app/login")})}}
@@ -208,60 +282,175 @@ function authView(mode){var q=new URLSearchParams(location.search),next=q.toStri
     req.then(function(r){busy(b,false);if(!r.ok){$("msg").innerHTML=errBox(r);return}return loadMe().then(function(){toast(mode==="signup"?"Welcome, "+ME.username+"!":"Logged in");go(safeNext(),true)})})}}
 
 // ---------- the logged-in layout: sidebar + content (for every user) ----------
-function U(inner,o){o=o||{};var L=function(h,label,on){return'<a href="'+h+'" data-nav class="'+(on?"on":"")+'"'+(on?' aria-current="page"':'')+'>'+label+'</a>'};
-  var mine=ME.superAdmin?"/app?view=orgs":"/app";
-  var menu='<div class="ag open"><div class="agh-static">Menu</div><div class="agi">'+L(mine,ic("users")+" My organizations",o.key==="orgs")+L("/app/new",ic("plus")+" New organization",o.key==="new")+
-    L("/app/support",ic("mail")+" Help &amp; support",o.key==="support")+(ME.superAdmin?L("/admin",ic("shield")+" Admin panel"):"")+'</div></div>';
-  var orgs=ORGS.length?'<div class="ag open"><div class="agh-static">Your organizations</div><div class="agi">'+ORGS.map(function(g){var on=o.org===g.slug;
-    return L("/app/org/"+g.slug,'<span class="dot"></span>'+esc(g.name),on&&o.section==="overview")+(on?'<div class="sub">'+SECTIONS.filter(function(s){return s[0]!=="overview"&&(!s[2]||has(s[2]))}).map(function(s){
-      return L("/app/org/"+g.slug+"/"+s[0],esc(s[1]),s[0]===o.section)}).join("")+'</div>':"")}).join("")+'</div></div>':"";
-  return'<div class="ashell"><aside class="asb" id="asb" aria-label="Dashboard menu"><div class="asb-h">'+ic("trophy")+' Dashboard</div><div class="asb-who">'+esc(ME.username)+(ME.superAdmin?' <span class="sb amber">Super admin</span>':'')+'</div>'+menu+orgs+
-    '<div class="asb-f"><a href="/competitions">Public competitions</a><a href="/">Public home page</a>'+(ME.leagueAccess?'<a href="/classic">Original league site</a>':'')+'</div></aside>'+
+// Inside an organization the sidebar becomes that organization's admin menu; elsewhere it lists your organizations.
+function U(inner,o){o=o||{};var L=function(h,label,on){return'<a href="'+h+'" data-nav class="'+(on?"on":"")+'"'+(on?' aria-current="page"':'')+'>'+label+'</a>'},side;
+  if(o.org&&ORG){var g=ORG.org;
+    side='<div class="oside">'+avatar(g,40)+'<div><b title="'+esc(g.name)+'">'+esc(g.name)+'</b>'+pill(ORG.me.role,ORG.me.roleLabel)+'</div></div>'+
+      OGROUPS.map(function(grp){var items=SECTIONS.filter(function(s){return s[2]===grp&&(!s[3]||has(s[3]))});if(!items.length)return"";
+        return'<div class="ag open"><div class="agh-static">'+esc(grp)+'</div><div class="agi">'+items.map(function(s){
+          if(s[0]==="preview")return'<a href="/org/'+esc(g.slug)+'" target="_blank" rel="noopener">'+ic(s[4])+' '+esc(s[1])+' ↗</a>';
+          return L(s[0]==="newcomp"?app0("/competitions?new=1"):app0(s[0]==="overview"?"":"/"+s[0]),ic(s[4])+' '+esc(s[1]),s[0]===o.section)}).join("")+'</div></div>'}).join("")+
+      '<div class="asb-f"><a href="'+mineUrl()+'" data-nav>← All organizations</a><a href="/app/support" data-nav>Help &amp; support</a>'+(ME.superAdmin?'<a href="/admin" data-nav>Admin panel</a>':'')+'</div>'}
+  else side='<div class="asb-h">'+ic("trophy")+' Dashboard</div><div class="asb-who">'+esc(ME.username)+(ME.superAdmin?' <span class="sb amber">Super admin</span>':'')+'</div>'+
+    '<div class="ag open"><div class="agh-static">Menu</div><div class="agi">'+L(mineUrl(),ic("users")+" My organizations",o.key==="orgs")+L("/app/new",ic("plus")+" Create organization",o.key==="new")+
+    L("/app/support",ic("mail")+" Help &amp; support",o.key==="support")+(ME.superAdmin?L("/admin",ic("shield")+" Admin panel"):"")+'</div></div>'+
+    (ORGS.length?'<div class="ag open"><div class="agh-static">Your organizations</div><div class="agi">'+ORGS.map(function(g){return L("/app/org/"+g.slug,'<span class="dot" style="background:'+safeColor(g.brandColor)+'"></span>'+esc(g.name),false)}).join("")+'</div></div>':'')+
+    '<div class="asb-f"><a href="/competitions">Public competitions</a><a href="/">Public home page</a>'+(ME.leagueAccess?'<a href="/classic">Original league site</a>':'')+'</div>';
+  return'<div class="ashell"><aside class="asb" id="asb" aria-label="'+(o.org?"Organization menu":"Dashboard menu")+'">'+side+'</aside>'+
     '<div class="amain"><div class="abar"><button type="button" class="btn g sm amenu" id="amenu" aria-controls="asb">☰ Menu</button>'+(o.crumbs||"")+'</div>'+inner+'</div></div>'}
 function UM(inner,o){main(U(inner,o),true);var m=$("amenu");if(m)m.onclick=function(){var s=$("asb");s.classList.add("show");var c=document.createElement("div");c.className="ascrim";c.onclick=function(){s.classList.remove("show");c.remove()};document.body.appendChild(c)};
   document.querySelectorAll("#asb a").forEach(function(a){a.addEventListener("click",function(){var c=document.querySelector(".ascrim");if(c)c.remove()})})}
 
 // ---------- my organizations ----------
+var OVIEW={q:"",f:"all",s:"name"};
 function dashboard(){document.title="My organizations · Competition Manager";
   UM((SITE.notice?'<div class="okm" style="margin:0 0 14px">'+esc(SITE.notice)+'</div>':'')+ANN.map(function(a){return'<div class="'+(a.level==="warning"?"err":"okm")+'" style="margin:0 0 12px"><b>'+esc(a.title)+'</b>'+(a.body?'<div style="margin-top:4px;white-space:pre-wrap">'+esc(a.body)+'</div>':'')+'</div>'}).join("")+
-    '<h1>My organizations</h1><p class="sub">An organization is your league, school, club, academy or company. Each one has its own competitions, teams and staff.</p><div id="invs"></div><div id="orgs"><div class="card note">Loading…</div></div>',{key:"orgs"});
+    '<div class="ph"><div><h1>My organizations</h1><p>Your leagues, schools, clubs, academies and companies. Choose one to manage its competitions, teams, staff and public website.</p></div><a class="btn" href="/app/new" data-nav>'+ic("plus")+' Create organization</a></div>'+
+    '<div id="invs"></div><div class="ptools" id="otools" hidden><input id="oq" class="grow" type="search" placeholder="Search organizations" aria-label="Search organizations" value="'+esc(OVIEW.q)+'">'+
+    '<select id="of" aria-label="Show">'+opts({all:"All organizations",owner:"Owned by me",manage:"I manage",member:"I'm a member"},OVIEW.f)+'</select>'+
+    '<select id="os" aria-label="Sort by">'+opts({name:"Sort: Name",activity:"Sort: Recent activity",competitions:"Sort: Most competitions",newest:"Sort: Newest"},OVIEW.s)+'</select></div>'+
+    '<div id="orgs"><div class="ogrid" aria-busy="true"><div class="sk"></div><div class="sk"></div><div class="sk"></div></div></div>',{key:"orgs"});
   Promise.all([loadMe(),loadRoles(),api("/api/me/invitations")]).then(function(res){topnav();var inv=res[2].data.invitations||[];
-    $("invs").innerHTML=inv.length?'<div class="card"><div class="gh">INVITATIONS FOR YOU</div>'+inv.map(function(i){return'<div class="actions" style="align-items:center;margin:6px 0;justify-content:space-between"><div><b>'+esc(i.org.name)+'</b> '+pill(i.role,i.roleLabel)+'<div class="note">Invited by '+esc(i.invitedBy||"someone")+' · expires '+date(i.expires)+'</div></div><button class="btn sm" data-acc="'+i.id+'">Accept</button></div>'}).join("")+'</div>':"";
-    $("orgs").innerHTML='<div class="grid">'+ORGS.map(function(o){return'<a class="oc" href="/app/org/'+esc(o.slug)+'" data-nav><b>'+esc(o.name)+'</b>'+pill(o.role,o.roleLabel)+'<div style="margin-top:8px"><small>'+ic("users")+' '+o.members+' member'+(o.members===1?"":"s")+(o.country||o.region?' · '+esc([o.region,o.country].filter(Boolean).join(", ")):"")+'</small></div></a>'}).join("")+
-      '<a class="oc" href="/app/new" data-nav style="border:1px dashed var(--line)"><b>'+ic("plus")+' Create an organization</b><small>Start a league, tournament or club and invite your team.</small></a></div>'+
-      (ME.leagueAccess?'<div class="card" style="margin-top:14px"><b>'+ic("trophy")+' Your original league</b><p class="note" style="margin:6px 0 10px">The league site you already run keeps working as before.</p><a class="btn g sm" href="/classic">Open the league site</a></div>':"");
+    $("invs").innerHTML=inv.length?'<div class="card"><div class="gh">Invitations for you</div>'+inv.map(function(i){return'<div class="actions" style="align-items:center;margin:6px 0;justify-content:space-between"><div><b>'+esc(i.org.name)+'</b> '+pill(i.role,i.roleLabel)+'<div class="note">Invited by '+esc(i.invitedBy||"someone")+' · expires '+date(i.expires)+'</div></div><button class="btn sm" data-acc="'+i.id+'">Accept</button></div>'}).join("")+'</div>':"";
     document.querySelectorAll("[data-acc]").forEach(function(b){b.onclick=function(){busy(b,true,"Joining…");api("/api/me/invitations/"+b.dataset.acc+"/accept","POST",{}).then(function(r){
-      if(!r.ok){busy(b,false);toast(r.data.error||"Couldn't accept",true);return}toast("You joined "+r.data.org.name);loadMe().then(function(){go("/app/org/"+r.data.org.slug)})})}})})}
+      if(!r.ok){busy(b,false);toast(r.data.error||"Couldn't accept",true);return}toast("You joined "+r.data.org.name);loadMe().then(function(){go("/app/org/"+r.data.org.slug)})})}});
+    if(!ORGS.length){$("orgs").innerHTML='<div class="card empty">'+ic("building")+'<h2>You\'re not in any organization yet</h2><p class="note" style="max-width:460px;margin:0 auto 16px">Create one for your league, school, club or company. You\'ll be its owner and can invite your staff. Got an invitation link? Open it to join.</p><a class="btn" href="/app/new" data-nav>'+ic("plus")+' Create organization</a></div>'+classicBox();return}
+    $("otools").hidden=false;drawOrgs();
+    $("oq").oninput=function(){OVIEW.q=this.value;drawOrgs()};$("of").onchange=function(){OVIEW.f=this.value;drawOrgs()};$("os").onchange=function(){OVIEW.s=this.value;drawOrgs()}})}
+function classicBox(){return ME.leagueAccess?'<div class="card" style="margin-top:14px"><b>'+ic("trophy")+' Your original league</b><p class="note" style="margin:6px 0 10px">The league site you already run keeps working as before.</p><a class="btn g sm" href="/classic">Open the league site</a></div>':""}
+function drawOrgs(){var q=OVIEW.q.trim().toLowerCase(),manages=function(g){return g.perms.indexOf("org.settings")>=0||g.perms.indexOf("competitions.manage")>=0};
+  var list=ORGS.filter(function(g){return(!q||(g.name+" "+g.kindLabel+" "+g.region+" "+g.country).toLowerCase().indexOf(q)>=0)&&
+    (OVIEW.f==="all"||(OVIEW.f==="owner"&&g.role==="owner")||(OVIEW.f==="manage"&&manages(g))||(OVIEW.f==="member"&&!manages(g)))});
+  var by={name:function(a,b){return a.name.localeCompare(b.name)},activity:function(a,b){return(b.lastActivity||0)-(a.lastActivity||0)},competitions:function(a,b){return b.competitions-a.competitions||a.name.localeCompare(b.name)},newest:function(a,b){return b.created-a.created}}[OVIEW.s];
+  list.sort(by);
+  $("orgs").innerHTML=list.length?'<div class="ogrid">'+list.map(orgCard).join("")+'</div>'+classicBox()
+    :'<div class="card empty">'+ic("users")+'<h2>No organizations match</h2><p class="note">Try another search or filter.</p><button type="button" class="btn g sm" id="oclear">Clear filters</button></div>';
+  if($("oclear"))$("oclear").onclick=function(){OVIEW={q:"",f:"all",s:OVIEW.s};$("oq").value="";$("of").value="all";drawOrgs()};
+  document.querySelectorAll("[data-leave]").forEach(function(b){b.onclick=function(){var name=b.dataset.name;
+    confirmBox("Leave "+name+"?","You'll lose access to its dashboard until someone invites you again.",{danger:true,ok:"Leave organization"}).then(function(ok){if(!ok)return;
+      api("/api/orgs/"+b.dataset.leave+"/leave","POST",{}).then(function(r){if(!r.ok){toast(r.data.error||"Couldn't leave",true);return}toast("You left "+name);loadMe().then(function(){topnav();drawOrgs()})})})}})}
+function orgCard(g){var p=function(k){return g.perms.indexOf(k)>=0},base="/app/org/"+esc(g.slug),pub="/org/"+g.slug;
+  return'<article class="ocard" style="--oc:'+safeColor(g.brandColor)+'"><div class="otop">'+avatar(g,48)+'<div class="nm"><b title="'+esc(g.name)+'">'+esc(g.name)+'</b><div class="tags"><span class="pill">'+esc(g.kindLabel)+'</span>'+pill(g.role,g.roleLabel)+(g.status!=="active"?statusTag(g.status):'')+'</div></div>'+
+    '<div class="dd"><button type="button" class="btn g sm" data-dd aria-haspopup="true" aria-expanded="false" aria-label="More actions for '+esc(g.name)+'">⋯</button><div class="ddm" hidden>'+
+      '<a href="'+base+(p("org.settings")?"/profile":"/settings")+'" data-nav>'+ic("sliders")+' Settings</a>'+(p("members.invite")?'<a href="'+base+'/invitations" data-nav>'+ic("mail")+' Invite members</a>':'')+
+      '<button type="button" data-copylink="'+esc(location.origin+pub)+'">'+ic("copy")+' Copy public link</button><hr>'+
+      (g.role==="owner"?'<a href="'+base+'/settings" data-nav class="bad">'+ic("trash")+' Delete organization</a>':'<button type="button" class="bad" data-leave="'+esc(g.slug)+'" data-name="'+esc(g.name)+'">'+ic("out")+' Leave organization</button>')+'</div></div></div>'+
+    '<p class="odesc">'+esc(g.description||"No description yet.")+'</p>'+
+    '<div class="ostats"><div><b>'+g.competitions+'</b><span>Competitions</span></div><div><b>'+g.teams+'</b><span>Teams</span></div><div><b>'+g.members+'</b><span>Members</span></div></div>'+
+    '<div class="ofoot">'+ic("pulse")+'<span>'+(g.lastActivity?"Active "+ago(g.lastActivity):"No activity yet")+'</span><span class="sp"></span><span>'+g.staff+' staff · '+g.players+' player'+(g.players===1?"":"s")+'</span></div>'+
+    '<div class="obtns"><a class="btn sm" href="'+base+'" data-nav>Manage organization</a><a class="btn g sm" href="'+esc(pub)+'" target="_blank" rel="noopener">View public site ↗</a></div></article>'}
 
-function createOrgView(){var team=new URLSearchParams(location.search).get("intent")==="team";document.title=(team?"Register your team":"New organization")+" · Competition Manager";
-  UM('<h1>'+(team?"Register your team":"New organization")+'</h1><form class="card" id="cf" style="max-width:640px" novalidate><div class="gh">'+(team?"REGISTER YOUR TEAM":"CREATE AN ORGANIZATION")+'</div><p class="note" style="margin-top:0">'+(team?'Create a home for your club, e.g. “Kasoa Stars FC”. Then add your team and squad under Teams, and share it with league organizers so they can invite you.':'For example “Kasoa Community League”, “St. Mary\'s School Sports” or “Accra Corporate Cup”.')+' You\'ll be its <b>owner</b> and can invite others afterwards.</p>'+
-  '<label for="n">Name<input id="n" maxlength="80" required></label><label for="d">Description (optional)<textarea id="d" maxlength="2000" placeholder="What is it? Who plays?"></textarea></label>'+
-  '<div class="row"><label for="c">Country<input id="c" maxlength="60" placeholder="Ghana"></label><label for="r">Region / city<input id="r" maxlength="60" placeholder="Central"></label></div>'+
-  '<div class="actions"><button class="btn" id="go">Create organization</button><a class="btn g" href="/app" data-nav>Cancel</a></div><div id="msg"></div></form>',{key:"new"});
-  $("n").focus();
-  $("cf").onsubmit=function(e){e.preventDefault();var b=$("go");busy(b,true,"Creating…");
-    api("/api/orgs","POST",{name:$("n").value,description:$("d").value,country:$("c").value,region:$("r").value}).then(function(r){busy(b,false);
-      if(!r.ok){$("msg").innerHTML=errBox(r);return}toast("Organization created");loadMe().then(function(){go("/app/org/"+r.data.org.slug)})})}}
+// ---------- create an organization: a 9-step setup ----------
+var KINDS_D={league:"Runs a league or tournaments",school:"School sports and inter-house games",club:"A club with one or more teams",academy:"Youth or training academy",company:"Company or corporate games",
+  community:"Community or neighbourhood games",association:"Federation or association",other:"Anything else"};
+var BRAND_SW=["#2563eb","#1e3a8a","#0ea5e9","#0f766e","#16a34a","#ca8a04","#ea580c","#dc2626","#db2777","#7c3aed"];
+var WSTEPS=["Name","Type","Description","Logo","Location and time zone","Branding","Public address","Invite your staff","Review and finish"],WZ=null;
+function slugify(s){s=String(s||"").toLowerCase();try{s=s.normalize("NFKD").replace(/[̀-ͯ]/g,"")}catch(e){}
+  s=s.replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,50).replace(/-+$/,"");return s.length>=3?s:(s?s+"-org":"")}
+function tzList(){try{return Intl.supportedValuesOf("timeZone")}catch(e){return[]}}
+function tzGuess(){try{return Intl.DateTimeFormat().resolvedOptions().timeZone||""}catch(e){return""}}
+function tzSelect(id,val){var l=tzList();if(val&&l.indexOf(val)<0)l=[val].concat(l);
+  return l.length?'<select id="'+id+'"><option value="">Not set</option>'+l.map(function(z){return'<option'+(z===val?" selected":"")+'>'+esc(z)+'</option>'}).join("")+'</select>':'<input id="'+id+'" maxlength="60" value="'+esc(val||"")+'" placeholder="Africa/Accra">'}
+function createOrgView(){var team=new URLSearchParams(location.search).get("intent")==="team";document.title="Create organization · Competition Manager";
+  WZ={step:0,d:{name:"",kind:team?"club":"league",description:"",logo:null,country:"",region:"",timezone:tzGuess(),brandColor:BRAND_SW[0],slug:"",slugTouched:false,invites:[{email:"",role:"admin"}]}};
+  loadRoles().then(wzDraw)}
+function wzBody(){var d=WZ.d,st=WZ.step,H=function(t,p){return'<h2>'+t+'</h2><p class="note" style="margin-top:0">'+p+'</p>'};
+  switch(st){
+  case 0:return H("What's it called?","The name everyone will see, e.g. “Kasoa Community League” or “St. Mary's School Sports”.")+'<label for="wn">Organization name<input id="wn" maxlength="80" value="'+esc(d.name)+'" required></label>';
+  case 1:return H("What kind of organization is it?","This helps people recognise you. You can change it later.")+'<div class="kinds" role="radiogroup" aria-label="Type">'+(ROLES.kinds||[]).map(function(k){
+    return'<button type="button" role="radio" aria-checked="'+(d.kind===k.key)+'" class="'+(d.kind===k.key?"on":"")+'" data-k="'+k.key+'"><b>'+esc(k.label)+'</b><small>'+esc(KINDS_D[k.key]||"")+'</small></button>'}).join("")+'</div>';
+  case 2:return H("Describe it","One or two sentences for your dashboard and public website. Optional.")+'<label for="wd">Description<textarea id="wd" maxlength="2000" placeholder="Who plays, where and when?">'+esc(d.description)+'</textarea></label>';
+  case 3:return H("Add a logo","Shown on your cards, dashboard and public website. PNG, JPG, GIF or WebP up to 256 KB. Optional.")+
+    '<div class="ch" style="margin-top:10px">'+avatar({name:d.name,logo:d.logo,brandColor:d.brandColor},72)+'<div><label for="wl" style="margin:0">Choose an image<input id="wl" type="file" accept="image/png,image/jpeg,image/gif,image/webp"></label>'+(d.logo?'<button type="button" class="btn g sm" id="wlx" style="margin-top:8px">Remove</button>':'')+'</div></div>';
+  case 4:return H("Where are you based?","Used on your public website. The time zone helps your team schedule matches.")+
+    '<div class="row"><label for="wc">Country<input id="wc" maxlength="60" value="'+esc(d.country)+'" placeholder="Ghana"></label><label for="wr">Region / city<input id="wr" maxlength="60" value="'+esc(d.region)+'" placeholder="Central"></label></div><label for="wt">Time zone'+tzSelect("wt",d.timezone)+'</label>';
+  case 5:return H("Pick your colour","Your brand colour is used on your public website and organization cards.")+
+    '<div class="sw" role="radiogroup" aria-label="Brand colour">'+BRAND_SW.map(function(c){return'<button type="button" role="radio" aria-checked="'+(d.brandColor===c)+'" aria-label="'+c+'" class="'+(d.brandColor===c?"on":"")+'" data-c="'+c+'" style="background:'+c+'"></button>'}).join("")+
+    '<label style="margin:0 0 0 6px;display:flex;align-items:center;gap:6px">Custom <input id="wcol" type="color" value="'+safeColor(d.brandColor)+'"></label></div>'+
+    '<div class="prev" style="--pc:'+safeColor(d.brandColor)+';background:linear-gradient(135deg,'+safeColor(d.brandColor)+'33,transparent 70%)">'+avatar({name:d.name,logo:d.logo,brandColor:d.brandColor},56)+'<div><b>'+esc(d.name)+'</b><div class="note">Preview of your public website header</div></div><span style="margin-left:auto;background:'+safeColor(d.brandColor)+';color:'+inkOn(d.brandColor)+'" class="btn sm" aria-hidden="true">Follow</span></div>';
+  case 6:return H("Choose your public address","This is the link you'll share with your community. Lowercase letters, numbers and dashes.")+
+    '<label for="ws">Public address<div class="slugrow"><span>'+esc(location.host)+'/org/</span><input id="ws" maxlength="50" value="'+esc(d.slug)+'" autocapitalize="none" spellcheck="false"></div></label><div id="wsm" class="note" style="margin-top:6px" aria-live="polite"></div>';
+  case 7:var roles=ROLES.roles.filter(function(r){return r.key!=="owner"});
+    return H("Invite your staff","They'll get an email with a link to join. Optional: you can also invite people later, or share an invitation link on WhatsApp.")+
+    '<div id="wirows">'+d.invites.map(function(v,i){return'<div class="irow"><label style="margin:0">Email<input type="email" data-ie="'+i+'" value="'+esc(v.email)+'" placeholder="name@example.com" autocomplete="off"></label><label style="margin:0">Role<select data-ir="'+i+'">'+roles.map(function(r){return'<option value="'+r.key+'"'+(r.key===v.role?" selected":"")+'>'+esc(r.label)+'</option>'}).join("")+'</select></label><button type="button" class="btn g sm" data-ix="'+i+'" aria-label="Remove">✕</button></div>'}).join("")+'</div>'+
+    '<div class="actions"><button type="button" class="btn g sm" id="wiadd">'+ic("plus")+' Add another</button></div>';
+  case 8:var inv=d.invites.filter(function(v){return v.email.trim()});
+    return H("Ready to go","Check the details, then create your organization. You can change all of this later.")+
+    '<div class="prev" style="--pc:'+safeColor(d.brandColor)+'">'+avatar({name:d.name,logo:d.logo,brandColor:d.brandColor},56)+'<div><b>'+esc(d.name)+'</b><div class="note">'+esc((ROLES.kinds.filter(function(k){return k.key===d.kind})[0]||{}).label||"")+(d.region||d.country?' · '+esc([d.region,d.country].filter(Boolean).join(", ")):'')+'</div></div></div>'+
+    '<dl class="kv" style="margin-top:14px"><dt>Public address</dt><dd>'+esc(location.host+"/org/"+d.slug)+'</dd><dt>Time zone</dt><dd>'+esc(d.timezone||"Not set")+'</dd><dt>Description</dt><dd>'+esc(d.description||"—")+'</dd><dt>Invitations</dt><dd>'+(inv.length?inv.map(function(v){return esc(v.email)+' ('+esc(roleLabel(v.role))+')'}).join("<br>"):"None yet")+'</dd></dl>'}}
+function wzSave(){var d=WZ.d,st=WZ.step;
+  if(st===0){d.name=val("wn").trim();if(!d.slugTouched)d.slug=slugify(d.name)}
+  if(st===2)d.description=val("wd");
+  if(st===4){d.country=val("wc").trim();d.region=val("wr").trim();d.timezone=val("wt")}
+  if(st===6){d.slug=val("ws").trim().toLowerCase()}
+  if(st===7)document.querySelectorAll("[data-ie]").forEach(function(i){d.invites[+i.dataset.ie].email=i.value.trim()})}
+function wzDraw(){var st=WZ.step,d=WZ.d,skip=st>=2&&st<=7;
+  var form='<div class="wzbar" aria-hidden="true">'+WSTEPS.map(function(_,i){return'<i class="'+(i<st?"done":i===st?"on":"")+'"></i>'}).join("")+'</div><div class="wzstep">Step '+(st+1)+' of '+WSTEPS.length+' · '+WSTEPS[st]+'</div>'+wzBody()+'<div id="msg"></div>'+
+    '<div class="actions" style="justify-content:space-between;margin-top:18px"><div>'+(st?'<button type="button" class="btn g" id="wzb">← Back</button>':'<a class="btn g" href="'+mineUrl()+'" data-nav>Cancel</a>')+'</div>'+
+    '<div style="display:flex;gap:8px">'+(skip&&st!==6?'<button type="button" class="btn g" id="wzs">Skip</button>':'')+'<button class="btn" id="wzn">'+(st===WSTEPS.length-1?ic("check")+" Create organization":"Continue →")+'</button></div></div>';
+  if($("wzf"))$("wzf").innerHTML=form;
+  else UM('<div class="wz"><div class="ph"><div><h1>Create an organization</h1><p>Takes about a minute. Everything can be changed later.</p></div></div><form class="card" id="wzf" novalidate>'+form+'</form></div>',{key:"new"});
+  var f=$("wzf").querySelector("input:not([type=file]):not([type=color]),textarea,select");if(f&&st!==7)f.focus();
+  if($("wzb"))$("wzb").onclick=function(){wzSave();WZ.step--;wzDraw()};
+  if($("wzs"))$("wzs").onclick=function(){if(st===7)d.invites=[{email:"",role:"admin"}];WZ.step++;wzDraw()};
+  document.querySelectorAll("[data-k]").forEach(function(b){b.onclick=function(){d.kind=b.dataset.k;wzDraw()}});
+  document.querySelectorAll("[data-c]").forEach(function(b){b.onclick=function(){d.brandColor=b.dataset.c;wzDraw()}});
+  if($("wcol"))$("wcol").onchange=function(){d.brandColor=this.value.toLowerCase();wzDraw()};
+  if($("wl"))$("wl").onchange=function(){var fl=this.files[0];if(!fl)return;if(fl.size>256*1024){toast("The logo must be smaller than 256 KB",true);return}
+    if(!/^image\/(png|jpeg|gif|webp)$/.test(fl.type)){toast("Use a PNG, JPG, GIF or WebP image",true);return}var rd=new FileReader();rd.onload=function(){d.logo=rd.result;wzDraw()};rd.readAsDataURL(fl)};
+  if($("wlx"))$("wlx").onclick=function(){d.logo=null;wzDraw()};
+  if($("wiadd"))$("wiadd").onclick=function(){wzSave();if(d.invites.length>=10){toast("Add up to 10 here; invite more later",true);return}d.invites.push({email:"",role:"organizer"});wzDraw()};
+  document.querySelectorAll("[data-ir]").forEach(function(s){s.onchange=function(){d.invites[+s.dataset.ir].role=s.value}});
+  document.querySelectorAll("[data-ix]").forEach(function(b){b.onclick=function(){wzSave();d.invites.splice(+b.dataset.ix,1);if(!d.invites.length)d.invites.push({email:"",role:"admin"});wzDraw()}});
+  var check=function(){var s=val("ws").trim().toLowerCase();if(!s){$("wsm").textContent="";return Promise.resolve(false)}
+    return api("/api/org-slug?slug="+encodeURIComponent(s)+"&name="+encodeURIComponent(d.name)).then(function(r){if(!$("wsm"))return false;var x=r.data||{};
+      $("wsm").innerHTML=!x.valid?'<span style="color:#ff8fa3">Use 3–50 lowercase letters, numbers or dashes (no dash at the start or end).</span>'
+        :x.available?'<span style="color:var(--ok)">'+ic("check")+' Available: '+esc(location.origin+"/org/"+s)+'</span>':'<span style="color:#ff8fa3">That address is taken.</span> Try <a href="#" id="wsug">'+esc(x.suggestion)+'</a>';
+      if($("wsug"))$("wsug").onclick=function(e){e.preventDefault();$("ws").value=x.suggestion;d.slugTouched=true;check()};return!!x.available})};
+  if($("ws")){var t;$("ws").oninput=function(){d.slugTouched=true;clearTimeout(t);t=setTimeout(check,350)};check()}
+  $("wzf").onsubmit=function(e){e.preventDefault();wzSave();$("msg").innerHTML="";
+    if(st===0&&d.name.length<2){$("msg").innerHTML=errBox({data:{error:"Give the organization a name (at least 2 characters)."}});return}
+    if(st===6)return check().then(function(ok){if(ok){WZ.step++;wzDraw()}else if(!$("wsm").textContent)$("wsm").innerHTML='<span style="color:#ff8fa3">Choose a public address.</span>'});
+    if(st===7){var bad=d.invites.filter(function(v){return v.email&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.email)})[0];if(bad){$("msg").innerHTML=errBox({data:{error:"Check the email address: "+bad.email}});return}}
+    if(st<WSTEPS.length-1){WZ.step++;wzDraw();return}
+    wzFinish()}}
+function wzFinish(){var d=WZ.d,b=$("wzn");busy(b,true,"Creating…");
+  api("/api/orgs","POST",{name:d.name,kind:d.kind,description:d.description,country:d.country,region:d.region,timezone:d.timezone,brandColor:d.brandColor,slug:d.slug}).then(function(r){
+    if(!r.ok){busy(b,false);$("msg").innerHTML=errBox(r);if(r.status===409){WZ.step=6;setTimeout(wzDraw,1200)}return}
+    var slug=r.data.org.slug,problems=[],chain=Promise.resolve();
+    if(d.logo)chain=chain.then(function(){return api("/api/orgs/"+slug+"/logo","POST",{image:d.logo}).then(function(x){if(!x.ok)problems.push("logo: "+(x.data.error||"upload failed"))})});
+    d.invites.filter(function(v){return v.email}).forEach(function(v){chain=chain.then(function(){return api("/api/orgs/"+slug+"/invitations","POST",{email:v.email,role:v.role}).then(function(x){if(!x.ok)problems.push(v.email+": "+(x.data.error||"not invited"))})})});
+    chain.then(function(){WZ=null;toast(problems.length?"Created. Some steps need attention: "+problems.join("; "):(r.data.pending?"Created. It goes public once a platform admin approves it.":"Organization created"),problems.length>0);
+      loadMe().then(function(){go("/app/org/"+slug)})})})}
 
 // ---------- one organization ----------
-var SECTIONS=[["overview","Overview"],["competitions","Competitions"],["teams","Teams"],["players","Players"],["fixtures","Fixtures"],["matches","Matches"],
-  ["results","Results"],["tables","League tables"],["members","Members"],["invitations","Invitations","members.invite"],["announcements","Announcements"],["settings","Settings"]];
+var OGROUPS=["Overview","Competition management","People","Organization","Public website"];
+var SECTIONS=[["overview","Dashboard","Overview",0,"home"],["activity","Activity","Overview",0,"pulse"],["notifications","Notifications","Overview",0,"bell"],
+  ["competitions","Competitions","Competition management",0,"trophy"],["newcomp","Create competition","Competition management","competitions.manage","plus"],["fixtures","Fixtures","Competition management",0,"cal"],
+  ["results","Results","Competition management",0,"check"],["tables","Standings","Competition management",0,"list"],["brackets","Brackets","Competition management",0,"bracket"],
+  ["teams","Teams","People",0,"shield"],["players","Players","People",0,"user"],["coaches","Coaches","People",0,"whistle"],["staff","Staff","People",0,"badge"],["members","Members","People",0,"users"],["invitations","Invitations","People","members.invite","mail"],
+  ["profile","Organization profile","Organization",0,"building"],["branding","Branding","Organization","org.settings","palette"],["settings","Organization settings","Organization",0,"sliders"],["roles","Roles & permissions","Organization",0,"key"],["access","Team access","Organization",0,"lock"],
+  ["site","Public site","Public website",0,"globe"],["website","Website settings","Public website","org.settings","sliders"],["pages","Pages","Public website","org.settings","file"],["announcements","Announcements","Public website",0,"megaphone"],["link","Public link","Public website",0,"link"],["preview","Preview website","Public website",0,"eye"]];
 var ORG=null;
 function has(p){return ORG&&ORG.me.perms.indexOf(p)>=0}
 function api0(path){return"/api/orgs/"+ORG.org.slug+path}
 function app0(path){return"/app/org/"+ORG.org.slug+(path||"")}
-var LOADING='<div class="card note">Loading…</div>';
+var LOADING='<div class="card note" aria-busy="true">Loading…</div>';
 function fail(r){$("sec").innerHTML='<div class="card">'+errBox(r)+'</div>'}
+function reloadOrg(section){return loadMe().then(function(){orgView(ORG.org.slug,section)})}
 function orgView(slug,section,rest){
   Promise.all([api("/api/orgs/"+slug),loadRoles()]).then(function(res){var r=res[0];
-    if(!r.ok){main('<div class="card empty"><h2>Organization not found</h2><p class="note">It doesn\'t exist, or you\'re not a member. Ask its owner for an invitation.</p><a class="btn" href="/app" data-nav>My organizations</a></div>');return}
-    ORG=r.data;var o=ORG.org,base="/app/org/"+o.slug,navOn=section==="match"?"matches":section;document.title=o.name+" · Competition Manager";
-    var label=(SECTIONS.filter(function(s){return s[0]===navOn})[0]||[0,""])[1];
-    UM('<div class="orghead"><div><h1>'+esc(o.name)+'</h1><div class="note">'+pill(ORG.me.role,ORG.me.roleLabel)+(o.region||o.country?' · '+esc([o.region,o.country].filter(Boolean).join(", ")):"")+'</div></div></div><section id="sec"></section>',
-      {org:o.slug,section:navOn,crumbs:'<nav class="crumbs" aria-label="Breadcrumb"><a href="'+(ME.superAdmin?"/app?view=orgs":"/app")+'" data-nav>My organizations</a><span>/</span><a href="'+base+'" data-nav>'+esc(o.name)+'</a>'+(navOn!=="overview"?'<span>/</span><b style="color:var(--tx)">'+esc(label)+'</b>':'')+'</nav>'});
-    var S={overview:overview,members:membersSec,invitations:invitationsSec,settings:settingsSec,competitions:competitionsSec,teams:teamsSec,players:playersSec,
-      fixtures:function(){matchesSec("upcoming")},results:function(){matchesSec("results")},matches:function(){matchesSec("all")},tables:tablesSec,announcements:announcementsSec,match:matchPage}[section];
-    if(!S||(section==="invitations"&&!has("members.invite"))){$("sec").innerHTML='<div class="card empty"><h2>Page not found</h2></div>';return}
+    if(!r.ok){UM('<div class="card empty">'+ic("building")+'<h2>Organization not found</h2><p class="note">It doesn\'t exist, or you\'re not a member. Ask its owner for an invitation.</p><a class="btn" href="'+mineUrl()+'" data-nav>My organizations</a></div>',{key:"orgs"});return}
+    ORG=r.data;var o=ORG.org,base="/app/org/"+o.slug,navOn={match:"fixtures",matches:"fixtures"}[section]||section;document.title=o.name+" · Competition Manager";topnav();
+    var sec=SECTIONS.filter(function(s){return s[0]===navOn})[0],label=sec?sec[1]:"";
+    UM('<div class="ahead"><div><div class="note">'+esc(o.name)+' · '+esc(o.kindLabel)+'</div><h1>'+esc(label)+'</h1></div><div class="note" style="text-align:right">You\'re '+(/^[aeiou]/i.test(ORG.me.roleLabel)?"an ":"a ")+pill(ORG.me.role,ORG.me.roleLabel)+' here<br><a href="'+base+'/roles" data-nav>What can I do?</a></div></div>'+
+      (o.status==="pending"?'<div class="banner">This organization is waiting for a platform admin to approve it. Everything works, but its public website isn\'t live yet.</div>':o.status==="suspended"?'<div class="banner">This organization has been suspended by the platform. Its public pages are hidden. Contact support for help.</div>':'')+
+      '<section id="sec"></section>',
+      {org:o.slug,section:navOn,crumbs:'<nav class="crumbs" aria-label="Breadcrumb"><a href="'+mineUrl()+'" data-nav>My organizations</a><span>/</span><a href="'+base+'" data-nav>'+esc(o.name)+'</a>'+(navOn!=="overview"?'<span>/</span><b style="color:var(--tx)">'+esc(label)+'</b>':'')+'</nav>'});
+    var S={overview:overview,activity:activitySec,notifications:notificationsSec,competitions:competitionsSec,fixtures:function(){matchesSec("upcoming")},results:function(){matchesSec("results")},matches:function(){matchesSec("all")},
+      tables:tablesSec,brackets:bracketsSec,teams:teamsSec,players:playersSec,coaches:function(){peopleSec("coaches")},staff:function(){peopleSec("staff")},members:function(){peopleSec("all")},invitations:invitationsSec,
+      profile:profileSec,branding:brandingSec,settings:settingsSec,roles:rolesSec,access:accessSec,site:siteSec,website:websiteSec,pages:pagesSec,announcements:announcementsSec,link:linkSec,match:matchPage}[section];
+    if(!S||(sec&&sec[3]&&!has(sec[3]))){$("sec").innerHTML='<div class="card empty">'+ic("lock")+'<h2>'+(S?"Not available for your role":"Page not found")+'</h2><p class="note">'+(S?"Your role doesn't include this. Ask the owner if you need it.":"")+'</p><a class="btn g" href="'+base+'" data-nav>Back to the dashboard</a></div>';return}
     $("sec").innerHTML=LOADING;S(rest)})}
 
 // ---------- shared pieces ----------
@@ -276,7 +465,7 @@ function opts(map,val){return Object.keys(map).map(function(k){return'<option va
 function crest(t,size){size=size||28;var st='width:'+size+'px;height:'+size+'px';if(!t)return'<span class="crest" style="'+st+'">?</span>';
   if(t.logo)return'<img class="crest" src="'+esc(t.logo)+'" alt="" style="'+st+'">';var h=0,n=t.name||"";for(var i=0;i<n.length;i++)h=(h*31+n.charCodeAt(i))%360;
   return'<span class="crest" style="'+st+';background:hsl('+h+',55%,38%)">'+esc((t.shortName||n).replace(/[^A-Za-z0-9]/g,"").slice(0,3).toUpperCase())+'</span>'}
-function cCrest(c,size){size=size||36;return c.logo?'<img class="crest" src="'+esc(c.logo)+'" alt="" style="width:'+size+'px;height:'+size+'px">':'<span class="crest" style="width:'+size+'px;height:'+size+'px;background:#0f4d33;color:var(--gold)">'+ic("trophy")+'</span>'}
+function cCrest(c,size){size=size||36;return c.logo?'<img class="crest" src="'+esc(c.logo)+'" alt="" style="width:'+size+'px;height:'+size+'px">':'<span class="crest" style="width:'+size+'px;height:'+size+'px;background:#1b3f8a;color:var(--gold)">'+ic("trophy")+'</span>'}
 function when(iso){if(!iso)return"Date to be set";var d=new Date(iso);return d.toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"short"})+" · "+d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"})}
 function toLocal(iso){if(!iso)return"";var d=new Date(iso),p=function(x){return String(x).padStart(2,"0")};return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+"T"+p(d.getHours())+":"+p(d.getMinutes())}
 function fromLocal(v){return v?new Date(v).toISOString():null}
@@ -309,27 +498,100 @@ function shareBox(path,name,extra){var url=location.origin+path,t=encodeURICompo
     '<a class="btn g sm" href="https://twitter.com/intent/tweet?url='+u+'&text='+t+'" target="_blank" rel="noopener">X</a><a class="btn g sm" href="https://t.me/share/url?url='+u+'&text='+t+'" target="_blank" rel="noopener">Telegram</a></div>'+(extra||"")+'</section>'}
 document.addEventListener("focusin",function(e){if(e.target.classList&&e.target.classList.contains("sbx-url"))e.target.select()});
 
-// ---------- overview ----------
-function overview(){var o=ORG.org,st=ORG.stats,mine=(ROLES.permissions||[]).filter(function(p){return has(p.key)});
-  api(api0("/summary")).then(function(r){var s=r.data||{};
-    $("sec").innerHTML='<div class="stats"><div class="stat"><b>'+(s.activeCompetitions||0)+'</b><span>Active competitions</span></div><div class="stat"><b>'+(s.teams||0)+'</b><span>Registered teams</span></div>'+
-      '<div class="stat"><b>'+(s.upcoming||0)+'</b><span>Upcoming matches</span></div><div class="stat"><b>'+(s.completed||0)+'</b><span>Completed matches</span></div>'+
-      '<div class="stat"><b>'+st.members+'</b><span>Members</span></div>'+(has("members.invite")?'<div class="stat"><b>'+st.pendingInvitations+'</b><span>Pending invitations</span></div>':'')+'</div>'+
-      (!s.competitions&&has("competitions.manage")?'<div class="card"><div class="gh">GET STARTED</div><ol style="margin:0;padding-left:20px;line-height:1.9"><li><a href="'+app0("/teams")+'" data-nav>Add your teams</a></li><li><a href="'+app0("/competitions")+'" data-nav>Create a competition</a> and enter the teams</li><li>Generate the fixtures, then enter results as matches are played</li><li>The league table updates by itself</li></ol></div>':'')+
-      '<div class="card"><div class="gh">NEXT MATCHES</div>'+matchList(s.nextMatches||[],{comp:1,by:"date",empty:"No upcoming matches with a date."})+'</div>'+
-      '<div class="card"><div class="gh">RECENT RESULTS</div>'+matchList(s.recentResults||[],{comp:1,by:"date",empty:"No results yet."})+'</div>'+
-      (o.description?'<div class="card"><div class="gh">ABOUT</div><p style="margin:0;white-space:pre-wrap">'+esc(o.description)+'</p></div>':'')+
-      shareBox("/organization/"+o.slug,o.name,'<p class="note" style="margin:12px 0 0">This is the public page of your organization, listing all its public competitions. Each competition also has its own link: open it under <a href="'+app0("/competitions")+'" data-nav>Competitions</a>.</p>')+
-      '<div class="card"><div class="gh">WHAT YOU CAN DO HERE</div><p class="note" style="margin-top:0">As '+esc(ORG.me.roleLabel)+':</p><ul style="margin:0;padding-left:20px">'+mine.map(function(p){return'<li>'+esc(p.label)+'</li>'}).join("")+'</ul></div>'+
-      '<div class="card"><div class="gh">RECENT ACTIVITY</div><div class="feed">'+(ORG.events.length?ORG.events.map(function(e){return'<div>'+ago(e.ts)+' · <b>'+esc(e.actor||"—")+'</b> '+esc(e.action)+'</div>'}).join(""):'<div>Nothing yet.</div>')+'</div></div>'})}
+// ---------- dashboard ----------
+function feed(evs){return evs&&evs.length?evs.map(function(e){return'<div>'+ago(e.ts)+' · <b>'+esc(e.actor||"—")+'</b> '+esc(e.action)+'</div>'}).join(""):'<div>Nothing yet.</div>'}
+function overview(){var o=ORG.org;
+  api(api0("/summary")).then(function(r){if(!r.ok)return fail(r);var s=r.data;
+    var K=function(v,label,path,sub,cls){return'<a class="kpi'+(cls?" "+cls:"")+'" href="'+app0(path)+'" data-nav><span>'+label+'</span><b>'+n(v)+'</b>'+(sub?'<small>'+sub+'</small>':'')+'</a>'};
+    var qa=[];
+    if(has("competitions.manage"))qa.push('<a class="btn sm" href="'+app0("/competitions?new=1")+'" data-nav>'+ic("plus")+' Create competition</a>');
+    if(has("teams.manage"))qa.push('<a class="btn g sm" href="'+app0("/teams?new=1")+'" data-nav>'+ic("shield")+' Add team</a>');
+    if(has("members.invite")){qa.push('<a class="btn g sm" href="'+app0("/invitations?role="+(ORG.me.assignable.indexOf("organizer")>=0?"organizer":"scorekeeper"))+'" data-nav>'+ic("badge")+' Invite staff</a>');
+      qa.push('<a class="btn g sm" href="'+app0("/invitations?role=viewer")+'" data-nav>'+ic("mail")+' Invite members</a>')}
+    if(has("fixtures.manage"))qa.push('<a class="btn g sm" href="'+app0("/competitions?pick=fixtures")+'" data-nav>'+ic("cal")+' Create match</a>');
+    if(has("content.edit"))qa.push('<a class="btn g sm" href="'+app0("/announcements")+'" data-nav>'+ic("megaphone")+' Publish announcement</a>');
+    qa.push('<a class="btn g sm" href="/org/'+esc(o.slug)+'" target="_blank" rel="noopener">'+ic("globe")+' Open public site ↗</a>');
+    $("sec").innerHTML='<div class="qa" aria-label="Quick actions">'+qa.join("")+'</div>'+
+      '<div class="kpis">'+K(s.activeCompetitions,"Active competitions","/competitions",s.competitions+" in total")+K(s.teams,"Total teams","/teams")+K(s.players,"Total players","/players")+
+        K(s.staff,"Staff","/staff",s.members+" member"+(s.members===1?"":"s")+" in total")+K(s.upcoming,"Upcoming matches","/fixtures")+K(s.completed,"Matches played","/results")+
+        (s.pendingInvitations!=null?K(s.pendingInvitations,"Pending invitations","/invitations"):"")+(s.awaitingResults?K(s.awaitingResults,"Waiting for a result","/fixtures","Kicked off, no score yet","warn"):"")+'</div>'+
+      (!s.competitions&&has("competitions.manage")?'<div class="card"><div class="gh">Get started</div><ol style="margin:0;padding-left:20px;line-height:1.9"><li><a href="'+app0("/teams?new=1")+'" data-nav>Add your teams</a></li><li><a href="'+app0("/competitions?new=1")+'" data-nav>Create a competition</a> and enter the teams</li><li>Generate the fixtures, then enter results as matches are played</li><li>Share your <a href="'+app0("/link")+'" data-nav>public link</a>: the tables update by themselves</li></ol></div>':'')+
+      '<div class="agrid"><div class="card"><div class="gh">Upcoming matches</div>'+matchList(s.nextMatches||[],{comp:1,by:"date",empty:"No upcoming matches with a date."})+'</div>'+
+      '<div class="card"><div class="gh">Recent results</div>'+matchList(s.recentResults||[],{comp:1,by:"date",empty:"No results yet."})+'</div></div>'+
+      '<div class="agrid" style="margin-top:14px"><div class="card"><div class="gh">Recent activity</div><div class="feed">'+feed(s.activity)+'</div><p style="margin:10px 0 0"><a href="'+app0("/activity")+'" data-nav>All activity →</a></p></div>'+
+      '<div class="card"><div class="gh">Your access</div><p style="margin-top:0">'+pill(ORG.me.role,ORG.me.roleLabel)+' <span class="note">'+esc((ROLES.roles.filter(function(x){return x.key===ORG.me.role})[0]||{}).description||"")+'</span></p><ul class="note" style="margin:0;padding-left:18px;line-height:1.7">'+
+        (ROLES.permissions||[]).filter(function(p){return has(p.key)}).map(function(p){return'<li>'+esc(p.label)+'</li>'}).join("")+'</ul></div></div>'})}
+
+// ---------- activity & notifications ----------
+function activitySec(){var all=[],more=function(before){api(api0("/activity"+(before?"?before="+before:""))).then(function(r){if(!r.ok)return fail(r);all=all.concat(r.data.events);
+    $("sec").innerHTML='<div class="card"><div class="gh">Everything that happened in '+esc(ORG.org.name)+'</div><div class="feed">'+all.map(function(e){return'<div><span title="'+esc(dt(e.ts))+'">'+ago(e.ts)+'</span> · <b>'+esc(e.actor||"—")+'</b> '+esc(e.action)+'</div>'}).join("")+(all.length?'':'<div>Nothing yet.</div>')+'</div>'+
+      (r.data.more?'<div class="actions"><button class="btn g sm" id="amore">Show older</button></div>':'')+'</div>';
+    if($("amore"))$("amore").onclick=function(){busy(this,true,"Loading…");more(all[all.length-1].id)}})};more()}
+function seenKey(){return"seen:"+ORG.org.slug}
+function notificationsSec(){var since=0;try{since=+localStorage.getItem(seenKey())||0}catch(e){}
+  Promise.all([api(api0("/summary")),api(api0("/activity"))]).then(function(res){if(!res[0].ok)return fail(res[0]);var s=res[0].data,evs=(res[1].data||{}).events||[],items=[],soon=Date.now()+48*3600e3;
+    var I=function(icon,title,sub,path){items.push('<a href="'+app0(path)+'" data-nav>'+ic(icon)+'<span><b>'+title+'</b><small>'+sub+'</small></span></a>')};
+    if(ORG.org.status==="pending")I("globe","Waiting for approval","Your public website goes live once a platform admin approves the organization.","/site");
+    if(s.awaitingResults&&has("results.enter"))I("check",s.awaitingResults+" match"+(s.awaitingResults===1?"":"es")+" waiting for a result","They've kicked off but have no score yet.","/fixtures");
+    (s.nextMatches||[]).filter(function(m){return m.kickoff&&new Date(m.kickoff).getTime()<soon}).forEach(function(m){I("cal","Kick-off soon: "+esc(m.home?m.home.name:"TBD")+" vs "+esc(m.away?m.away.name:"TBD"),esc(when(m.kickoff))+" · "+esc(m.competition.name),"/match/"+m.id)});
+    if(s.pendingInvitations)I("mail",s.pendingInvitations+" invitation"+(s.pendingInvitations===1?"":"s")+" not accepted yet","Resend or share the link again if needed.","/invitations");
+    var fresh=evs.filter(function(e){return e.ts>since&&e.actor!==ME.username});
+    $("sec").innerHTML='<div class="card"><div class="gh">Needs your attention</div>'+(items.length?'<div class="nlist">'+items.join("")+'</div>':'<p class="note">'+ic("check")+' All clear. Nothing needs your attention.</p>')+'</div>'+
+      '<div class="card"><div class="gh">New since your last visit · '+fresh.length+'</div><div class="feed">'+(fresh.length?feed(fresh.slice(0,30)):'<div>No new updates from your team.</div>')+'</div></div>';
+    try{localStorage.setItem(seenKey(),String(Date.now()))}catch(e){}})}
+
+// ---------- brackets ----------
+function bracketsSec(){api(api0("/competitions")).then(function(cr){if(!cr.ok)return fail(cr);var cs=(cr.data.competitions||[]).filter(function(c){return c.format!=="league"});
+  if(!cs.length){$("sec").innerHTML='<div class="card empty">'+ic("bracket")+'<h2>No knockout competitions yet</h2><p class="note">Create a cup or a “groups, then knockouts” competition to get a bracket.</p>'+(has("competitions.manage")?'<a class="btn" href="'+app0("/competitions?new=1")+'" data-nav>'+ic("plus")+' Create competition</a>':'')+'</div>';return}
+  var sel=new URLSearchParams(location.search).get("competition")||cs[0].slug;
+  $("sec").innerHTML='<div class="card"><div class="gh">Knockout brackets</div>'+(cs.length>1?'<label for="bf" style="max-width:320px;margin-top:0">Competition<select id="bf">'+cs.map(function(c){return'<option value="'+esc(c.slug)+'"'+(c.slug===sel?" selected":"")+'>'+esc(c.name)+'</option>'}).join("")+'</select></label>':'')+'<div id="bout" style="margin-top:12px">'+LOADING+'</div></div>';
+  var load=function(){api(api0("/competitions/"+sel+"/matches")).then(function(r){if(!r.ok){$("bout").innerHTML=errBox(r);return}
+    var ko=r.data.matches.filter(function(m){return m.stage==="knockout"}),rounds=[],idx={};
+    ko.forEach(function(m){var k=m.roundName||("Round "+m.round);if(!(k in idx)){idx[k]=rounds.length;rounds.push([k,[]])}rounds[idx[k]][1].push(m)});
+    var side=function(t,mine,theirs,played){return'<div><span'+(played&&mine>theirs?' class="w"':'')+'>'+(t?esc(t.name):'<small>To be decided</small>')+'</span><b>'+(played?mine:"")+'</b></div>'};
+    $("bout").innerHTML=rounds.length?'<div class="bracket">'+rounds.map(function(rd){return'<div class="rnd"><h3>'+esc(rd[0])+'</h3>'+rd[1].map(function(m){var p=m.homeScore!=null;
+      return'<a class="bm" href="'+app0("/match/"+m.id)+'" data-nav>'+side(m.home,m.homeScore,m.awayScore,p)+side(m.away,m.awayScore,m.homeScore,p)+'<small>'+(m.leg>1?"2nd leg · ":"")+esc(m.kickoff?when(m.kickoff):"Date to be set")+'</small></a>'}).join("")+'</div>'}).join("")+'</div>'
+      :'<p class="note">No knockout rounds drawn yet.'+(has("fixtures.manage")?' Open the competition\'s <a href="'+app0("/competitions/"+sel+"/fixtures")+'" data-nav>Fixtures</a> tab to draw a round.':'')+'</p>'})};
+  if($("bf"))$("bf").onchange=function(){sel=val("bf");history.replaceState(null,"",location.pathname+"?competition="+encodeURIComponent(sel));load()};load()})}
+
+// ---------- public website ----------
+var PAGES=[["show_competitions","Competitions","Your public competitions with their logos."],["show_fixtures","Fixtures","Upcoming matches."],["show_results","Results","Recent scores."],
+  ["show_standings","Standings","League tables of your competitions."],["show_brackets","Brackets","Knockout rounds of your cups."],["show_teams","Teams","Every team playing in a public competition."],
+  ["show_players","Players","Squad lists (names and shirt numbers)."],["show_news","News","Your published announcements."]];
+function siteSec(){var o=ORG.org,w=o.website,live=o.status==="active";
+  api(api0("/competitions")).then(function(r){var cs=(r.data.competitions||[]),pub=cs.filter(function(c){return c.visibility==="public"});
+    $("sec").innerHTML='<div class="agrid"><div class="card"><div class="gh">Status</div><p style="margin-top:0">'+(live?'<span class="sb green">Live</span> Anyone can open your website.':'<span class="sb amber">Not live</span> '+(o.status==="pending"?"Waiting for platform approval.":"Suspended by the platform."))+'</p>'+
+      '<p class="note">'+pub.length+' of '+cs.length+' competition'+(cs.length===1?" is":"s are")+' public. Only public competitions (and their teams, matches and tables) appear on the website. Change a competition\'s visibility under its Settings tab.</p>'+
+      '<div class="actions"><a class="btn" href="/org/'+esc(o.slug)+'" target="_blank" rel="noopener">'+ic("eye")+' Preview website ↗</a>'+(has("org.settings")?'<a class="btn g" href="'+app0("/website")+'" data-nav>Website settings</a><a class="btn g" href="'+app0("/branding")+'" data-nav>Branding</a>':'')+'</div></div>'+
+      '<div class="card"><div class="gh">What visitors see</div>'+PAGES.map(function(p){return'<div class="actions" style="margin:4px 0;justify-content:space-between"><span>'+esc(p[1])+'</span>'+(w[p[0]]?'<span class="sb green">Shown</span>':'<span class="sb grey">Hidden</span>')+'</div>'}).join("")+
+      (has("org.settings")?'<p style="margin:10px 0 0"><a href="'+app0("/pages")+'" data-nav>Choose pages →</a></p>':'')+'</div></div>'+
+      shareBox("/org/"+o.slug,o.name,'<p class="note" style="margin:12px 0 0">Your organization\'s own website. Each competition also has its own link under <a href="'+app0("/link")+'" data-nav>Public link</a>.</p>')})}
+function linkSec(){var o=ORG.org;api(api0("/competitions")).then(function(r){var cs=(r.data.competitions||[]).filter(function(c){return c.visibility!=="private"});
+  $("sec").innerHTML=shareBox("/org/"+o.slug,o.name)+'<div class="card"><div class="gh">Competition links</div>'+(cs.length?'<div class="tbl"><table class="dt"><thead><tr><th>Competition</th><th>Visibility</th><th></th></tr></thead><tbody>'+cs.map(function(c){var u=location.origin+"/competition/"+c.slug;
+    return'<tr><td><b>'+esc(c.name)+'</b><small>'+esc(u)+'</small></td><td>'+esc(VIS_L[c.visibility].split(":")[0])+'</td><td style="white-space:nowrap;text-align:right"><button type="button" class="btn sm" data-copylink="'+esc(u)+'">'+ic("copy")+' Copy</button> <a class="btn g sm" href="/competition/'+esc(c.slug)+'" target="_blank" rel="noopener">Open ↗</a></td></tr>'}).join("")+'</tbody></table></div>'
+    :'<p class="note">No public or unlisted competitions yet.</p>')+'</div>'})}
+function websiteSec(){var o=ORG.org,w=o.website;
+  $("sec").innerHTML='<form class="card" id="wf" novalidate style="max-width:760px"><div class="gh">Website text</div><label for="wtag">Tagline<input id="wtag" maxlength="160" value="'+esc(w.tagline)+'" placeholder="Football every Saturday in Kasoa"></label>'+
+    '<label for="wab">About<textarea id="wab" maxlength="3000" placeholder="Your story, where you play, how to join.">'+esc(w.about)+'</textarea></label><div class="note">Empty “About” shows your organization description instead.</div>'+
+    '<label for="wco">Contact<textarea id="wco" maxlength="3000" placeholder="Email, phone or WhatsApp number people can use.">'+esc(w.contact)+'</textarea></label><div class="note">Shown publicly. Only add contact details you\'re happy for anyone to see.</div>'+
+    '<div class="actions"><button class="btn" id="wsave">Save</button><a class="btn g" href="/org/'+esc(o.slug)+'" target="_blank" rel="noopener">Preview ↗</a></div></form>';
+  $("wf").onsubmit=function(e){e.preventDefault();var b=$("wsave");busy(b,true,"Saving…");
+    api(api0(""),"PATCH",{website:{tagline:val("wtag"),about:val("wab"),contact:val("wco")}}).then(function(r){busy(b,false);if(!r.ok){toast(r.data.error||"Couldn't save",true);return}toast("Website updated");ORG.org=r.data.org})}}
+function pagesSec(){var w=ORG.org.website;
+  $("sec").innerHTML='<form class="card" id="pgf" novalidate style="max-width:760px"><div class="gh">Pages on your public website</div><p class="note" style="margin-top:0">Choose what visitors can see. Hidden pages disappear from your website straight away.</p>'+
+    PAGES.map(function(p){return'<label class="toggle"><span>'+esc(p[1])+'<small>'+esc(p[2])+'</small></span><input type="checkbox" data-pg="'+p[0]+'"'+(w[p[0]]?" checked":"")+'></label>'}).join("")+
+    '<div class="actions"><button class="btn" id="pgsave">Save</button><a class="btn g" href="/org/'+esc(ORG.org.slug)+'" target="_blank" rel="noopener">Preview ↗</a></div></form>';
+  $("pgf").onsubmit=function(e){e.preventDefault();var d={},b=$("pgsave");document.querySelectorAll("[data-pg]").forEach(function(i){d[i.dataset.pg]=i.checked});busy(b,true,"Saving…");
+    api(api0(""),"PATCH",{website:d}).then(function(r){busy(b,false);if(!r.ok){toast(r.data.error||"Couldn't save",true);return}toast("Pages updated");ORG.org=r.data.org})}}
 
 // ---------- competitions ----------
 function competitionsSec(rest){if(rest){var parts=rest.split("/");return competitionDetail(parts[0],parts[1]||"overview")}
-  api(api0("/competitions")).then(function(r){if(!r.ok)return fail(r);var cs=r.data.competitions;
-    $("sec").innerHTML='<div class="card"><div class="gh">COMPETITIONS</div>'+(has("competitions.manage")?'<div class="actions" style="margin:0 0 12px"><button class="btn sm" id="newc">'+ic("plus")+' New competition</button></div><div id="cform"></div>':'')+
-      (cs.length?'<div class="grid">'+cs.map(function(c){return'<a class="oc" href="'+app0("/competitions/"+c.slug)+'" data-nav><span class="ch">'+cCrest(c)+'<b style="margin:0">'+esc(c.name)+'</b></span><small style="display:block;margin-top:8px">'+esc([c.season,KIND_L[c.kind]].filter(Boolean).join(" · "))+'</small><div style="margin-top:8px"><span class="pill '+c.status+'">'+esc(ST_L[c.status])+'</span> <span class="pill">'+esc(VIS_L[c.visibility].split(":")[0])+'</span></div><small style="display:block;margin-top:6px">'+c.teams+' teams · '+c.finished+' of '+c.matches+' matches played</small></a>'}).join("")+'</div>'
+  api(api0("/competitions")).then(function(r){if(!r.ok)return fail(r);var cs=r.data.competitions,q=new URLSearchParams(location.search),PICK=q.get("pick")==="fixtures"?"/fixtures":"";
+    $("sec").innerHTML=(PICK&&cs.length?'<div class="okm" style="margin:0 0 14px">'+ic("cal")+' Choose the competition to add a match to. You\'ll land on its Fixtures tab.</div>':'')+'<div class="card"><div class="gh">Competitions</div>'+(has("competitions.manage")?'<div class="actions" style="margin:0 0 12px"><button class="btn sm" id="newc">'+ic("plus")+' New competition</button></div><div id="cform"></div>':'')+
+      (cs.length?'<div class="grid">'+cs.map(function(c){return'<a class="oc" href="'+app0("/competitions/"+c.slug+PICK)+'" data-nav><span class="ch">'+cCrest(c)+'<b style="margin:0">'+esc(c.name)+'</b></span><small style="display:block;margin-top:8px">'+esc([c.season,KIND_L[c.kind]].filter(Boolean).join(" · "))+'</small><div style="margin-top:8px"><span class="pill '+c.status+'">'+esc(ST_L[c.status])+'</span> <span class="pill">'+esc(VIS_L[c.visibility].split(":")[0])+'</span></div><small style="display:block;margin-top:6px">'+c.teams+' teams · '+c.finished+' of '+c.matches+' matches played</small></a>'}).join("")+'</div>'
         :'<div class="empty">'+ic("trophy")+'<h2>No competitions yet</h2><p class="note">A competition can be a league, a cup, a school championship or any tournament.</p></div>')+'</div>';
-    if($("newc"))$("newc").onclick=function(){$("cform").innerHTML=compForm(null);bindCompForm(null);$("cn").focus()}})}
+    if($("newc"))$("newc").onclick=function(){$("cform").innerHTML=compForm(null);bindCompForm(null);$("cn").focus()};
+    if(q.get("new")&&$("newc"))$("newc").click()})}
 function compForm(c,crit){var v=function(k,d){return c&&c[k]!=null?c[k]:d},tb=c?c.tiebreakers:["points","goal_difference","goals_for","head_to_head_points","wins"];
   crit=crit||{goal_difference:"Goal difference",goals_for:"Goals scored",goals_against:"Fewest goals conceded",wins:"Wins",away_goals:"Away goals scored",head_to_head_points:"Head-to-head points",head_to_head_goal_difference:"Head-to-head goal difference",head_to_head_goals_for:"Head-to-head goals scored"};
   var critOpts=function(sel){var m={"":"— none —"};Object.keys(crit).forEach(function(k){if(k!=="points")m[k]=crit[k]});return opts(m,sel||"")};
@@ -467,8 +729,9 @@ function teamsSec(rest){if(rest)return teamPage(+rest);
     $("sec").innerHTML='<div class="card"><div class="gh">TEAMS · '+ts.length+'</div>'+(has("teams.manage")?'<form id="tf" class="row" novalidate style="align-items:end;margin-bottom:12px"><label for="tn" style="margin:0">New team name<input id="tn" maxlength="80" placeholder="e.g. Kasoa Stars"></label><div><button class="btn" id="tadd">'+ic("plus")+' Add team</button></div></form>':'')+
       (ts.length?'<div class="grid">'+ts.map(function(t){return'<a class="oc" href="'+app0("/teams/"+t.id)+'" data-nav><span class="ch">'+crest(t,36)+'<b style="margin:0">'+esc(t.name)+'</b></span><small style="display:block;margin-top:8px">'+esc([t.city,t.venue].filter(Boolean).join(" · ")||"No details yet")+'</small><small>'+t.playerCount+' player'+(t.playerCount===1?"":"s")+'</small></a>'}).join("")+'</div>'
         :'<p class="note">No teams yet. Add the clubs or sides that will play in your competitions.</p>')+'</div>';
-    if($("tf"))$("tf").onsubmit=function(e){e.preventDefault();var b=$("tadd");busy(b,true);api(api0("/teams"),"POST",{name:val("tn")}).then(function(r){busy(b,false);if(!r.ok){toast(r.data.error,true);return}toast("Team added");teamsSec()})}})}
-function teamPage(id){api(api0("/teams/"+id)).then(function(r){if(!r.ok)return fail(r);var t=r.data.team,can=has("teams.manage");
+    if($("tf"))$("tf").onsubmit=function(e){e.preventDefault();var b=$("tadd");busy(b,true);api(api0("/teams"),"POST",{name:val("tn")}).then(function(r){busy(b,false);if(!r.ok){toast(r.data.error,true);return}toast("Team added");teamsSec()})};
+    if(new URLSearchParams(location.search).get("new")&&$("tn"))$("tn").focus()})}
+function teamPage(id){api(api0("/teams/"+id)).then(function(r){if(!r.ok)return fail(r);var t=r.data.team,full=has("teams.manage"),can=full||(has("teams.manage_assigned")&&ORG.me.teams.indexOf(id)>=0);
   var dis=can?"":" disabled",ps=t.players;
   $("sec").innerHTML='<div class="card"><a class="note" style="color:var(--soft)" href="'+app0("/teams")+'" data-nav>← Teams</a><div class="ch" style="margin-top:8px">'+crest(t,56)+'<div><h2 style="margin:0">'+esc(t.name)+'</h2><div class="note">'+esc([t.city,t.venue].filter(Boolean).join(" · "))+'</div></div></div>'+
     (t.competitions.length?'<p class="note">Plays in: '+t.competitions.map(function(c){return'<a href="'+app0("/competitions/"+c.slug)+'" data-nav>'+esc(c.name)+'</a>'}).join(", ")+'</p>':'')+
@@ -479,12 +742,12 @@ function teamPage(id){api(api0("/teams/"+id)).then(function(r){if(!r.ok)return f
     '<form class="card" id="tef" novalidate><div class="gh">TEAM DETAILS</div><div class="row"><label for="ten">Name<input id="ten" maxlength="80" value="'+esc(t.name)+'"'+dis+'></label><label for="tes">Short name<input id="tes" maxlength="12" value="'+esc(t.shortName||"")+'"'+dis+'></label></div>'+
       '<div class="row"><label for="tec">City<input id="tec" maxlength="60" value="'+esc(t.city)+'"'+dis+'></label><label for="tev">Home ground<input id="tev" maxlength="100" value="'+esc(t.venue)+'"'+dis+'></label></div>'+
       '<div class="row"><label for="tef2">Founded<input id="tef2" type="number" min="1800" max="2100" value="'+esc(t.founded||"")+'"'+dis+'></label><label for="tek">Colours<input id="tek" maxlength="40" value="'+esc(t.colors)+'"'+dis+'></label></div>'+
-      '<label for="ted">About<textarea id="ted" maxlength="2000"'+dis+'>'+esc(t.description)+'</textarea></label>'+(can?'<label for="tlogo">Logo (PNG, JPG, GIF or WebP, up to 256 KB)<input id="tlogo" type="file" accept="image/png,image/jpeg,image/gif,image/webp"></label><div class="actions"><button class="btn" id="tsave">Save team</button><button type="button" class="btn bad" id="tdel">Delete team</button></div>':'')+'</form>';
+      '<label for="ted">About<textarea id="ted" maxlength="2000"'+dis+'>'+esc(t.description)+'</textarea></label>'+(can?'<label for="tlogo">Logo (PNG, JPG, GIF or WebP, up to 256 KB)<input id="tlogo" type="file" accept="image/png,image/jpeg,image/gif,image/webp"></label><div class="actions"><button class="btn" id="tsave">Save team</button>'+(full?'<button type="button" class="btn bad" id="tdel">Delete team</button>':'')+'</div>':'')+'</form>';
   var reload=function(){teamPage(id)};
   if(!can)return;
   $("tef").onsubmit=function(e){e.preventDefault();api(api0("/teams/"+id),"PATCH",{name:val("ten"),shortName:val("tes"),city:val("tec"),venue:val("tev"),founded:intOrNull(val("tef2")),colors:val("tek"),description:val("ted")}).then(function(r){if(!r.ok){toast(r.data.error,true);return}toast("Team saved");reload()})};
   logoPicker("tlogo",api0("/teams/"+id+"/logo"),reload);
-  $("tdel").onclick=function(){if(!armed($("tdel"),"Sure? Delete team"))return;api(api0("/teams/"+id),"DELETE",{}).then(function(r){if(!r.ok){toast(r.data.error,true);return}toast("Team deleted");go(app0("/teams"))})};
+  if($("tdel"))$("tdel").onclick=function(){if(!armed($("tdel"),"Sure? Delete team"))return;api(api0("/teams/"+id),"DELETE",{}).then(function(r){if(!r.ok){toast(r.data.error,true);return}toast("Team deleted");go(app0("/teams"))})};
   $("pf").onsubmit=function(e){e.preventDefault();api(api0("/teams/"+id+"/players"),"POST",{name:val("npn"),number:intOrNull(val("npno")),position:val("npp")}).then(function(r){if(!r.ok){toast(r.data.error,true);return}reload()})};
   var patch=function(pid,d){api(api0("/players/"+pid),"PATCH",d).then(function(r){toast(r.ok?"Saved":r.data.error,!r.ok)})};
   document.querySelectorAll("[data-pn]").forEach(function(i){i.onchange=function(){patch(i.dataset.pn,{number:intOrNull(i.value)})}});
@@ -515,25 +778,107 @@ function announcementsSec(){Promise.all([api(api0("/announcements")),api(api0("/
   document.querySelectorAll("[data-apin]").forEach(function(b){b.onclick=function(){api(api0("/announcements/"+b.dataset.apin),"PATCH",{pinned:b.dataset.v==="1"}).then(function(r){if(r.ok)reload();else toast(r.data.error,true)})}});
   document.querySelectorAll("[data-adel]").forEach(function(b){b.onclick=function(){if(!armed(b,"Sure?"))return;api(api0("/announcements/"+b.dataset.adel),"DELETE",{}).then(function(r){if(r.ok)reload();else toast(r.data.error,true)})}});})}
 
-function matrix(){return'<details class="card"><summary>What each role can do</summary><div class="tbl" style="margin-top:10px"><table class="mx"><tr><th>Permission</th>'+ROLES.roles.map(function(r){return'<th>'+esc(r.label)+'</th>'}).join("")+'</tr>'+
-  ROLES.permissions.map(function(p){return'<tr><td>'+esc(p.label)+'</td>'+ROLES.roles.map(function(r){var y=p.roles.indexOf(r.key)>=0;return'<td class="'+(y?"y":"n")+'" aria-label="'+(y?"yes":"no")+'">'+(y?"✓":"–")+'</td>'}).join("")+'</tr>'}).join("")+
-  '</table></div><ul class="note" style="padding-left:18px;margin-bottom:0">'+ROLES.roles.map(function(r){return'<li><b style="color:var(--tx)">'+esc(r.label)+':</b> '+esc(r.description)+'</li>'}).join("")+'</ul></details>'}
+function matrix(){return'<div class="card"><p class="note" style="margin:0">'+ic("key")+' See exactly what each role can do in this organization under <a href="'+app0("/roles")+'" data-nav>Roles &amp; permissions</a>.</p></div>'}
 
-function membersSec(){var slug=ORG.org.slug;$("sec").innerHTML='<div class="card note">Loading members…</div>';
-  api("/api/orgs/"+slug+"/members").then(function(r){if(!r.ok){$("sec").innerHTML=errBox(r);return}var ms=r.data.members,can=ORG.me.assignable;
-    $("sec").innerHTML='<div class="card"><div class="gh">MEMBERS · '+ms.length+'</div>'+(has("members.invite")?'<div class="actions" style="margin:0 0 10px"><a class="btn sm" href="/app/org/'+esc(slug)+'/invitations" data-nav>'+ic("plus")+' Invite member</a></div>':'')+
-      '<div class="tbl"><table><tr><th>Member</th><th>Role</th><th>Status</th><th>Joined</th><th>Last activity</th><th></th></tr>'+ms.map(function(m){
-        var role=m.canManage?'<select data-role="'+m.id+'" aria-label="Role for '+esc(m.username)+'">'+can.map(function(k){return'<option value="'+k+'"'+(k===m.role?" selected":"")+'>'+esc(roleLabel(k))+'</option>'}).join("")+(can.indexOf(m.role)<0?'<option selected>'+esc(m.roleLabel)+'</option>':'')+'</select>':pill(m.role,m.roleLabel);
-        return'<tr><td class="who-cell"><b>'+esc(m.username)+(m.you?' <span class="pill">you</span>':'')+'</b>'+(m.email?'<small>'+esc(m.email)+'</small>':'')+'</td><td>'+role+'</td><td><span class="pill accepted">Active</span></td><td>'+date(m.joined)+'</td><td>'+ago(m.lastActive)+'</td><td>'+
-          (m.canManage?'<button class="btn bad sm" data-rm="'+m.id+'">Remove</button>':'')+'</td></tr>'}).join("")+'</table></div></div>'+matrix();
-    document.querySelectorAll("[data-role]").forEach(function(s){s.onchange=function(){api("/api/orgs/"+slug+"/members/"+s.dataset.role,"PATCH",{role:s.value}).then(function(r){
-      if(!r.ok){toast(r.data.error||"Couldn't change the role",true);membersSec();return}toast("Role updated")})}});
-    document.querySelectorAll("[data-rm]").forEach(function(b){b.onclick=function(){if(!armed(b,"Sure? Remove"))return;busy(b,true);
-      api("/api/orgs/"+slug+"/members/"+b.dataset.rm,"DELETE",{}).then(function(r){if(!r.ok){toast(r.data.error||"Couldn't remove",true);busy(b,false);return}toast("Member removed");membersSec()})}})})}
+// ---------- people: members, staff, coaches ----------
+var PEOPLE_F={all:"Everyone",staff:"Staff",coaches:"Coaches & team managers",players:"Players",viewers:"Viewers"};
+function peopleSec(start){var slug=ORG.org.slug,filter=start,q="";
+  api("/api/orgs/"+slug+"/members").then(function(r){if(!r.ok)return fail(r);var ms=r.data.members,can=ORG.me.assignable;
+    var match=function(m){return filter==="all"||(filter==="staff"&&m.staff)||(filter==="coaches"&&(m.role==="coach"||m.role==="team_manager"))||(filter==="players"&&m.role==="player")||(filter==="viewers"&&m.role==="viewer")};
+    var inviteRole={staff:"organizer",coaches:"coach",all:"viewer"}[start];if(can.indexOf(inviteRole)<0)inviteRole=can[can.length-1];
+    var intro={all:"Everyone in "+esc(ORG.org.name)+". Change roles or remove people here.",staff:"People who help run the organization: administrators, competition managers, scorekeepers, editors and moderators, plus team staff.",
+      coaches:"Team managers and coaches only work on the teams they're assigned to. Assign teams under <a href=\""+app0("/access")+"\" data-nav>Team access</a>."}[start];
+    $("sec").innerHTML='<div class="card"><p class="note" style="margin-top:0">'+intro+'</p><div class="ptools" style="margin-bottom:6px"><input id="mq" class="grow" type="search" placeholder="Search by name or email" aria-label="Search people">'+
+      (start==="all"?'<select id="mf" aria-label="Show">'+opts(PEOPLE_F,filter)+'</select>':'')+(has("members.invite")?'<a class="btn sm" href="'+app0("/invitations?role="+inviteRole)+'" data-nav>'+ic("plus")+' Invite '+(start==="all"?"member":start==="staff"?"staff":"coach")+'</a>':'')+'</div><div id="mlist"></div></div>'+matrix();
+    var draw=function(){var rows=ms.filter(function(m){return match(m)&&(!q||(m.username+" "+(m.email||"")).toLowerCase().indexOf(q)>=0)});
+      $("mlist").innerHTML=rows.length?'<div class="tbl"><table class="dt"><thead><tr><th>Person</th><th>Role</th>'+(start==="coaches"?'<th>Teams</th>':'')+'<th>Joined</th><th>Last active</th><th></th></tr></thead><tbody>'+rows.map(function(m){
+        var role=m.canManage?'<select data-role="'+m.id+'" aria-label="Role for '+esc(m.username)+'" style="margin:0;padding:7px;font-size:13px;width:auto">'+can.map(function(k){return'<option value="'+k+'"'+(k===m.role?" selected":"")+'>'+esc(roleLabel(k))+'</option>'}).join("")+(can.indexOf(m.role)<0?'<option selected>'+esc(m.roleLabel)+'</option>':'')+'</select>':pill(m.role,m.roleLabel);
+        return'<tr><td class="who-cell"><b>'+esc(m.username)+(m.you?' <span class="pill">you</span>':'')+'</b>'+(m.email?'<small>'+esc(m.email)+'</small>':'')+'</td><td>'+role+'</td>'+
+          (start==="coaches"?'<td>'+(m.teams.length?m.teams.map(function(t){return esc(t.name)}).join(", "):'<span class="note">No teams yet</span>')+'</td>':'')+'<td>'+date(m.joined)+'</td><td>'+ago(m.lastActive)+'</td><td style="text-align:right">'+
+          (m.canManage?'<button class="btn bad sm" data-rm="'+m.id+'" data-name="'+esc(m.username)+'">Remove</button>':'')+'</td></tr>'}).join("")+'</tbody></table></div>'
+        :'<div class="empty">'+ic("users")+'<h2>'+(q?"Nobody matches":"No one here yet")+'</h2>'+(has("members.invite")&&!q?'<a class="btn sm" href="'+app0("/invitations?role="+inviteRole)+'" data-nav>'+ic("plus")+' Invite someone</a>':'')+'</div>';
+      document.querySelectorAll("[data-role]").forEach(function(s){s.onchange=function(){api("/api/orgs/"+slug+"/members/"+s.dataset.role,"PATCH",{role:s.value}).then(function(r){
+        if(!r.ok){toast(r.data.error||"Couldn't change the role",true);peopleSec(start);return}toast("Role updated");peopleSec(start)})}});
+      document.querySelectorAll("[data-rm]").forEach(function(b){b.onclick=function(){confirmBox("Remove "+b.dataset.name+"?","They'll lose access to "+ORG.org.name+" straight away. You can invite them again later.",{danger:true,ok:"Remove"}).then(function(ok){if(!ok)return;busy(b,true);
+        api("/api/orgs/"+slug+"/members/"+b.dataset.rm,"DELETE",{}).then(function(r){if(!r.ok){toast(r.data.error||"Couldn't remove",true);busy(b,false);return}toast("Member removed");peopleSec(start)})})}})};
+    draw();$("mq").oninput=function(){q=this.value.trim().toLowerCase();draw()};if($("mf"))$("mf").onchange=function(){filter=this.value;draw()}})}
+
+// ---------- team access ----------
+function accessSec(){var slug=ORG.org.slug,canEdit=has("members.manage");
+  Promise.all([api("/api/orgs/"+slug+"/members"),api(api0("/teams"))]).then(function(res){if(!res[0].ok)return fail(res[0]);
+    var staff=res[0].data.members.filter(function(m){return m.role==="team_manager"||m.role==="coach"}),teams=(res[1].data||{}).teams||[];
+    $("sec").innerHTML='<div class="card"><p class="note" style="margin-top:0">Team managers and coaches can only edit the teams (and squads) they\'re assigned to here. Administrators and competition managers can edit every team.</p></div>'+
+      (staff.length?staff.map(function(m){var mine=m.teams.map(function(t){return t.id}),ed=canEdit&&m.canManage;
+        return'<form class="card" data-acc="'+m.id+'" novalidate><div class="ch" style="justify-content:space-between;flex-wrap:wrap"><div><b>'+esc(m.username)+'</b> '+pill(m.role,m.roleLabel)+'</div><span class="note">'+mine.length+' team'+(mine.length===1?"":"s")+'</span></div>'+
+          (teams.length?'<div class="picks" style="margin-top:10px">'+teams.map(function(t){return'<label><input type="checkbox" value="'+t.id+'"'+(mine.indexOf(t.id)>=0?" checked":"")+(ed?"":" disabled")+'>'+crest(t,20)+esc(t.name)+'</label>'}).join("")+'</div>':'<p class="note">No teams yet.</p>')+
+          (ed&&teams.length?'<div class="actions"><button class="btn sm">Save team access</button></div>':'')+'</form>'}).join("")
+      :'<div class="card empty">'+ic("lock")+'<h2>No team managers or coaches yet</h2><p class="note">Invite someone as a Team Manager or Coach, then give them their teams here.</p>'+(has("members.invite")?'<a class="btn" href="'+app0("/invitations?role=team_manager")+'" data-nav>'+ic("plus")+' Invite a team manager</a>':'')+'</div>');
+    document.querySelectorAll("form[data-acc]").forEach(function(f){f.onsubmit=function(e){e.preventDefault();var ids=[].map.call(f.querySelectorAll("input:checked"),function(i){return+i.value}),b=f.querySelector("button");busy(b,true,"Saving…");
+      api("/api/orgs/"+slug+"/members/"+f.dataset.acc,"PATCH",{teams:ids}).then(function(r){busy(b,false);if(!r.ok){toast(r.data.error||"Couldn't save",true);return}toast("Team access saved")})}})})}
+
+// ---------- roles & permissions ----------
+function rolesSec(){api(api0("/permissions")).then(function(r){if(!r.ok)return fail(r);var M=r.data,ed=M.canEdit,state={};
+  M.permissions.forEach(function(p){state[p.key]=p.roles.slice()});
+  var draw=function(){$("sec").innerHTML='<div class="card"><p class="note" style="margin-top:0">'+(ed?"You're the owner: tick what each role may do in this organization. The owner always has every permission, and some owner-only powers can't be given away.":"Only the owner can change these. This is what each role can do here.")+'</p>'+
+    '<div class="tbl"><table class="pe"><thead><tr><th>Permission</th>'+M.roles.map(function(x){return'<th scope="col">'+esc(x.label)+'</th>'}).join("")+'</tr></thead><tbody>'+M.permissions.map(function(p){
+      return'<tr class="'+(p.configurable?"":"fixed")+'"><td>'+esc(p.label)+(p.configurable?"":' <small class="note">(fixed)</small>')+'</td>'+M.roles.map(function(x){var on=state[p.key].indexOf(x.key)>=0,dflt=p.defaults.indexOf(x.key)>=0,dis=!ed||!p.configurable||x.key==="owner";
+        return'<td class="'+(on!==dflt?"chg":"")+'"><input type="checkbox" data-p="'+p.key+'" data-r="'+x.key+'"'+(on?" checked":"")+(dis?" disabled":"")+' aria-label="'+esc(x.label)+': '+esc(p.label)+'"></td>'}).join("")+'</tr>'}).join("")+'</tbody></table></div>'+
+    (ed?'<p class="note">Highlighted boxes differ from the defaults.</p><div class="actions"><button class="btn" id="psave">Save permissions</button><button type="button" class="btn g" id="preset">Reset to defaults</button></div>':'')+'</div>'+
+    '<div class="card"><div class="gh">The roles</div><dl class="kv">'+M.roles.map(function(x){return'<dt>'+pill(x.key,x.label)+'</dt><dd>'+esc(x.description)+'</dd>'}).join("")+'</dl></div>';
+    document.querySelectorAll("[data-p]").forEach(function(c){c.onchange=function(){var l=state[c.dataset.p],i=l.indexOf(c.dataset.r);if(c.checked&&i<0)l.push(c.dataset.r);if(!c.checked&&i>=0)l.splice(i,1);draw()}});
+    if(!ed)return;
+    $("psave").onclick=function(){var out={};M.permissions.forEach(function(p){if(p.configurable)out[p.key]=state[p.key].filter(function(x){return x!=="owner"})});busy(this,true,"Saving…");
+      api(api0("/permissions"),"PATCH",{permissions:out}).then(function(r){if(!r.ok){toast(r.data.error||"Couldn't save",true);draw();return}toast("Permissions saved");reloadOrg("roles")})};
+    $("preset").onclick=function(){confirmBox("Reset permissions?","Every role goes back to the standard permissions.",{ok:"Reset"}).then(function(ok){if(!ok)return;
+      api(api0("/permissions"),"PATCH",{reset:true}).then(function(r){if(!r.ok){toast(r.data.error||"Couldn't reset",true);return}toast("Back to the defaults");reloadOrg("roles")})})}};
+  draw()})}
+
+// ---------- organization: profile, branding, settings ----------
+function profileSec(){var o=ORG.org,ed=has("org.settings"),dis=ed?"":" disabled";
+  $("sec").innerHTML='<form class="card" id="sf" novalidate style="max-width:760px">'+(ed?'':'<p class="note" style="margin-top:0">Only the owner and administrators can change these.</p>')+
+    '<div class="ch" style="margin-bottom:6px">'+avatar(o,56)+'<div><b style="font-size:18px">'+esc(o.name)+'</b><div class="note">'+esc(o.kindLabel)+' · created '+date(o.created)+'</div></div></div>'+
+    '<label for="sn">Name<input id="sn" maxlength="80" value="'+esc(o.name)+'"'+dis+'></label><label for="sk">Type<select id="sk"'+dis+'>'+(ROLES.kinds||[]).map(function(k){return'<option value="'+k.key+'"'+(k.key===o.kind?" selected":"")+'>'+esc(k.label)+'</option>'}).join("")+'</select></label>'+
+    '<label for="sd">Description<textarea id="sd" maxlength="2000"'+dis+'>'+esc(o.description)+'</textarea></label>'+
+    '<div class="row"><label for="sc">Country<input id="sc" maxlength="60" value="'+esc(o.country)+'"'+dis+'></label><label for="sr">Region / city<input id="sr" maxlength="60" value="'+esc(o.region)+'"'+dis+'></label></div>'+
+    '<label for="stz">Time zone'+tzSelect("stz",o.timezone)+'</label>'+
+    '<p class="note">Public address: <b style="color:var(--tx)">'+esc(location.host+"/org/"+o.slug)+'</b>. It stays the same when you rename, so shared links keep working.</p>'+
+    (ed?'<div class="actions"><button class="btn" id="ss">Save changes</button></div>':'')+'</form>';
+  if(!ed){$("stz").disabled=true;return}
+  $("sf").onsubmit=function(e){e.preventDefault();var b=$("ss");busy(b,true,"Saving…");
+    api(api0(""),"PATCH",{name:val("sn"),kind:val("sk"),description:val("sd"),country:val("sc"),region:val("sr"),timezone:val("stz")}).then(function(r){
+      busy(b,false);if(!r.ok){toast(r.data.error||"Couldn't save",true);return}toast("Saved");reloadOrg("profile")})}}
+function brandingSec(){var o=ORG.org,color=safeColor(o.brandColor);
+  var draw=function(){$("sec").innerHTML='<div class="agrid"><div class="card"><div class="gh">Logo</div><div class="ch">'+avatar(o,80)+'<div><label for="blogo" style="margin:0">Upload a logo (PNG, JPG, GIF or WebP, up to 256 KB)<input id="blogo" type="file" accept="image/png,image/jpeg,image/gif,image/webp"></label>'+
+      (o.logo?'<button type="button" class="btn g sm" id="blx" style="margin-top:8px">Remove logo</button>':'')+'</div></div></div>'+
+    '<div class="card"><div class="gh">Brand colour</div><div class="sw" role="radiogroup" aria-label="Brand colour">'+BRAND_SW.map(function(c){return'<button type="button" role="radio" aria-checked="'+(color===c)+'" aria-label="'+c+'" class="'+(color===c?"on":"")+'" data-c="'+c+'" style="background:'+c+'"></button>'}).join("")+
+      '<label style="margin:0 0 0 6px;display:flex;align-items:center;gap:6px">Custom <input id="bcol" type="color" value="'+color+'"></label></div>'+
+      '<div class="prev" style="--pc:'+color+';background:linear-gradient(135deg,'+color+'33,transparent 70%)">'+avatar({name:o.name,logo:o.logo,brandColor:color},48)+'<div><b>'+esc(o.name)+'</b><div class="note">Website header preview</div></div><span class="btn sm" style="margin-left:auto;background:'+color+';color:'+inkOn(color)+'" aria-hidden="true">Button</span></div>'+
+      '<div class="actions"><button class="btn" id="bsave"'+(color===safeColor(o.brandColor)?" disabled":"")+'>Save colour</button><a class="btn g" href="/org/'+esc(o.slug)+'" target="_blank" rel="noopener">Preview website ↗</a></div></div></div>';
+    document.querySelectorAll("[data-c]").forEach(function(b){b.onclick=function(){color=b.dataset.c;draw()}});
+    $("bcol").onchange=function(){color=this.value.toLowerCase();draw()};
+    $("bsave").onclick=function(){busy(this,true,"Saving…");api(api0(""),"PATCH",{brandColor:color}).then(function(r){if(!r.ok){toast(r.data.error||"Couldn't save",true);draw();return}toast("Brand colour saved");reloadOrg("branding")})};
+    logoPicker("blogo",api0("/logo"),function(){reloadOrg("branding")});
+    if($("blx"))$("blx").onclick=function(){confirmBox("Remove the logo?","Your initial will be shown instead.",{ok:"Remove",danger:true}).then(function(ok){if(ok)api(api0("/logo"),"DELETE",{}).then(function(r){if(!r.ok){toast(r.data.error,true);return}toast("Logo removed");reloadOrg("branding")})})}};
+  draw()}
+function settingsSec(){var o=ORG.org,slug=o.slug,owner=ORG.me.role==="owner";
+  $("sec").innerHTML='<div class="card" style="max-width:760px"><div class="gh">Organization</div><dl class="kv"><dt>Your role</dt><dd>'+pill(ORG.me.role,ORG.me.roleLabel)+'</dd><dt>Status</dt><dd>'+statusTag(o.status)+'</dd><dt>Public address</dt><dd>'+esc(location.host+"/org/"+slug)+'</dd><dt>Created</dt><dd>'+date(o.created)+'</dd></dl>'+
+    (has("org.settings")?'<div class="actions"><a class="btn g sm" href="'+app0("/profile")+'" data-nav>Edit profile</a><a class="btn g sm" href="'+app0("/branding")+'" data-nav>Branding</a><a class="btn g sm" href="'+app0("/website")+'" data-nav>Website settings</a></div>':'')+'</div>'+
+    (owner?'<div class="card" style="max-width:760px"><div class="gh">Transfer ownership</div><p class="note" style="margin-top:0">Give full control to another member. You\'ll become an Administrator.</p><label for="tm">New owner<select id="tm"><option value="">Loading members…</option></select></label><div class="actions"><button class="btn g" id="tg">Transfer ownership</button></div></div>'+
+      '<div class="card" style="max-width:760px;border:1px solid var(--bad)"><div class="gh" style="color:#ff8fa3">Danger zone</div><p class="note" style="margin-top:0">Deleting removes the organization, its competitions, teams, members and invitations for good. It can\'t be undone.</p><div class="actions"><button class="btn bad" id="dg">'+ic("trash")+' Delete organization</button></div></div>'
+    :'<div class="card" style="max-width:760px"><div class="gh">Leave organization</div><p class="note" style="margin-top:0">You\'ll lose access until someone invites you again.</p><button class="btn bad" id="lv">'+ic("out")+' Leave '+esc(o.name)+'</button></div>');
+  if(owner){api("/api/orgs/"+slug+"/members").then(function(r){var others=(r.data.members||[]).filter(function(m){return!m.you});
+      $("tm").innerHTML=others.length?'<option value="">Choose a member…</option>'+others.map(function(m){return'<option value="'+m.id+'">'+esc(m.username)+' ('+esc(m.roleLabel)+')</option>'}).join(""):'<option value="">Invite someone first</option>'});
+    $("tg").onclick=function(){var id=+$("tm").value;if(!id){toast("Choose a member first",true);return}var who=$("tm").selectedOptions[0].textContent;
+      confirmBox("Transfer ownership?",who+" becomes the owner. You'll become an Administrator and can't undo this yourself.",{ok:"Transfer"}).then(function(ok){if(!ok)return;
+        api("/api/orgs/"+slug+"/transfer","POST",{memberId:id}).then(function(r){if(!r.ok){toast(r.data.error||"Couldn't transfer",true);return}toast("Ownership transferred");reloadOrg("overview")})})};
+    $("dg").onclick=function(){confirmBox("Delete "+o.name+"?","This permanently deletes everything in the organization.",{danger:true,ok:"Delete forever",type:o.name}).then(function(v){if(!v)return;
+      api("/api/orgs/"+slug,"DELETE",{confirm:v}).then(function(r){if(!r.ok){toast(r.data.error||"Couldn't delete",true);return}toast("Organization deleted");loadMe().then(function(){go(mineUrl())})})})}}
+  else $("lv").onclick=function(){confirmBox("Leave "+o.name+"?","You'll lose access until someone invites you again.",{danger:true,ok:"Leave"}).then(function(ok){if(!ok)return;
+    api("/api/orgs/"+slug+"/leave","POST",{}).then(function(r){if(!r.ok){toast(r.data.error||"Couldn't leave",true);return}toast("You left "+o.name);loadMe().then(function(){go(mineUrl())})})})}}
 
 var IFILTER="all";
-function invitationsSec(){var slug=ORG.org.slug,roles=ORG.me.assignable,def=roles.indexOf("editor")>=0?"editor":roles[0];
-  $("sec").innerHTML='<form class="card" id="inf" novalidate><div class="gh">INVITE MEMBER</div><p class="note" style="margin-top:0">Enter an email to send an invitation, or leave it empty to create a link you can share on WhatsApp, Telegram or anywhere. Invitations expire after 7 days.</p>'+
+function invitationsSec(){var slug=ORG.org.slug,roles=ORG.me.assignable,qr=new URLSearchParams(location.search).get("role"),def=roles.indexOf(qr)>=0?qr:roles.indexOf("editor")>=0?"editor":roles[0];
+  $("sec").innerHTML='<form class="card" id="inf" novalidate><div class="gh">Invite someone</div><p class="note" style="margin-top:0">Invite administrators, competition managers, team managers, coaches, scorekeepers, players or viewers. Enter an email to send an invitation, or leave it empty to create a link you can share on WhatsApp, Telegram or anywhere. Invitations expire after 7 days.</p>'+
     '<div class="row"><label for="ie">Email (optional)<input id="ie" type="email" placeholder="name@example.com" autocomplete="off"></label><label for="ir">Role<select id="ir">'+roles.map(function(k){return'<option value="'+k+'"'+(k===def?" selected":"")+'>'+esc(roleLabel(k))+'</option>'}).join("")+'</select></label></div>'+
     '<div class="note" id="rd" style="margin-top:6px"></div><div class="actions"><button class="btn" id="ig">'+ic("link")+' Create invitation link</button></div><div id="ires"></div></form><div class="card"><div class="gh">INVITATIONS</div><div class="chips" id="chips"></div><div id="ilist" class="note">Loading…</div></div>'+matrix();
   var desc=function(){var r=ROLES.roles.filter(function(x){return x.key===$("ir").value})[0];$("rd").textContent=r?r.label+": "+r.description:""};desc();$("ir").onchange=desc;
@@ -560,26 +905,6 @@ function loadInvites(){var slug=ORG.org.slug;api("/api/orgs/"+slug+"/invitations
     if(!r.ok){toast(r.data.error||"Couldn't revoke",true);busy(b,false);return}toast("Invitation revoked");loadInvites()})}});
   document.querySelectorAll("[data-re]").forEach(function(b){b.onclick=function(){busy(b,true,"…");api("/api/orgs/"+slug+"/invitations/"+b.dataset.re+"/resend","POST",{}).then(function(r){
     busy(b,false);if(!r.ok){toast(r.data.error||"Couldn't renew",true);return}$("ires").innerHTML=linkBox(r.data);bindLinkBox();toast(r.data.emailed?"Invitation sent again":"New link created");loadInvites()})}})})}
-
-function settingsSec(){var o=ORG.org,slug=o.slug,owner=ORG.me.role==="owner";
-  var info='<form class="card" id="sf" novalidate><div class="gh">ORGANIZATION DETAILS</div>'+(owner?'':'<p class="note" style="margin-top:0">Only the owner can change these.</p>')+
-    '<label for="sn">Name<input id="sn" maxlength="80" value="'+esc(o.name)+'"'+(owner?"":" disabled")+'></label><label for="sd">Description<textarea id="sd" maxlength="2000"'+(owner?"":" disabled")+'>'+esc(o.description)+'</textarea></label>'+
-    '<div class="row"><label for="sc">Country<input id="sc" maxlength="60" value="'+esc(o.country)+'"'+(owner?"":" disabled")+'></label><label for="sr">Region / city<input id="sr" maxlength="60" value="'+esc(o.region)+'"'+(owner?"":" disabled")+'></label></div>'+
-    '<p class="note">Organization address: <b style="color:var(--tx)">'+esc(slug)+'</b> (stays the same when you rename, so shared links keep working). Created '+date(o.created)+'.</p>'+
-    (owner?'<div class="actions"><button class="btn" id="ss">Save changes</button></div>':'')+'</form>';
-  var own=owner?'<div class="card"><div class="gh">TRANSFER OWNERSHIP</div><p class="note" style="margin-top:0">Give full control to another member. You\'ll become an organizer.</p><label for="tm">New owner<select id="tm"><option value="">Loading members…</option></select></label><div class="actions"><button class="btn g" id="tg">Transfer ownership</button></div></div>'+
-    '<div class="card" style="border:1px solid var(--bad)"><div class="gh" style="background:var(--bad);color:#fff">DELETE ORGANIZATION</div><p class="note" style="margin-top:0">This permanently deletes the organization, its members and invitations. It can\'t be undone.</p><label for="dc">Type <b style="color:var(--tx)">'+esc(o.name)+'</b> to confirm<input id="dc" autocomplete="off"></label><div class="actions"><button class="btn bad" id="dg">Delete organization</button></div></div>'
-    :'<div class="card"><div class="gh">LEAVE ORGANIZATION</div><p class="note" style="margin-top:0">You\'ll lose access until someone invites you again.</p><button class="btn bad" id="lv">Leave '+esc(o.name)+'</button></div>';
-  $("sec").innerHTML=info+own;
-  if(owner){$("sf").onsubmit=function(e){e.preventDefault();var b=$("ss");busy(b,true,"Saving…");api("/api/orgs/"+slug,"PATCH",{name:$("sn").value,description:$("sd").value,country:$("sc").value,region:$("sr").value}).then(function(r){
-      busy(b,false);if(!r.ok){toast(r.data.error||"Couldn't save",true);return}toast("Saved");loadMe().then(function(){orgView(slug,"settings")})})};
-    api("/api/orgs/"+slug+"/members").then(function(r){var others=(r.data.members||[]).filter(function(m){return!m.you});
-      $("tm").innerHTML=others.length?'<option value="">Choose a member…</option>'+others.map(function(m){return'<option value="'+m.id+'">'+esc(m.username)+' ('+esc(m.roleLabel)+')</option>'}).join(""):'<option value="">Invite someone first</option>'});
-    $("tg").onclick=function(){var id=+$("tm").value;if(!id){toast("Choose a member first",true);return}if(!armed($("tg"),"Sure? You'll stop being the owner"))return;
-      api("/api/orgs/"+slug+"/transfer","POST",{memberId:id}).then(function(r){if(!r.ok){toast(r.data.error||"Couldn't transfer",true);return}toast("Ownership transferred");loadMe().then(function(){orgView(slug,"overview")})})};
-    $("dg").onclick=function(){if($("dc").value!==o.name){toast("Type the exact name to confirm",true);return}if(!armed($("dg"),"Really delete forever?"))return;
-      api("/api/orgs/"+slug,"DELETE",{confirm:$("dc").value}).then(function(r){if(!r.ok){toast(r.data.error||"Couldn't delete",true);return}toast("Organization deleted");loadMe().then(function(){go("/app")})})}}
-  else $("lv").onclick=function(){if(!armed($("lv"),"Sure? Leave"))return;api("/api/orgs/"+slug+"/leave","POST",{}).then(function(r){if(!r.ok){toast(r.data.error||"Couldn't leave",true);return}toast("You left "+o.name);loadMe().then(function(){go("/app")})})}}
 
 // ---------- accepting an invitation ----------
 function inviteView(token){document.title="Invitation · Competition Manager";main('<div class="card note auth">Checking your invitation…</div>');
@@ -796,7 +1121,7 @@ function compTable(cs){return'<div class="tbl"><table class="dt"><thead><tr><th>
 function aOrg(id){var sec=A("Organization",[["Organizations","/admin/organizations"],["Details"]]);
   api("/api/admin/organizations/"+id).then(function(r){if(!r.ok){sec.innerHTML=errBox(r);return}var d=r.data,o=d.org;document.querySelector(".ahead h1").textContent=o.name;
     $("aacts").innerHTML=(o.status==="pending"?'<button class="btn sm" data-oa="approve">Approve</button>':'')+(o.status==="suspended"?'<button class="btn sm" data-oa="reactivate">Reactivate</button>':'<button class="btn bad sm" data-oa="suspend">Suspend</button>')+
-      '<a class="btn g sm" href="/organization/'+esc(o.slug)+'" target="_blank" rel="noopener">Public page ↗</a><button class="btn bad sm" id="odel">Delete</button>';
+      '<a class="btn g sm" href="/org/'+esc(o.slug)+'" target="_blank" rel="noopener">Public page ↗</a><button class="btn bad sm" id="odel">Delete</button>';
     sec.innerHTML='<div class="kpis">'+[["Members",o.members],["Competitions",o.competitions],["Teams",o.teams],["Matches",o.matches],["Pending invitations",d.invitations]].map(function(k){return'<div class="kpi"><span>'+k[0]+'</span><b>'+n(k[1])+'</b></div>'}).join("")+'</div>'+
       '<div class="agrid"><div class="card"><div class="gh">DETAILS</div><dl class="kv"><dt>Status</dt><dd>'+sb(o.status)+'</dd><dt>Owner</dt><dd>'+ULINK(o.owner)+'</dd><dt>Address</dt><dd>'+esc(o.slug)+'</dd><dt>Where</dt><dd>'+esc(o.where||"—")+'</dd><dt>Created</dt><dd>'+dt(o.created)+'</dd></dl>'+(o.description?'<p class="note" style="white-space:pre-wrap">'+esc(o.description)+'</p>':'')+'</div>'+
       '<div class="card"><div class="gh">MEMBERS · '+d.members.length+'</div><table class="dt"><tbody>'+d.members.map(function(m){return'<tr><td>'+ULINK(m.user)+'<small>joined '+date(m.joined)+' · active '+ago(m.lastActive)+'</small></td><td>'+pill(m.role,m.roleLabel)+'</td></tr>'}).join("")+'</tbody></table></div></div>'+

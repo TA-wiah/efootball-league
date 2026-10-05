@@ -65,7 +65,7 @@ class PublicPagesTest(Helpers, TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertIn('content="noindex"', r.content.decode())
         self.assertEqual(r["X-Robots-Tag"], "noindex")
-        self.assertNotIn("Secret Cup", Client().get(f"/organization/{self.slug}").content.decode())
+        self.assertNotIn("Secret Cup", Client().get(f"/org/{self.slug}").content.decode())
         self.assertNotIn(cs, Client().get("/sitemap.xml").content.decode())
         self.assertEqual(Client().get("/team/alpha").status_code, 404, "teams only in unlisted competitions have no public page")
 
@@ -86,7 +86,7 @@ class PublicPagesTest(Helpers, TestCase):
         r = Client().get("/team/kasoa-stars")
         self.assertEqual(r.status_code, 200)
         self.assertIn("Sunday League", r.content.decode())
-        org = Client().get(f"/organization/{self.slug}").content.decode()
+        org = Client().get(f"/org/{self.slug}").content.decode()
         self.assertIn("Sunday League", org)
         self.assertIn("Kasoa Stars", org)
 

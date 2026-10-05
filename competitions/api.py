@@ -13,7 +13,7 @@ from django.utils import timezone
 from league.http import ApiError, body, endpoint, ms, session_user, text
 from orgs.api import access, log
 from orgs.models import Membership
-from orgs.permissions import ROLE_INFO, can
+from orgs.permissions import ROLE_INFO, STAFF_ROLES, can
 
 from . import engine
 from .models import (COMP_STATUS, EVENT_KINDS, FORMATS, KINDS, MATCH_STATUS, POSITIONS, VISIBILITY, Announcement, Competition,
@@ -25,8 +25,17 @@ CHOICE = {"kind": dict(KINDS), "format": dict(FORMATS), "visibility": dict(VISIB
 # ---------- small helpers ----------
 def need(m, *perms):
     """At least one of `perms`, or 403."""
-    if not any(can(m.role, p) for p in perms):
+    if not any(can(m.role, p, m.org) for p in perms):
         raise ApiError(403, f"Your role ({ROLE_INFO[m.role][0]}) doesn't allow that.")
+
+
+def team_access(user, slug, team_id):
+    """Teams and their players: anyone with teams.manage, or a team manager/coach assigned to this team."""
+    org, m = access(user, slug, "org.view")
+    t = team_of(org, team_id)
+    if not (can(m.role, "teams.manage", org) or (can(m.role, "teams.manage_assigned", org) and m.teams.filter(id=t.id).exists())):
+        raise ApiError(403, f"Your role ({ROLE_INFO[m.role][0]}) can't change {t.name}.")
+    return org, m, t
 
 
 def num(b, key, lo, hi, allow_null=True):
@@ -162,8 +171,12 @@ def summary(request, user, ip, slug):
             "teams": org.teams.count(), "players": Player.objects.filter(team__org=org).count(),
             "upcoming": matches.filter(status="scheduled").filter(Q(kickoff__gte=now) | Q(kickoff__isnull=True)).count(),
             "completed": matches.filter(status="finished").count(),
+            "awaitingResults": matches.filter(status__in=["scheduled", "live"], kickoff__lt=now - timezone.timedelta(hours=2)).count(),
             "nextMatches": [match_json(x) for x in matches.filter(status__in=["scheduled", "live"], kickoff__isnull=False, kickoff__gte=now - timezone.timedelta(hours=3)).order_by("kickoff")[:5]],
-            "recentResults": [match_json(x) for x in matches.filter(status="finished").order_by("-kickoff", "-updated")[:5]]}
+            "recentResults": [match_json(x) for x in matches.filter(status="finished").order_by("-kickoff", "-updated")[:5]],
+            "members": org.memberships.count(), "staff": org.memberships.filter(role__in=STAFF_ROLES).count(),
+            "pendingInvitations": org.invitations.filter(status="pending", expires__gt=now).count() if can(m.role, "members.invite", org) else None,
+            "activity": [{"ts": ms(e.ts), "actor": e.actor, "action": e.action} for e in org.events.order_by("-id")[:8]]}
 
 
 # ---------- competitions ----------
@@ -610,11 +623,16 @@ def team_of(org, team_id):
 
 @endpoint("GET", "PATCH", "DELETE", login_required=True)
 def team_detail(request, user, ip, slug, team_id):
-    org, m = access(user, slug, "org.view")
-    t = team_of(org, team_id)
     if request.method == "GET":
-        return {"team": team_json(t, players=True)}
-    need(m, "teams.manage")
+        org, m = access(user, slug, "org.view")
+        return {"team": team_json(team_of(org, team_id), players=True)}
+    if request.method == "PATCH":
+        org, m, t = team_access(user, slug, team_id)
+        apply_team(t, body(request))
+        t.save()
+        return {"ok": True, "team": team_json(t, players=True)}
+    org, m = access(user, slug, "teams.manage")
+    t = team_of(org, team_id)
     if request.method == "DELETE":
         if Match.objects.filter(Q(home__team=t) | Q(away__team=t)).exists():
             raise ApiError(409, f"{t.name} has played or scheduled matches. Delete those matches first.")
@@ -627,15 +645,12 @@ def team_detail(request, user, ip, slug, team_id):
             raise ApiError(409, f"{name} is still used by matches.") from None
         log(org, user, f"deleted the team {name}")
         return {"ok": True}
-    apply_team(t, body(request))
-    t.save()
-    return {"ok": True, "team": team_json(t, players=True)}
 
 
 @endpoint("POST", "DELETE", login_required=True)
 def team_logo(request, user, ip, slug, team_id):
-    org, m = access(user, slug, "teams.manage")
-    return set_logo(request, team_of(org, team_id), "team")
+    org, m, t = team_access(user, slug, team_id)
+    return set_logo(request, t, "team")
 
 
 def apply_player(p, b):
@@ -656,8 +671,7 @@ def apply_player(p, b):
 
 @endpoint("POST", login_required=True)
 def team_players(request, user, ip, slug, team_id):
-    org, m = access(user, slug, "teams.manage")
-    t = team_of(org, team_id)
+    org, m, t = team_access(user, slug, team_id)
     if t.players.count() >= 100:
         raise ApiError(400, "A team can have at most 100 players.")
     p = Player(team=t)
@@ -674,10 +688,11 @@ def players(request, user, ip, slug):
 
 @endpoint("PATCH", "DELETE", login_required=True)
 def player_detail(request, user, ip, slug, player_id):
-    org, m = access(user, slug, "teams.manage")
+    org, m = access(user, slug, "org.view")
     p = Player.objects.select_related("team").filter(team__org=org, id=player_id).first()
     if not p:
         raise ApiError(404, "Player not found.")
+    team_access(user, slug, p.team_id)
     if request.method == "DELETE":
         p.delete()
         return {"ok": True}
@@ -716,16 +731,16 @@ def announcement_detail(request, user, ip, slug, ann_id):
     a = org.announcements.select_related("competition", "author").filter(id=ann_id).first()
     if not a:
         raise ApiError(404, "Announcement not found.")
-    own = a.author_id == user.id and can(m.role, "content.edit")
+    own = a.author_id == user.id and can(m.role, "content.edit", org)
     if request.method == "DELETE":
-        if not (own or can(m.role, "content.moderate")):
+        if not (own or can(m.role, "content.moderate", org)):
             raise ApiError(403, "Only its author or a moderator can delete this announcement.")
         a.delete()
         log(org, user, f"deleted the announcement “{a.title}”")
         return {"ok": True}
     b = body(request, 20_000)
     if {"title", "body"} & set(b):
-        if not (own or can(m.role, "competitions.manage")):    # staff can edit any; editors their own
+        if not (own or can(m.role, "competitions.manage", org)):    # staff can edit any; editors their own
             raise ApiError(403, "You can only edit your own announcements.")
         if "title" in b:
             title = text(b, "title", 140)
@@ -746,6 +761,14 @@ def announcement_detail(request, user, ip, slug, ann_id):
 
 # ---------- logos (images) ----------
 def logo_file(request, kind, obj_id):
+    if kind == "org":
+        from orgs.models import Organization
+        o = Organization.objects.filter(id=obj_id).only("id", "logo_data", "logo_type").first()
+        if not o or not o.logo_data:
+            return HttpResponse(status=404)
+        return HttpResponse(bytes(o.logo_data), content_type=o.logo_type,
+                            headers={"Cache-Control": "public, max-age=86400", "Content-Disposition": "inline",
+                                     "Content-Security-Policy": "default-src 'none'; sandbox"})
     model = Competition if kind == "competition" else Team
     obj = model.objects.filter(id=obj_id).only("id", "data", "content_type", "version", "org_id",
                                                 *(["visibility"] if kind == "competition" else [])).first()

@@ -5,7 +5,7 @@
     {% if logo %}<img class="crest" src="{{ logo }}" alt="{{ c.name }} logo" style="width:72px;height:72px">{% else %}<span class="crest trophy" style="width:72px;height:72px" aria-hidden="true"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 13v3M8 20h8M9.5 20l.5-4h4l.5 4"/></svg></span>{% endif %}
     <div>
       <h1>{{ c.name }}</h1>
-      <div class="note">{{ kind }}{% if c.season %} · {{ c.season }}{% endif %}{% if c.region or c.country %} · {{ c.region }}{% if c.region and c.country %}, {% endif %}{{ c.country }}{% endif %} · by <a href="/organization/{{ c.org.slug }}">{{ c.org.name }}</a></div>
+      <div class="note">{{ kind }}{% if c.season %} · {{ c.season }}{% endif %}{% if c.region or c.country %} · {{ c.region }}{% if c.region and c.country %}, {% endif %}{{ c.country }}{% endif %} · by <a href="/org/{{ c.org.slug }}">{{ c.org.name }}</a></div>
       <div class="note">{{ team_count }} teams · {{ played }} of {{ total }} matches played{% if c.status == "completed" %} · <span class="pill finished">Completed</span>{% endif %}</div>
     </div>
   </div>

@@ -1,19 +1,71 @@
 {% extends "public/base.html" %}
 {% block content %}
-<section class="card">
-  <div class="hero"><span class="crest trophy" style="width:64px;height:64px" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20a6 6 0 0 0-4-5.6"/></svg></span>
-    <div><h1>{{ o.name }}</h1><div class="note">{% if o.region %}{{ o.region }}{% endif %}{% if o.region and o.country %}, {% endif %}{{ o.country }}{% if o.region or o.country %} · {% endif %}{{ comps|length }} public competition{{ comps|length|pluralize }}</div></div></div>
-  {% if o.description %}<p style="white-space:pre-wrap;margin-bottom:0">{{ o.description }}</p>{% endif %}
-  <div style="margin-top:12px">{% include "public/_share.html" with share_url=url share_text=o.name %}</div>
-</section>
-<section class="card"><div class="gh">Competitions</div><div class="grid">
+<style>
+.osite{--brand:{{ brand }};--brand-ink:{{ brand_ink }}}
+.ohero{position:relative;overflow:hidden;border-radius:22px;padding:30px 26px;margin-bottom:14px;border:1px solid var(--line2);
+  background:radial-gradient(700px 260px at 90% -20%,color-mix(in srgb,var(--brand) 55%,transparent),transparent 70%),linear-gradient(135deg,color-mix(in srgb,var(--brand) 28%,var(--card)),var(--card2) 70%)}
+.ohero:after{content:"";position:absolute;left:0;right:0;bottom:0;height:4px;background:var(--brand)}
+.ohero .row1{display:flex;gap:20px;align-items:center}
+.ologo{width:88px;height:88px;border-radius:22px;flex:none;display:grid;place-items:center;background:var(--brand);color:var(--brand-ink);font-size:34px;font-weight:900;overflow:hidden;border:2px solid rgba(255,255,255,.85);box-shadow:0 12px 30px -12px rgba(0,0,0,.7)}
+.ologo img{width:100%;height:100%;object-fit:cover;background:#fff}
+.ohero h1{margin:0;font-size:34px;line-height:1.1;letter-spacing:-.6px}.ohero .tag{font-size:17px;color:var(--tx2);margin-top:6px}
+.ohero .meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.obtn{background:var(--brand)!important;color:var(--brand-ink)!important;box-shadow:none!important}
+.onav{position:sticky;top:62px;z-index:5;display:flex;gap:4px;overflow-x:auto;padding:5px;margin:0 0 16px;background:rgba(6,16,36,.85);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:14px;scrollbar-width:none}
+.onav a{flex:none;padding:8px 14px;border-radius:10px;color:var(--tx2);text-decoration:none;font-weight:700;font-size:14px}.onav a:hover{background:rgba(255,255,255,.06);color:var(--tx)}
+.osite section[id]{scroll-margin-top:130px}
+.osite .gh{color:var(--tx)}.osite .gh:before{background:var(--brand);box-shadow:none}
+.bracket{display:flex;gap:14px;overflow-x:auto;padding-bottom:6px}.bracket .rnd{flex:none;width:250px;display:flex;flex-direction:column;gap:8px}
+.bracket .rnd h3{margin:0 0 2px;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--soft)}
+.bm{display:block;background:rgba(255,255,255,.03);border:1px solid var(--line);border-left:3px solid var(--brand);border-radius:10px;padding:8px 10px;color:var(--tx);text-decoration:none;font-size:14px}
+.bm:hover{border-color:var(--line2);background:rgba(255,255,255,.05)}.bm div{display:flex;justify-content:space-between;gap:8px}.bm b{font-variant-numeric:tabular-nums}.bm .w{font-weight:800}
+.plist{columns:3 220px;column-gap:18px}.plist .pt{break-inside:avoid;margin-bottom:14px}.plist .pt b{display:block;margin-bottom:4px}.plist .pt div{font-size:14px;color:var(--tx2);padding:2px 0}.plist .no{display:inline-block;min-width:26px;color:var(--soft);font-variant-numeric:tabular-nums}
+@media(max-width:620px){.ohero{padding:22px 18px}.ohero h1{font-size:26px}.ologo{width:64px;height:64px;font-size:24px;border-radius:16px}.ohero .row1{gap:14px}}
+</style>
+<div class="osite">
+<header class="ohero">
+  <div class="row1">
+    <div class="ologo">{% if org_logo %}<img src="{{ org_logo }}" alt="{{ o.name }} logo">{% else %}{{ o.name|slice:":1"|upper }}{% endif %}</div>
+    <div style="min-width:0"><h1>{{ o.name }}</h1>
+      {% if s.tagline %}<div class="tag">{{ s.tagline }}</div>{% endif %}
+      <div class="meta"><span class="pill">{{ kind }}</span>{% if o.region or o.country %}<span class="pill">{{ o.region }}{% if o.region and o.country %}, {% endif %}{{ o.country }}</span>{% endif %}<span class="pill">{{ comps|length }} competition{{ comps|length|pluralize }}</span></div>
+    </div>
+  </div>
+  <div style="margin-top:18px">{% include "public/_share.html" with share_url=url share_text=o.name %}</div>
+</header>
+{% if nav|length > 1 %}<nav class="onav" aria-label="{{ o.name }}">{% for k, label in nav %}<a href="#{{ k }}">{{ label }}</a>{% endfor %}</nav>{% endif %}
+
+<section class="card" id="competitions"><div class="gh">Competitions</div><div class="grid">
   {% for x in comps %}<a class="tile" href="/competition/{{ x.c.slug }}">{% if x.logo %}<img class="crest" src="{{ x.logo }}" alt="" style="width:40px;height:40px">{% else %}<span class="crest trophy" style="width:40px;height:40px" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M12 13v3M8 20h8"/></svg></span>{% endif %}<span>{{ x.c.name }}<small>{{ x.kind }}{% if x.c.season %} · {{ x.c.season }}{% endif %} · {{ x.teams }} teams</small></span></a>
   {% empty %}<p class="note">No public competitions yet.</p>{% endfor %}
 </div></section>
-<div class="two">
-  <section class="card"><div class="gh">Upcoming matches</div>{% for m in upcoming %}{% include "public/_match.html" with show_comp=1 %}{% empty %}<p class="note">No upcoming matches.</p>{% endfor %}</section>
-  <section class="card"><div class="gh">Recent results</div>{% for m in recent %}{% include "public/_match.html" with show_comp=1 %}{% empty %}<p class="note">No results yet.</p>{% endfor %}</section>
+
+{% if upcoming is not None or recent is not None %}<div class="two">
+  {% if upcoming is not None %}<section class="card" id="fixtures"><div class="gh">Fixtures</div>{% for m in upcoming %}{% include "public/_match.html" with show_comp=1 %}{% empty %}<p class="note">No upcoming matches.</p>{% endfor %}</section>{% endif %}
+  {% if recent is not None %}<section class="card" id="results"><div class="gh">Results</div>{% for m in recent %}{% include "public/_match.html" with show_comp=1 %}{% empty %}<p class="note">No results yet.</p>{% endfor %}</section>{% endif %}
+</div>{% endif %}
+
+{% if tables %}<section class="card" id="standings"><div class="gh">Standings</div>
+  {% for t in tables %}<h3 style="margin:4px 0 6px"><a href="/competition/{{ t.c.slug }}/table" style="color:var(--tx);text-decoration:none">{{ t.c.name }}</a></h3>{% include "public/_table.html" with groups=t.groups %}{% endfor %}
+</section>{% endif %}
+
+{% if brackets %}<section class="card" id="brackets"><div class="gh">Brackets</div>
+  {% for b in brackets %}<h3 style="margin:4px 0 10px">{{ b.c.name }}</h3><div class="bracket">{% for name, games in b.rounds %}<div class="rnd"><h3>{{ name }}</h3>
+    {% for m in games %}<a class="bm" href="/match/{{ m.slug }}"><div><span{% if m.played and m.hs > m.as %} class="w"{% endif %}>{{ m.home.name|default:"To be decided" }}</span><b>{% if m.played %}{{ m.hs }}{% endif %}</b></div><div><span{% if m.played and m.as > m.hs %} class="w"{% endif %}>{{ m.away.name|default:"To be decided" }}</span><b>{% if m.played %}{{ m.as }}{% endif %}</b></div></a>{% endfor %}
+  </div>{% endfor %}</div>{% endfor %}
+</section>{% endif %}
+
+{% if teams %}<section class="card" id="teams"><div class="gh">Teams</div><div class="grid">{% for t in teams %}<a class="tile" href="/team/{{ t.slug }}">{% include "public/_crest.html" with t=t size=32 %}<span>{{ t.name }}</span></a>{% endfor %}</div></section>{% endif %}
+
+{% if players %}<section class="card" id="players"><div class="gh">Players</div><div class="plist">
+  {% for team, ps in players %}<div class="pt"><b>{{ team }}</b>{% for p in ps %}<div><span class="no">{% if p.number is not None %}{{ p.number }}{% endif %}</span>{{ p.name }}</div>{% endfor %}</div>{% endfor %}
+</div></section>{% endif %}
+
+{% if news %}<section class="card" id="news"><div class="gh">News</div>{% for n in news %}<div class="news"><b>{{ n.title }}</b>{% if n.pinned %} <span class="pill">Pinned</span>{% endif %}{% if n.competition %} <span class="pill">{{ n.competition.name }}</span>{% endif %}<div class="note"><time datetime="{{ n.created|date:'c' }}" data-f="date">{{ n.created|date:"j M Y" }}</time></div><p>{{ n.body }}</p></div>{% endfor %}</section>{% endif %}
+
+{% if s.about or s.contact or o.description %}<section class="card" id="about"><div class="gh">About</div>
+  {% if s.about or o.description %}<p style="white-space:pre-wrap;margin-top:0">{% firstof s.about o.description %}</p>{% endif %}
+  {% if s.contact %}<div class="md">Contact</div><p style="white-space:pre-wrap;margin:0">{{ s.contact }}</p>{% endif %}
+</section>{% endif %}
 </div>
-{% if news %}<section class="card"><div class="gh">News</div>{% for n in news %}<div class="news"><b>{{ n.title }}</b>{% if n.competition %} <span class="pill">{{ n.competition.name }}</span>{% endif %}<div class="note"><time datetime="{{ n.created|date:'c' }}" data-f="date">{{ n.created|date:"j M Y" }}</time></div><p>{{ n.body }}</p></div>{% endfor %}</section>{% endif %}
-{% if teams %}<section class="card"><div class="gh">Teams</div><div class="grid">{% for t in teams %}<a class="tile" href="/team/{{ t.slug }}">{% include "public/_crest.html" with t=t size=32 %}<span>{{ t.name }}</span></a>{% endfor %}</div></section>{% endif %}
 {% endblock %}
