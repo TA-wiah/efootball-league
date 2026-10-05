@@ -32,6 +32,10 @@ DB_FILE.parent.mkdir(parents=True, exist_ok=True)
 DATABASES = {"default": dj_database_url.parse(E.get("DATABASE_URL") or f"sqlite:///{DB_FILE.as_posix()}", conn_max_age=600, conn_health_checks=True)}
 SEED_FILE = Path(E.get("SEED_FILE") or BASE_DIR / "seed.json")
 INDEX_FILE = BASE_DIR / "public" / "index.html"
+# "/" shows the platform's landing page; the original single league lives at /classic.
+# Set HOME_PAGE=league to keep the original league at "/" instead (it stays at /classic too).
+HOME_PAGE = "league" if E.get("HOME_PAGE") == "league" else "platform"
+LEAGUE_PATH = "/" if HOME_PAGE == "league" else "/classic"
 APP_FILE = BASE_DIR / "public" / "app.html"     # the platform: sign-up, organizations, dashboards
 
 

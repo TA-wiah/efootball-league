@@ -73,7 +73,7 @@ table.st td,table.st th{text-align:center;padding:8px 4px}.st .tl{text-align:lef
 @media (prefers-reduced-motion:no-preference){#main>*{animation:rise .35s cubic-bezier(.2,.8,.2,1) both}.toast{animation:rise .3s both}}
 @keyframes rise{from{opacity:0;transform:translateY(12px)}}
 </style></head><body>
-<header class="top"><a class="brand" href="/app" data-nav><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 13v3M8 20h8M9.5 20l.5-4h4l.5 4"/></svg><span>Competition Manager</span></a><nav id="topnav" aria-label="Account"></nav></header>
+<header class="top"><a class="brand" href="/"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 13v3M8 20h8M9.5 20l.5-4h4l.5 4"/></svg><span>Competition Manager</span></a><nav id="topnav" aria-label="Account"></nav></header>
 <main class="w" id="main"><div class="card note">Loading…</div></main>
 <div class="toast" id="toast" role="status" hidden></div>
 <script>
@@ -115,9 +115,9 @@ function go(path,replace){history[replace?"replaceState":"pushState"](null,"",pa
 document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("a[data-nav]");if(a&&!e.ctrlKey&&!e.metaKey&&!e.shiftKey&&e.button===0){e.preventDefault();go(a.getAttribute("href"))}});
 window.addEventListener("popstate",route);
 function topnav(){$("topnav").innerHTML=(ME?
-  '<a href="/app" data-nav>My organizations'+(INV?' <span class="pill pending">'+INV+'</span>':'')+'</a>'+(ME.leagueAccess?'<a href="/">League site</a>':'')+'<span class="who">'+esc(ME.username)+'</span><button class="btn g sm" id="logout">Log out</button>'
+  '<a href="/app" data-nav>My organizations'+(INV?' <span class="pill pending">'+INV+'</span>':'')+'</a>'+(ME.leagueAccess?'<a href="/classic">League site</a>':'')+'<span class="who">'+esc(ME.username)+'</span><button class="btn g sm" id="logout">Log out</button>'
   :(function(){var n=/^\/invite\//.test(location.pathname)?"?next="+encodeURIComponent(location.pathname):"";
-     return'<a href="/">League site</a><a href="/app/login'+n+'" data-nav>Log in</a><a class="btn sm" href="/app/signup'+n+'" data-nav>Sign up</a>'})());
+     return'<a href="/competitions">Competitions</a><a href="/app/login'+n+'" data-nav>Log in</a><a class="btn sm" href="/app/signup'+n+'" data-nav>Sign up</a>'})());
   var lo=$("logout");if(lo)lo.onclick=function(){api("/api/auth/logout","POST",{}).then(loadMe).then(function(){toast("Logged out");go("/app/login")})}}
 function route(){topnav();var p=location.pathname.replace(/\/+$/,"")||"/",m;
   if((m=p.match(/^\/invite\/([^/]+)$/)))return inviteView(decodeURIComponent(m[1]));
@@ -152,7 +152,7 @@ function dashboard(){document.title="My organizations · Competition Manager";
     $("invs").innerHTML=inv.length?'<div class="card"><div class="gh">INVITATIONS FOR YOU</div>'+inv.map(function(i){return'<div class="actions" style="align-items:center;margin:6px 0;justify-content:space-between"><div><b>'+esc(i.org.name)+'</b> '+pill(i.role,i.roleLabel)+'<div class="note">Invited by '+esc(i.invitedBy||"someone")+' · expires '+date(i.expires)+'</div></div><button class="btn sm" data-acc="'+i.id+'">Accept</button></div>'}).join("")+'</div>':"";
     $("orgs").innerHTML='<div class="grid">'+ORGS.map(function(o){return'<a class="oc" href="/app/org/'+esc(o.slug)+'" data-nav><b>'+esc(o.name)+'</b>'+pill(o.role,o.roleLabel)+'<div style="margin-top:8px"><small>'+ic("users")+' '+o.members+' member'+(o.members===1?"":"s")+(o.country||o.region?' · '+esc([o.region,o.country].filter(Boolean).join(", ")):"")+'</small></div></a>'}).join("")+
       '<a class="oc" href="/app/new" data-nav style="border:1px dashed var(--line)"><b>'+ic("plus")+' Create an organization</b><small>Start a league, tournament or club and invite your team.</small></a></div>'+
-      (ME.leagueAccess?'<div class="card" style="margin-top:14px"><b>'+ic("trophy")+' Your original league</b><p class="note" style="margin:6px 0 10px">The league site you already run keeps working as before.</p><a class="btn g sm" href="/">Open the league site</a></div>':"");
+      (ME.leagueAccess?'<div class="card" style="margin-top:14px"><b>'+ic("trophy")+' Your original league</b><p class="note" style="margin:6px 0 10px">The league site you already run keeps working as before.</p><a class="btn g sm" href="/classic">Open the league site</a></div>':"");
     document.querySelectorAll("[data-acc]").forEach(function(b){b.onclick=function(){busy(b,true,"Joining…");api("/api/me/invitations/"+b.dataset.acc+"/accept","POST",{}).then(function(r){
       if(!r.ok){busy(b,false);toast(r.data.error||"Couldn't accept",true);return}toast("You joined "+r.data.org.name);loadMe().then(function(){go("/app/org/"+r.data.org.slug)})})}})})}
 

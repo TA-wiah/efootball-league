@@ -185,7 +185,7 @@ def forgot(request, me, ip):
         return answer
     a = Admin.objects.filter(Q(username__iexact=ident) | Q(email__iexact=ident)).first() if ident else None
     if a and a.email and a.has_usable_password() and not hit(f"forgot:{a.id}", 3, 3600):
-        link = f"{settings.APP_URL}/#reset={new_token(a, 'reset', timedelta(hours=1))}"
+        link = f"{settings.APP_URL}{settings.LEAGUE_PATH}#reset={new_token(a, 'reset', timedelta(hours=1))}"
         txt, html = emailer.body("Reset your password", [f"Hi {a.username},", "Someone (hopefully you) asked to reset your admin password. The link works once and expires in 1 hour."],
                                  link, "Choose a new password", "If you didn't ask for this you can ignore this email; your password stays the same.")
         audit(a.username, "reset email requested", ip)
@@ -293,7 +293,7 @@ def draw_knockout(request, me, ip):
 
 # ---------- admins ----------
 def send_invite(request, me, a, ip):
-    link = f"{base_url(request)}/#invite={new_token(a, 'invite', timedelta(hours=48))}"
+    link = f"{base_url(request)}{settings.LEAGUE_PATH}#invite={new_token(a, 'invite', timedelta(hours=48))}"
     if not emailer.ready():
         return {"ok": True, "emailed": False, "link": link, "note": "Email is not set up, so send this link yourself. It expires in 48 hours."}
     txt, html = emailer.body("You're invited as an admin",

@@ -25,7 +25,8 @@ def app_page(request, **kwargs):
 
 urlpatterns = [
     # ---- the original league page and its API ----
-    path("", v.index),
+    path("", v.index),          # landing page replaces this when HOME_PAGE=platform (phase 4, in progress)
+    path("classic", v.index),
     path("index.html", v.index),
     path("api/state", state),
     path("api/seed", v.seed_view),
