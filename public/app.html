@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Competition Manager</title>
+<meta name="description" content="Create and run leagues and tournaments: teams, fixtures, results, standings and your staff, in one place.">
+<style>
+:root{--bg:#080e30;--card:#182664;--card2:#0c1646;--line:#2d418c;--gold:#ffcd46;--tx:#f5f8ff;--soft:#96afeb;--ok:#6dff9c;--bad:#ff5d73}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(#080e30,#0a2450) fixed;background-color:#080e30;color:var(--tx);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;min-height:100vh;line-height:1.45}
+a{color:var(--gold)}
+.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top,0px));background:rgba(8,14,48,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:8px;color:var(--tx);text-decoration:none;font-weight:900;letter-spacing:.5px}.brand .ic{color:var(--gold);width:24px;height:24px}
+.top nav{margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;font-size:14px}
+.top nav a{color:var(--soft);text-decoration:none;font-weight:700}.top nav a:hover{color:var(--tx)}.who{color:var(--soft);font-size:13px}
+.w{max-width:1040px;margin:0 auto;padding:18px 16px 70px}
+h1{font-size:26px;margin:6px 0 4px}h2{font-size:18px;margin:0 0 10px}
+.sub{color:var(--soft);margin:0 0 16px}
+.card{background:var(--card);border-radius:14px;padding:16px;margin-bottom:14px}
+.gh{background:var(--gold);color:#080e30;border-radius:10px;padding:8px 12px;font-weight:800;margin:-4px -4px 12px;letter-spacing:.5px;font-size:14px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 16px;border:0;border-radius:12px;background:var(--gold);color:#080e30;font-weight:800;font-size:15px;cursor:pointer;text-decoration:none;font-family:inherit}
+.btn.g{background:var(--card2);color:var(--soft);border:1px solid var(--line)}.btn.bad{background:#6b1a35;color:#fff}.btn.sm{padding:7px 11px;font-size:13px;border-radius:9px}.btn.block{display:flex;width:100%}
+.btn:disabled{opacity:.55;cursor:default}.btn:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+label{display:block;color:var(--soft);font-size:12px;font-weight:700;margin:10px 0 0}
+input,select,textarea{width:100%;margin-top:4px;padding:11px;border:1px solid var(--line);border-radius:9px;background:var(--card2);color:var(--tx);font:inherit;font-size:15px}
+textarea{resize:vertical;min-height:80px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:560px){.row{grid-template-columns:1fr}}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.note{color:var(--soft);font-size:13px}
+.err{background:#4a1427;border:1px solid var(--bad);color:#ffd5dc;border-radius:10px;padding:10px;font-size:14px;margin-top:12px}
+.okm{background:#123d2a;border:1px solid var(--ok);color:#d4ffe4;border-radius:10px;padding:10px;font-size:14px;margin-top:12px;word-break:break-word}
+.pill{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.4px;padding:3px 8px;border-radius:20px;background:#2d418c;color:var(--tx);white-space:nowrap;vertical-align:middle}
+.pill.owner{background:var(--gold);color:#080e30}.pill.organizer{background:#ff9f43;color:#2a1600}.pill.admin{background:#4aa3ff;color:#04203f}.pill.editor{background:#6dff9c;color:#06301a}.pill.moderator{background:#c18cff;color:#250a44}.pill.viewer{background:#2d418c}
+.pill.pending{background:#6b4a05;color:#ffe9b0}.pill.accepted{background:#1d5c3c;color:#d4ffe4}.pill.expired{background:#3a3f5c;color:#c8d0e1}.pill.revoked{background:#5a1a2d;color:#ffd5dc}.pill.soon{background:transparent;border:1px solid var(--line);color:var(--soft);font-size:10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.oc{display:block;background:var(--card);border-radius:14px;padding:16px;text-decoration:none;color:var(--tx);border:1px solid transparent;transition:border-color .2s,transform .15s}.oc:hover{border-color:var(--gold);transform:translateY(-2px)}
+.oc b{display:block;font-size:17px;margin-bottom:6px}.oc small{color:var(--soft)}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.stat{background:var(--card);border-radius:14px;padding:14px}.stat b{display:block;font-size:28px;color:var(--gold)}.stat span{color:var(--soft);font-size:13px}
+.layout{display:grid;grid-template-columns:220px 1fr;gap:16px;align-items:start}.layout>*{min-width:0}
+.side{position:sticky;top:70px;background:var(--card);border-radius:14px;padding:8px}
+.side>a,.side>span{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:9px 10px;border-radius:9px;color:var(--soft);text-decoration:none;font-weight:700;font-size:14px}
+.side>a.on{background:var(--gold);color:#080e30}.side>a:hover:not(.on){background:var(--card2);color:var(--tx)}.side>span{opacity:.55;cursor:default}
+@media(max-width:760px){.side>span{display:none}.who{display:none}.brand span{font-size:15px}.layout{grid-template-columns:1fr}.side{position:static;display:flex;overflow-x:auto;gap:4px;padding:6px}.side>a,.side>span{white-space:nowrap;flex:none}}
+.tbl{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px}th{color:var(--soft);font-size:12px;font-weight:700;text-align:left}th,td{padding:9px 6px;vertical-align:middle}tr+tr td{border-top:1px solid var(--line)}
+td select{margin:0;padding:7px;font-size:13px;min-width:120px}
+.who-cell b{display:block}.who-cell small{color:var(--soft)}
+.feed div{padding:7px 0;border-top:1px solid var(--line);font-size:13px;color:var(--soft)}.feed div:first-child{border-top:0}.feed b{color:var(--tx)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}.chip{border:1px solid var(--line);background:var(--card2);color:var(--soft);border-radius:20px;padding:6px 12px;font-weight:700;font-size:13px;cursor:pointer}.chip.on{background:var(--gold);color:#080e30;border-color:var(--gold)}
+.link{display:grid;grid-template-columns:1fr auto auto;gap:6px;margin-top:8px}.link input{margin:0;font-size:13px}
+details summary{cursor:pointer;color:var(--gold);font-weight:800;padding:4px 0}
+.mx td,.mx th{text-align:center;font-size:12px}.mx td:first-child,.mx th:first-child{text-align:left}.mx .y{color:var(--ok);font-weight:900}.mx .n{color:#4b5a91}
+.ic{width:1.1em;height:1.1em;vertical-align:-.18em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.auth{max-width:440px;margin:24px auto}.tabs2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px}.tabs2 a{text-align:center;padding:10px;border-radius:10px;background:var(--card2);color:var(--soft);text-decoration:none;font-weight:800}.tabs2 a.on{background:var(--gold);color:#080e30}
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:20;max-width:min(92vw,520px);background:#123d2a;border:1px solid var(--ok);color:#d4ffe4;border-radius:12px;padding:12px 16px;font-weight:700;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.5)}.toast.bad{background:#4a1427;border-color:var(--bad);color:#ffd5dc}.toast[hidden]{display:none}
+.empty{text-align:center;padding:30px 16px}.empty .ic{width:44px;height:44px;color:var(--gold)}
+@media (prefers-reduced-motion:no-preference){#main>*{animation:rise .35s cubic-bezier(.2,.8,.2,1) both}.toast{animation:rise .3s both}}
+@keyframes rise{from{opacity:0;transform:translateY(12px)}}
+</style></head><body>
+<header class="top"><a class="brand" href="/app" data-nav><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 13v3M8 20h8M9.5 20l.5-4h4l.5 4"/></svg><span>Competition Manager</span></a><nav id="topnav" aria-label="Account"></nav></header>
+<main class="w" id="main"><div class="card note">Loading…</div></main>
+<div class="toast" id="toast" role="status" hidden></div>
+<script>
+"use strict";
+// ---------- basics ----------
+var $=function(id){return document.getElementById(id)};
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+var IC={users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20a6 6 0 0 0-4-5.6"/>',
+  mail:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',plus:'<path d="M12 5v14M5 12h14"/>',
+  link:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+  trophy:'<path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 13v3M8 20h8M9.5 20l.5-4h4l.5 4"/>',
+  shield:'<path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/>',copy:'<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
+  share:'<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>'};
+function ic(n){return'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">'+IC[n]+'</svg>'}
+var ME=null,ORGS=[],INV=0,CSRF="",ROLES=null;
+function api(url,method,data){var o={method:method||"GET",headers:{},credentials:"same-origin",cache:"no-store"};if(CSRF)o.headers["X-CSRF"]=CSRF;
+  if(data!==undefined){o.headers["Content-Type"]="application/json";o.body=JSON.stringify(data)}
+  return fetch(url,o).then(function(r){return r.json().catch(function(){return{}}).then(function(d){return{ok:r.ok,status:r.status,data:d}})},
+    function(){return{ok:false,status:0,data:{error:"Can't reach the server. Check your connection."}}})}
+function loadMe(){return api("/api/auth/me").then(function(r){if(r.ok){ME=r.data.user;ORGS=r.data.orgs||[];INV=r.data.invitations||0;CSRF=r.data.csrf}})}
+function loadRoles(){return ROLES?Promise.resolve(ROLES):api("/api/roles").then(function(r){ROLES=r.data;return ROLES})}
+function roleLabel(k){var r=ROLES&&ROLES.roles.filter(function(x){return x.key===k})[0];return r?r.label:k}
+function pill(role,label){return'<span class="pill '+esc(role)+'">'+esc(label||roleLabel(role))+'</span>'}
+function date(ms){return ms?new Date(ms).toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"}):"—"}
+function ago(ms){if(!ms)return"never";var s=(Date.now()-ms)/1000;return s<90?"just now":s<5400?Math.round(s/60)+" min ago":s<129600?Math.round(s/3600)+" h ago":Math.round(s/86400)+" days ago"}
+function toast(msg,bad){var t=$("toast");t.textContent=msg;t.className="toast"+(bad?" bad":"");t.hidden=false;clearTimeout(t._h);t._h=setTimeout(function(){t.hidden=true},5000)}
+function errBox(r){return'<div class="err" role="alert">'+esc((r&&r.data&&r.data.error)||"Something went wrong.")+'</div>'}
+function main(html){$("main").innerHTML=html;window.scrollTo(0,0)}
+function safeNext(){var n=new URLSearchParams(location.search).get("next")||"";return/^\/(?!\/)/.test(n)?n:"/app"}
+function copy(text,btn){var done=function(){if(btn){var o=btn.innerHTML;btn.textContent="Copied";setTimeout(function(){btn.innerHTML=o},1600)}toast("Link copied")};
+  if(navigator.clipboard)navigator.clipboard.writeText(text).then(done,function(){prompt("Copy this link:",text)});else prompt("Copy this link:",text)}
+// Two-tap confirmation for anything destructive
+function armed(btn,label){if(btn.dataset.armed)return true;var o=btn.innerHTML;btn.dataset.armed="1";btn.textContent=label;
+  setTimeout(function(){if(btn.isConnected){delete btn.dataset.armed;btn.innerHTML=o}},4000);return false}
+function busy(btn,on,txt){if(!btn)return;if(on){btn._t=btn.innerHTML;btn.disabled=true;if(txt)btn.textContent=txt}else{btn.disabled=false;if(btn._t)btn.innerHTML=btn._t}}
+
+// ---------- routing ----------
+function go(path,replace){history[replace?"replaceState":"pushState"](null,"",path);route()}
+document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("a[data-nav]");if(a&&!e.ctrlKey&&!e.metaKey&&!e.shiftKey&&e.button===0){e.preventDefault();go(a.getAttribute("href"))}});
+window.addEventListener("popstate",route);
+function topnav(){$("topnav").innerHTML=(ME?
+  '<a href="/app" data-nav>My organizations'+(INV?' <span class="pill pending">'+INV+'</span>':'')+'</a>'+(ME.leagueAccess?'<a href="/">League site</a>':'')+'<span class="who">'+esc(ME.username)+'</span><button class="btn g sm" id="logout">Log out</button>'
+  :(function(){var n=/^\/invite\//.test(location.pathname)?"?next="+encodeURIComponent(location.pathname):"";
+     return'<a href="/">League site</a><a href="/app/login'+n+'" data-nav>Log in</a><a class="btn sm" href="/app/signup'+n+'" data-nav>Sign up</a>'})());
+  var lo=$("logout");if(lo)lo.onclick=function(){api("/api/auth/logout","POST",{}).then(loadMe).then(function(){toast("Logged out");go("/app/login")})}}
+function route(){topnav();var p=location.pathname.replace(/\/+$/,"")||"/",m;
+  if((m=p.match(/^\/invite\/([^/]+)$/)))return inviteView(decodeURIComponent(m[1]));
+  if(p==="/app/login"||p==="/app/signup")return ME?go(safeNext(),true):authView(p.slice(5));
+  if(!ME)return go("/app/login?next="+encodeURIComponent(location.pathname),true);
+  if(p==="/app")return dashboard();
+  if(p==="/app/new")return createOrgView();
+  if((m=p.match(/^\/app\/org\/([a-z0-9-]+)(?:\/([a-z]+))?$/)))return orgView(m[1],m[2]||"overview");
+  main('<div class="card empty"><h2>Page not found</h2><p class="note">That page doesn\'t exist.</p><a class="btn" href="/app" data-nav>Go to my organizations</a></div>')}
+
+// ---------- log in / sign up ----------
+function authView(mode){var q=new URLSearchParams(location.search),next=q.toString()?"?"+q.toString():"";
+  document.title=(mode==="signup"?"Sign up":"Log in")+" · Competition Manager";
+  main('<div class="auth"><div class="tabs2"><a href="/app/login'+esc(next)+'" data-nav class="'+(mode==="login"?"on":"")+'">Log in</a><a href="/app/signup'+esc(next)+'" data-nav class="'+(mode==="signup"?"on":"")+'">Sign up</a></div>'+
+  '<form class="card" id="af" novalidate><h1>'+(mode==="signup"?"Create your account":"Welcome back")+'</h1><p class="sub">'+(mode==="signup"?"Free. Run leagues and tournaments, invite your staff and publish results.":"Log in to manage your organizations and competitions.")+'</p>'+
+  (mode==="signup"?'<label for="u">Username<input id="u" autocomplete="username" autocapitalize="none" spellcheck="false" required></label><label for="e">Email<input id="e" type="email" autocomplete="email" value="'+esc(q.get("email")||"")+'" required></label>'
+   :'<label for="u">Username or email<input id="u" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>')+
+  '<label for="p">Password<input id="p" type="password" autocomplete="'+(mode==="signup"?"new-password":"current-password")+'" required></label>'+
+  (mode==="signup"?'<div class="note" style="margin-top:4px">At least 10 characters. A short sentence works well.</div><label for="p2">Repeat password<input id="p2" type="password" autocomplete="new-password" required></label>':'')+
+  '<div class="actions"><button class="btn block" id="go">'+(mode==="signup"?"Create account":"Log in")+'</button></div><div id="msg"></div></form></div>');
+  $("u").focus();
+  $("af").onsubmit=function(e){e.preventDefault();var b=$("go"),u=$("u").value.trim(),p=$("p").value;
+    if(mode==="signup"&&p!==$("p2").value){$("msg").innerHTML=errBox({data:{error:"The two passwords don't match."}});return}
+    busy(b,true,mode==="signup"?"Creating…":"Checking…");
+    var req=mode==="signup"?api("/api/auth/signup","POST",{username:u,email:$("e").value.trim(),password:p}):api("/api/auth/login","POST",{user:u,password:p});
+    req.then(function(r){busy(b,false);if(!r.ok){$("msg").innerHTML=errBox(r);return}return loadMe().then(function(){toast(mode==="signup"?"Welcome, "+ME.username+"!":"Logged in");go(safeNext(),true)})})}}
+
+// ---------- my organizations ----------
+function dashboard(){document.title="My organizations · Competition Manager";
+  main('<h1>My organizations</h1><p class="sub">An organization is your league, school, club, academy or company. Each one has its own competitions, teams and staff.</p><div id="invs"></div><div id="orgs"><div class="card note">Loading…</div></div>');
+  Promise.all([loadMe(),loadRoles(),api("/api/me/invitations")]).then(function(res){topnav();var inv=res[2].data.invitations||[];
+    $("invs").innerHTML=inv.length?'<div class="card"><div class="gh">INVITATIONS FOR YOU</div>'+inv.map(function(i){return'<div class="actions" style="align-items:center;margin:6px 0;justify-content:space-between"><div><b>'+esc(i.org.name)+'</b> '+pill(i.role,i.roleLabel)+'<div class="note">Invited by '+esc(i.invitedBy||"someone")+' · expires '+date(i.expires)+'</div></div><button class="btn sm" data-acc="'+i.id+'">Accept</button></div>'}).join("")+'</div>':"";
+    $("orgs").innerHTML='<div class="grid">'+ORGS.map(function(o){return'<a class="oc" href="/app/org/'+esc(o.slug)+'" data-nav><b>'+esc(o.name)+'</b>'+pill(o.role,o.roleLabel)+'<div style="margin-top:8px"><small>'+ic("users")+' '+o.members+' member'+(o.members===1?"":"s")+(o.country||o.region?' · '+esc([o.region,o.country].filter(Boolean).join(", ")):"")+'</small></div></a>'}).join("")+
+      '<a class="oc" href="/app/new" data-nav style="border:1px dashed var(--line)"><b>'+ic("plus")+' Create an organization</b><small>Start a league, tournament or club and invite your team.</small></a></div>'+
+      (ME.leagueAccess?'<div class="card" style="margin-top:14px"><b>'+ic("trophy")+' Your original league</b><p class="note" style="margin:6px 0 10px">The league site you already run keeps working as before.</p><a class="btn g sm" href="/">Open the league site</a></div>':"");
+    document.querySelectorAll("[data-acc]").forEach(function(b){b.onclick=function(){busy(b,true,"Joining…");api("/api/me/invitations/"+b.dataset.acc+"/accept","POST",{}).then(function(r){
+      if(!r.ok){busy(b,false);toast(r.data.error||"Couldn't accept",true);return}toast("You joined "+r.data.org.name);loadMe().then(function(){go("/app/org/"+r.data.org.slug)})})}})})}
+
+function createOrgView(){document.title="New organization · Competition Manager";
+  main('<form class="card" id="cf" style="max-width:640px" novalidate><div class="gh">CREATE AN ORGANIZATION</div><p class="note" style="margin-top:0">For example “Kasoa Community League”, “St. Mary\'s School Sports” or “Accra Corporate Cup”. You\'ll be its <b>owner</b> and can invite others afterwards.</p>'+
+  '<label for="n">Name<input id="n" maxlength="80" required></label><label for="d">Description (optional)<textarea id="d" maxlength="2000" placeholder="What is it? Who plays?"></textarea></label>'+
+  '<div class="row"><label for="c">Country<input id="c" maxlength="60" placeholder="Ghana"></label><label for="r">Region / city<input id="r" maxlength="60" placeholder="Central"></label></div>'+
+  '<div class="actions"><button class="btn" id="go">Create organization</button><a class="btn g" href="/app" data-nav>Cancel</a></div><div id="msg"></div></form>');
+  $("n").focus();
+  $("cf").onsubmit=function(e){e.preventDefault();var b=$("go");busy(b,true,"Creating…");
+    api("/api/orgs","POST",{name:$("n").value,description:$("d").value,country:$("c").value,region:$("r").value}).then(function(r){busy(b,false);
+      if(!r.ok){$("msg").innerHTML=errBox(r);return}toast("Organization created");loadMe().then(function(){go("/app/org/"+r.data.org.slug)})})}}
+
+// ---------- one organization ----------
+var SECTIONS=[["overview","Overview"],["competitions","Competitions",1],["teams","Teams",1],["players","Players",1],["fixtures","Fixtures",1],["matches","Matches",1],
+  ["results","Results",1],["tables","League tables",1],["members","Members"],["invitations","Invitations","members.invite"],["announcements","Announcements",1],["settings","Settings"]];
+var ORG=null;
+function has(p){return ORG&&ORG.me.perms.indexOf(p)>=0}
+function orgView(slug,section){
+  Promise.all([api("/api/orgs/"+slug),loadRoles()]).then(function(res){var r=res[0];
+    if(!r.ok){main('<div class="card empty"><h2>Organization not found</h2><p class="note">It doesn\'t exist, or you\'re not a member. Ask its owner for an invitation.</p><a class="btn" href="/app" data-nav>My organizations</a></div>');return}
+    ORG=r.data;var o=ORG.org,base="/app/org/"+o.slug;document.title=o.name+" · Competition Manager";
+    var nav=SECTIONS.filter(function(s){return typeof s[2]!=="string"||has(s[2])}).map(function(s){
+      return s[2]===1?'<span title="Arrives in the next update">'+esc(s[1])+'<span class="pill soon">soon</span></span>':'<a href="'+base+(s[0]==="overview"?"":"/"+s[0])+'" data-nav class="'+(s[0]===section?"on":"")+'"'+(s[0]===section?' aria-current="page"':'')+'>'+esc(s[1])+'</a>'}).join("");
+    main('<div style="margin-bottom:14px"><a href="/app" data-nav class="note" style="color:var(--soft)">← My organizations</a><h1>'+esc(o.name)+'</h1><div class="note">'+pill(ORG.me.role,ORG.me.roleLabel)+(o.region||o.country?' · '+esc([o.region,o.country].filter(Boolean).join(", ")):"")+'</div></div>'+
+      '<div class="layout"><nav class="side" aria-label="Organization sections">'+nav+'</nav><section id="sec"></section></div>');
+    var on=document.querySelector(".side .on");if(on&&on.scrollIntoView)on.scrollIntoView({block:"nearest",inline:"center"});
+    var S={overview:overview,members:membersSec,invitations:invitationsSec,settings:settingsSec}[section];
+    if(!S||(section==="invitations"&&!has("members.invite")))$("sec").innerHTML=soon(section);else S()})}
+function soon(section){var s=SECTIONS.filter(function(x){return x[0]===section})[0];
+  return'<div class="card empty">'+ic("trophy")+'<h2>'+esc(s?s[1]:"This section")+' arrive in the next update</h2><p class="note">Competitions, teams, players, fixtures, results, league tables and announcements are being added next. Your members and invitations are ready to use now.</p></div>'}
+
+function overview(){var o=ORG.org,st=ORG.stats,mine=(ROLES.permissions||[]).filter(function(p){return has(p.key)});
+  $("sec").innerHTML='<div class="stats"><div class="stat"><b>'+st.members+'</b><span>Members</span></div>'+(has("members.invite")?'<div class="stat"><b>'+st.pendingInvitations+'</b><span>Pending invitations</span></div>':'')+
+    '<div class="stat"><b>—</b><span>Competitions (next update)</span></div><div class="stat"><b>—</b><span>Upcoming matches (next update)</span></div></div>'+
+    (o.description?'<div class="card"><div class="gh">ABOUT</div><p style="margin:0;white-space:pre-wrap">'+esc(o.description)+'</p></div>':'')+
+    (has("members.invite")?'<div class="card"><div class="gh">GET YOUR TEAM ON BOARD</div><p class="note" style="margin-top:0">Invite organizers, editors and moderators to help run your competitions. Each person only gets the access their role allows.</p><a class="btn" href="/app/org/'+esc(o.slug)+'/invitations" data-nav>'+ic("plus")+' Invite member</a></div>':'')+
+    '<div class="card"><div class="gh">WHAT YOU CAN DO HERE</div><p class="note" style="margin-top:0">As '+esc(ORG.me.roleLabel)+':</p><ul style="margin:0;padding-left:20px">'+mine.map(function(p){return'<li>'+esc(p.label)+'</li>'}).join("")+'</ul></div>'+
+    '<div class="card"><div class="gh">RECENT ACTIVITY</div><div class="feed">'+(ORG.events.length?ORG.events.map(function(e){return'<div>'+ago(e.ts)+' · <b>'+esc(e.actor||"—")+'</b> '+esc(e.action)+'</div>'}).join(""):'<div>Nothing yet.</div>')+'</div></div>'}
+
+function matrix(){return'<details class="card"><summary>What each role can do</summary><div class="tbl" style="margin-top:10px"><table class="mx"><tr><th>Permission</th>'+ROLES.roles.map(function(r){return'<th>'+esc(r.label)+'</th>'}).join("")+'</tr>'+
+  ROLES.permissions.map(function(p){return'<tr><td>'+esc(p.label)+'</td>'+ROLES.roles.map(function(r){var y=p.roles.indexOf(r.key)>=0;return'<td class="'+(y?"y":"n")+'" aria-label="'+(y?"yes":"no")+'">'+(y?"✓":"–")+'</td>'}).join("")+'</tr>'}).join("")+
+  '</table></div><ul class="note" style="padding-left:18px;margin-bottom:0">'+ROLES.roles.map(function(r){return'<li><b style="color:var(--tx)">'+esc(r.label)+':</b> '+esc(r.description)+'</li>'}).join("")+'</ul></details>'}
+
+function membersSec(){var slug=ORG.org.slug;$("sec").innerHTML='<div class="card note">Loading members…</div>';
+  api("/api/orgs/"+slug+"/members").then(function(r){if(!r.ok){$("sec").innerHTML=errBox(r);return}var ms=r.data.members,can=ORG.me.assignable;
+    $("sec").innerHTML='<div class="card"><div class="gh">MEMBERS · '+ms.length+'</div>'+(has("members.invite")?'<div class="actions" style="margin:0 0 10px"><a class="btn sm" href="/app/org/'+esc(slug)+'/invitations" data-nav>'+ic("plus")+' Invite member</a></div>':'')+
+      '<div class="tbl"><table><tr><th>Member</th><th>Role</th><th>Status</th><th>Joined</th><th>Last activity</th><th></th></tr>'+ms.map(function(m){
+        var role=m.canManage?'<select data-role="'+m.id+'" aria-label="Role for '+esc(m.username)+'">'+can.map(function(k){return'<option value="'+k+'"'+(k===m.role?" selected":"")+'>'+esc(roleLabel(k))+'</option>'}).join("")+(can.indexOf(m.role)<0?'<option selected>'+esc(m.roleLabel)+'</option>':'')+'</select>':pill(m.role,m.roleLabel);
+        return'<tr><td class="who-cell"><b>'+esc(m.username)+(m.you?' <span class="pill">you</span>':'')+'</b>'+(m.email?'<small>'+esc(m.email)+'</small>':'')+'</td><td>'+role+'</td><td><span class="pill accepted">Active</span></td><td>'+date(m.joined)+'</td><td>'+ago(m.lastActive)+'</td><td>'+
+          (m.canManage?'<button class="btn bad sm" data-rm="'+m.id+'">Remove</button>':'')+'</td></tr>'}).join("")+'</table></div></div>'+matrix();
+    document.querySelectorAll("[data-role]").forEach(function(s){s.onchange=function(){api("/api/orgs/"+slug+"/members/"+s.dataset.role,"PATCH",{role:s.value}).then(function(r){
+      if(!r.ok){toast(r.data.error||"Couldn't change the role",true);membersSec();return}toast("Role updated")})}});
+    document.querySelectorAll("[data-rm]").forEach(function(b){b.onclick=function(){if(!armed(b,"Sure? Remove"))return;busy(b,true);
+      api("/api/orgs/"+slug+"/members/"+b.dataset.rm,"DELETE",{}).then(function(r){if(!r.ok){toast(r.data.error||"Couldn't remove",true);busy(b,false);return}toast("Member removed");membersSec()})}})})}
+
+var IFILTER="all";
+function invitationsSec(){var slug=ORG.org.slug,roles=ORG.me.assignable,def=roles.indexOf("editor")>=0?"editor":roles[0];
+  $("sec").innerHTML='<form class="card" id="inf" novalidate><div class="gh">INVITE MEMBER</div><p class="note" style="margin-top:0">Enter an email to send an invitation, or leave it empty to create a link you can share on WhatsApp, Telegram or anywhere. Invitations expire after 7 days.</p>'+
+    '<div class="row"><label for="ie">Email (optional)<input id="ie" type="email" placeholder="name@example.com" autocomplete="off"></label><label for="ir">Role<select id="ir">'+roles.map(function(k){return'<option value="'+k+'"'+(k===def?" selected":"")+'>'+esc(roleLabel(k))+'</option>'}).join("")+'</select></label></div>'+
+    '<div class="note" id="rd" style="margin-top:6px"></div><div class="actions"><button class="btn" id="ig">'+ic("link")+' Create invitation link</button></div><div id="ires"></div></form><div class="card"><div class="gh">INVITATIONS</div><div class="chips" id="chips"></div><div id="ilist" class="note">Loading…</div></div>'+matrix();
+  var desc=function(){var r=ROLES.roles.filter(function(x){return x.key===$("ir").value})[0];$("rd").textContent=r?r.label+": "+r.description:""};desc();$("ir").onchange=desc;
+  $("ie").oninput=function(){$("ig").innerHTML=$("ie").value.trim()?ic("mail")+" Send invitation":ic("link")+" Create invitation link"};
+  $("inf").onsubmit=function(e){e.preventDefault();var b=$("ig");busy(b,true,"Creating…");
+    api("/api/orgs/"+slug+"/invitations","POST",{email:$("ie").value.trim(),role:$("ir").value}).then(function(r){busy(b,false);
+      if(!r.ok){$("ires").innerHTML=errBox(r);return}$("ie").value="";$("ie").oninput();$("ires").innerHTML=linkBox(r.data);bindLinkBox();loadInvites()})};
+  loadInvites()}
+function linkBox(d){return'<div class="okm">'+(d.emailed?ic("mail")+' Invitation emailed to '+esc(d.invitation.email)+'. You can also share the link:':esc(d.note||"Share this link:"))+
+  '<div class="link"><input readonly value="'+esc(d.link)+'" aria-label="Invitation link" id="ilink"><button type="button" class="btn sm" id="icopy">'+ic("copy")+' Copy</button>'+(navigator.share?'<button type="button" class="btn g sm" id="ishare">'+ic("share")+' Share</button>':'<span></span>')+'</div></div>'}
+function bindLinkBox(){var l=$("ilink");if(!l)return;$("icopy").onclick=function(){copy(l.value,$("icopy"))};
+  if($("ishare"))$("ishare").onclick=function(){navigator.share({title:"Join "+ORG.org.name,text:"You're invited to join "+ORG.org.name+" on Competition Manager",url:l.value}).catch(function(){})}}
+function loadInvites(){var slug=ORG.org.slug;api("/api/orgs/"+slug+"/invitations").then(function(r){if(!r.ok){$("ilist").innerHTML=errBox(r);return}
+  var all=r.data.invitations,count=function(s){return all.filter(function(i){return s==="all"||i.status===s}).length};
+  $("chips").innerHTML=["all","pending","accepted","expired","revoked"].map(function(s){return'<button type="button" class="chip'+(IFILTER===s?" on":"")+'" data-f="'+s+'">'+s.charAt(0).toUpperCase()+s.slice(1)+' ('+count(s)+')</button>'}).join("");
+  document.querySelectorAll("[data-f]").forEach(function(c){c.onclick=function(){IFILTER=c.dataset.f;loadInvites()}});
+  var rows=all.filter(function(i){return IFILTER==="all"||i.status===IFILTER}),canTouch=function(i){return ORG.me.assignable.indexOf(i.role)>=0};
+  $("ilist").innerHTML=rows.length?'<div class="tbl"><table><tr><th>Who</th><th>Role</th><th>Status</th><th>Sent</th><th>Details</th><th></th></tr>'+rows.map(function(i){
+    return'<tr><td class="who-cell"><b>'+(i.email?esc(i.email):ic("link")+' Invitation link')+'</b><small>by '+esc(i.invitedBy||"—")+'</small></td><td>'+pill(i.role,i.roleLabel)+'</td><td><span class="pill '+i.status+'">'+i.status+'</span></td><td>'+date(i.created)+'</td><td class="note">'+
+      (i.status==="accepted"?"Joined as "+esc(i.acceptedBy||"—")+" · "+date(i.acceptedAt):i.status==="pending"?"Expires "+date(i.expires):i.status==="expired"?"Expired "+date(i.expires):"Cancelled")+'</td><td style="white-space:nowrap">'+
+      (canTouch(i)&&(i.status==="pending"||i.status==="expired")?'<button class="btn g sm" data-re="'+i.id+'">'+(i.email?"Resend":"New link")+'</button> ':'')+(canTouch(i)&&i.status==="pending"?'<button class="btn bad sm" data-rv="'+i.id+'">Revoke</button>':'')+'</td></tr>'}).join("")+'</table></div>'
+    :'<p class="note">No invitations here yet.</p>';
+  document.querySelectorAll("[data-rv]").forEach(function(b){b.onclick=function(){if(!armed(b,"Sure?"))return;busy(b,true);api("/api/orgs/"+slug+"/invitations/"+b.dataset.rv+"/revoke","POST",{}).then(function(r){
+    if(!r.ok){toast(r.data.error||"Couldn't revoke",true);busy(b,false);return}toast("Invitation revoked");loadInvites()})}});
+  document.querySelectorAll("[data-re]").forEach(function(b){b.onclick=function(){busy(b,true,"…");api("/api/orgs/"+slug+"/invitations/"+b.dataset.re+"/resend","POST",{}).then(function(r){
+    busy(b,false);if(!r.ok){toast(r.data.error||"Couldn't renew",true);return}$("ires").innerHTML=linkBox(r.data);bindLinkBox();toast(r.data.emailed?"Invitation sent again":"New link created");loadInvites()})}})})}
+
+function settingsSec(){var o=ORG.org,slug=o.slug,owner=ORG.me.role==="owner";
+  var info='<form class="card" id="sf" novalidate><div class="gh">ORGANIZATION DETAILS</div>'+(owner?'':'<p class="note" style="margin-top:0">Only the owner can change these.</p>')+
+    '<label for="sn">Name<input id="sn" maxlength="80" value="'+esc(o.name)+'"'+(owner?"":" disabled")+'></label><label for="sd">Description<textarea id="sd" maxlength="2000"'+(owner?"":" disabled")+'>'+esc(o.description)+'</textarea></label>'+
+    '<div class="row"><label for="sc">Country<input id="sc" maxlength="60" value="'+esc(o.country)+'"'+(owner?"":" disabled")+'></label><label for="sr">Region / city<input id="sr" maxlength="60" value="'+esc(o.region)+'"'+(owner?"":" disabled")+'></label></div>'+
+    '<p class="note">Organization address: <b style="color:var(--tx)">'+esc(slug)+'</b> (stays the same when you rename, so shared links keep working). Created '+date(o.created)+'.</p>'+
+    (owner?'<div class="actions"><button class="btn" id="ss">Save changes</button></div>':'')+'</form>';
+  var own=owner?'<div class="card"><div class="gh">TRANSFER OWNERSHIP</div><p class="note" style="margin-top:0">Give full control to another member. You\'ll become an organizer.</p><label for="tm">New owner<select id="tm"><option value="">Loading members…</option></select></label><div class="actions"><button class="btn g" id="tg">Transfer ownership</button></div></div>'+
+    '<div class="card" style="border:1px solid var(--bad)"><div class="gh" style="background:var(--bad);color:#fff">DELETE ORGANIZATION</div><p class="note" style="margin-top:0">This permanently deletes the organization, its members and invitations. It can\'t be undone.</p><label for="dc">Type <b style="color:var(--tx)">'+esc(o.name)+'</b> to confirm<input id="dc" autocomplete="off"></label><div class="actions"><button class="btn bad" id="dg">Delete organization</button></div></div>'
+    :'<div class="card"><div class="gh">LEAVE ORGANIZATION</div><p class="note" style="margin-top:0">You\'ll lose access until someone invites you again.</p><button class="btn bad" id="lv">Leave '+esc(o.name)+'</button></div>';
+  $("sec").innerHTML=info+own;
+  if(owner){$("sf").onsubmit=function(e){e.preventDefault();var b=$("ss");busy(b,true,"Saving…");api("/api/orgs/"+slug,"PATCH",{name:$("sn").value,description:$("sd").value,country:$("sc").value,region:$("sr").value}).then(function(r){
+      busy(b,false);if(!r.ok){toast(r.data.error||"Couldn't save",true);return}toast("Saved");loadMe().then(function(){orgView(slug,"settings")})})};
+    api("/api/orgs/"+slug+"/members").then(function(r){var others=(r.data.members||[]).filter(function(m){return!m.you});
+      $("tm").innerHTML=others.length?'<option value="">Choose a member…</option>'+others.map(function(m){return'<option value="'+m.id+'">'+esc(m.username)+' ('+esc(m.roleLabel)+')</option>'}).join(""):'<option value="">Invite someone first</option>'});
+    $("tg").onclick=function(){var id=+$("tm").value;if(!id){toast("Choose a member first",true);return}if(!armed($("tg"),"Sure? You'll stop being the owner"))return;
+      api("/api/orgs/"+slug+"/transfer","POST",{memberId:id}).then(function(r){if(!r.ok){toast(r.data.error||"Couldn't transfer",true);return}toast("Ownership transferred");loadMe().then(function(){orgView(slug,"overview")})})};
+    $("dg").onclick=function(){if($("dc").value!==o.name){toast("Type the exact name to confirm",true);return}if(!armed($("dg"),"Really delete forever?"))return;
+      api("/api/orgs/"+slug,"DELETE",{confirm:$("dc").value}).then(function(r){if(!r.ok){toast(r.data.error||"Couldn't delete",true);return}toast("Organization deleted");loadMe().then(function(){go("/app")})})}}
+  else $("lv").onclick=function(){if(!armed($("lv"),"Sure? Leave"))return;api("/api/orgs/"+slug+"/leave","POST",{}).then(function(r){if(!r.ok){toast(r.data.error||"Couldn't leave",true);return}toast("You left "+o.name);loadMe().then(function(){go("/app")})})}}
+
+// ---------- accepting an invitation ----------
+function inviteView(token){document.title="Invitation · Competition Manager";main('<div class="card note auth">Checking your invitation…</div>');
+  Promise.all([loadMe(),api("/api/invitations/"+encodeURIComponent(token))]).then(function(res){topnav();var r=res[1];
+    if(!r.ok){main('<div class="card auth empty">'+ic("link")+'<h2>Invitation not found</h2><p class="note">'+esc(r.data.error||"")+'</p><a class="btn" href="/app" data-nav>Go to the dashboard</a></div>');return}
+    var d=r.data,here=encodeURIComponent(location.pathname),state={accepted:"This invitation has already been used.",revoked:"This invitation was cancelled by the organization.",expired:"This invitation has expired. Ask "+(d.invitedBy||"the organization")+" for a new one."}[d.status];
+    var head='<div class="card auth"><div class="gh">INVITATION</div><h1 style="margin-top:0">Join '+esc(d.org.name)+'</h1><p>'+esc(d.invitedBy||"Someone")+' invited you as '+pill(d.role,d.roleLabel)+'</p><p class="note">'+esc(d.roleLabel)+': '+esc(d.roleDescription)+'</p>'+
+      (d.email?'<p class="note">This invitation is for <b style="color:var(--tx)">'+esc(d.email)+'</b>.</p>':'');
+    if(state)return main(head+'<div class="err">'+esc(state)+'</div></div>');
+    if(d.alreadyMember)return main(head+'<div class="okm">You\'re already a member.</div><div class="actions"><a class="btn" href="/app/org/'+esc(d.org.slug)+'" data-nav>Open '+esc(d.org.name)+'</a></div></div>');
+    if(!ME)return main(head+'<p>To accept, create a free account or log in.</p><div class="actions"><a class="btn" href="/app/signup?next='+here+'" data-nav>Create account</a><a class="btn g" href="/app/login?next='+here+'" data-nav>Log in</a></div></div>');
+    main(head+'<p class="note">You\'re logged in as <b style="color:var(--tx)">'+esc(ME.username)+'</b>.</p><div class="actions"><button class="btn" id="acc">Accept invitation</button><a class="btn g" href="/app" data-nav>Not now</a></div><div id="msg"></div></div>');
+    $("acc").onclick=function(){var b=$("acc");busy(b,true,"Joining…");api("/api/invitations/"+encodeURIComponent(token)+"/accept","POST",{}).then(function(r){
+      if(!r.ok){busy(b,false);$("msg").innerHTML=errBox(r);return}toast("Welcome to "+r.data.org.name+"!");loadMe().then(function(){go("/app/org/"+r.data.org.slug)})})}})}
+
+loadMe().then(route);
+</script></body></html>

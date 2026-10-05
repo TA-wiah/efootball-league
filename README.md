@@ -74,6 +74,27 @@ automatically (`start.sh`), then serves the site with gunicorn. Without Docker, 
 - **Undo** (button or Ctrl+Z) takes back your last changes.
 - Ballon d'Or points: goal 3, assist 2, champion +10, runner-up +5.
 
+## The platform (/app): organizations, members and invitations
+Anyone can sign up at **/app** and create an **organization** (a league, school, club, academy or company). One account
+can belong to many organizations with a different role in each, and each organization's data is private to its members.
+
+| Role | What they can do |
+|---|---|
+| **Owner** | Everything, including settings, transferring ownership and deleting the organization |
+| **Organizer** | Run competitions (teams, fixtures, results, tables) and manage admins, editors, moderators and viewers |
+| **Admin** | Like an organizer, but can only manage editors, moderators and viewers |
+| **Editor** | Update scores, matches, team information and competition content |
+| **Moderator** | Look after published content, match information, teams and users |
+| **Viewer** | Read-only access |
+
+- **Invitations**: by email or as a shareable link, with a role. They're single-use, expire after 7 days, and show as
+  pending, accepted, expired or revoked. Email invitations can only be accepted by the account with that email.
+- People can only give roles below their own; ownership moves only through "Transfer ownership".
+- Every action is checked **on the server** (`orgs/permissions.py` is the single list of who can do what). Non-members
+  get "not found" for an organization, so private organizations stay invisible.
+- Competitions, teams, players, fixtures, results, tables and public pages arrive in the next phases. The original
+  league site at `/` keeps working; only its existing editors can edit it.
+
 ## Fair random draws
 - **Group draw** (Players tab): the **server** shuffles the players into groups with the operating system's
   cryptographic random generator, so the organizer can't pick or predict groups. A player's place in the group also
@@ -109,11 +130,13 @@ Nobody can read a password: only a one-way hash is stored. Set `ADMIN_USER` and 
 
 ## Checks
 - `python manage.py test` runs the automated tests (login, lockouts, CSRF, two editors, validation, draws, invites,
-  email). Run it after every change, before you deploy.
+  email, and every organization role and invitation state). Run it after every change, before you deploy.
 - `GET /api/health` answers `{"ok": true}` when the server and database are working.
 
 ## Files
-- `league/`: the Django app: `views.py` (the API), `logic.py` (rules, draws, validation), `models.py` (database tables),
+- `orgs/`: the platform: `models.py` (organizations, memberships, invitations), `permissions.py` (roles), `api.py`, `tests.py`
+- `public/app.html`: the platform pages (sign-up, dashboards, members, invitations)
+- `league/`: the original league app: `views.py` (the API), `logic.py` (rules, draws, validation), `models.py` (database tables),
   `emailer.py` (Brevo/Resend/SMTP), `management/commands/` (`ensure_admin`, `backup`), `tests.py`
 - `league_site/settings.py`: all settings, read from environment variables / `.env`
 - `public/index.html`: the whole page (HTML, CSS and the JavaScript that runs in the browser)

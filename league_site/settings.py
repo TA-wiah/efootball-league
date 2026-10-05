@@ -32,6 +32,7 @@ DB_FILE.parent.mkdir(parents=True, exist_ok=True)
 DATABASES = {"default": dj_database_url.parse(E.get("DATABASE_URL") or f"sqlite:///{DB_FILE.as_posix()}", conn_max_age=600, conn_health_checks=True)}
 SEED_FILE = Path(E.get("SEED_FILE") or BASE_DIR / "seed.json")
 INDEX_FILE = BASE_DIR / "public" / "index.html"
+APP_FILE = BASE_DIR / "public" / "app.html"     # the platform: sign-up, organizations, dashboards
 
 
 def _secret_key():
@@ -63,6 +64,7 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "league",
+    "orgs",
 ]
 MIDDLEWARE = [
     "league.middleware.health",                       # answers /api/health before host checks
@@ -106,7 +108,7 @@ CSRF_COOKIE_HTTPONLY = True            # the page gets the token from /api/me in
 CSRF_COOKIE_SAMESITE = "Strict"
 CSRF_COOKIE_SECURE = SECURE
 CSRF_HEADER_NAME = "HTTP_X_CSRF"
-CSRF_FAILURE_VIEW = "league.views.csrf_failure"
+CSRF_FAILURE_VIEW = "league.http.csrf_failure"
 
 # ---------- security headers ----------
 SECURE_CONTENT_TYPE_NOSNIFF = True

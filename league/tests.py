@@ -15,7 +15,7 @@ LEAGUE = {"g": {"A": ["a1", "a2", "a3", "a4"], "B": ["b1", "b2", "b3", "b4"]}, "
 
 class ApiTest(TestCase):
     def setUp(self):
-        owner = Admin(username="owner", role=Admin.OWNER)
+        owner = Admin(username="owner", role=Admin.OWNER, league_access=True)
         owner.set_password(PASS)
         owner.save()
 

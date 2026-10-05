@@ -1,5 +1,4 @@
 """The JSON API used by public/index.html, plus the page itself."""
-import functools
 import hashlib
 import json
 import logging
@@ -9,93 +8,39 @@ import threading
 from datetime import timedelta
 
 from django.conf import settings
-from django.contrib.auth import login, logout, update_session_auth_hash
-from django.contrib.auth.hashers import make_password
-from django.core.exceptions import RequestDataTooBig
+from django.contrib.auth import logout, update_session_auth_hash
 from django.db import transaction
 from django.db.models import Q
-from django.http import HttpResponse, JsonResponse
+from django.http import JsonResponse
 from django.middleware.csrf import get_token
 from django.utils import timezone
 
 from . import emailer
-from .logic import (EMAIL_RE, SLOT_RE, USER_RE, audit, clear, deal_groups, force_save, hit, over, password_problem,
+from .http import (ApiError, base_url, body, check_login, csrf_failure, ip_of, ms, not_found, serve_page,  # noqa: F401
+                   server_error, session_user, start_session, text)
+from .logic import (EMAIL_RE, SLOT_RE, USER_RE, audit, deal_groups, force_save, hit, password_problem,
                     read_state, record_draw, save_if_current, seed, shuffle, valid_state)
 from .models import Admin, Audit, Draw, Token
 
 log = logging.getLogger("league")
-BACKEND = "django.contrib.auth.backends.ModelBackend"
-GENERIC = "Wrong username or password."
 CONFLICT = "Another editor changed the league at the same time. The latest version has been loaded, so please redo your last change."
 
 
 # ---------- helpers ----------
-class ApiError(Exception):
-    def __init__(self, status, message, **extra):
-        super().__init__(message)
-        self.status, self.message, self.extra = status, message, extra
-
-
-def ip_of(request):
-    if settings.TRUST_PROXY:
-        fwd = request.META.get("HTTP_X_FORWARDED_FOR", "").split(",")[0].strip()
-        if fwd:
-            return fwd
-    return request.META.get("REMOTE_ADDR", "")
-
-
-def body(request, max_len=10_000):
-    if "application/json" not in request.META.get("CONTENT_TYPE", ""):
-        raise ApiError(415, "json only")
-    try:
-        raw = request.body
-    except RequestDataTooBig:
-        raise ApiError(413, "too big") from None
-    if len(raw) > max_len:
-        raise ApiError(413, "too big")
-    try:
-        data = json.loads(raw or b"{}")
-    except ValueError:
-        raise ApiError(400, "bad json") from None
-    if not isinstance(data, dict):
-        raise ApiError(400, "bad json")
-    return data
-
-
-def text(b, key, limit):
-    v = b.get(key)
-    return v.strip()[:limit] if isinstance(v, str) else ""
-
-
-def ms(dt):
-    return int(dt.timestamp() * 1000) if dt else None
-
-
 def pub(a):
     return {"id": a.id, "username": a.username, "email": a.email or None, "role": a.role, "pending": a.pending,
             "mustChange": a.must_change, "lastLogin": ms(a.last_login), "created": ms(a.date_joined), "invitedBy": a.invited_by or None}
 
 
 def current(request):
-    """The signed-in admin, or None. Also enforces "log out on all devices"."""
-    u = request.user
-    if not u.is_authenticated or not u.is_active or not u.has_usable_password():
-        return None
-    if request.session.get("epoch") != u.session_epoch:
-        logout(request)
-        return None
-    return u
-
-
-def start_session(request, a):
-    login(request, a, backend=BACKEND)        # new session id + new CSRF token
-    request.session["epoch"] = a.session_epoch
+    """The signed-in editor of this league, or None. Platform accounts without league access don't count."""
+    u = session_user(request)
+    return u if u and u.league_access else None
 
 
 def api(method, auth=False, before_password_change=False):
-    """Wrap a view: method check, optional login requirement, JSON errors."""
+    """Wrap a league view: method check, optional login requirement, JSON errors."""
     def wrap(view):
-        @functools.wraps(view)
         def inner(request):
             if request.method != method:
                 return JsonResponse({"error": "not found"}, status=404)
@@ -108,7 +53,8 @@ def api(method, auth=False, before_password_change=False):
                 result = view(request, me, ip_of(request))
             except ApiError as e:
                 return JsonResponse({"error": e.message, **e.extra}, status=e.status)
-            return result if isinstance(result, HttpResponse) else JsonResponse(result)
+            return result if not isinstance(result, dict) else JsonResponse(result)
+        inner.__name__ = view.__name__
         return inner
     return wrap
 
@@ -132,37 +78,9 @@ def find_token(request, b):
     return row
 
 
-def base_url(request):
-    return settings.APP_URL or request.build_absolute_uri("/").rstrip("/")
-
-
-def csrf_failure(request, reason=""):
-    return JsonResponse({"error": "Session check failed. Reload the page."}, status=403)
-
-
-def not_found(request, exception=None):
-    return JsonResponse({"error": "not found"}, status=404)
-
-
-def server_error(request):
-    return JsonResponse({"error": "server error"}, status=500)
-
-
 # ---------- the page ----------
-_page = None
-
-
 def index(request):
-    global _page
-    if request.method != "GET":
-        return not_found(request)
-    if _page is None or settings.DEBUG:
-        _page = settings.INDEX_FILE.read_text(encoding="utf-8")
-    nonce = secrets.token_urlsafe(16)
-    csp = (f"default-src 'self'; script-src 'nonce-{nonce}'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
-           "connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
-    return HttpResponse(_page.replace("<script>", f'<script nonce="{nonce}">'), content_type="text/html; charset=utf-8",
-                        headers={"Content-Security-Policy": csp, "Cache-Control": "no-store"})
+    return serve_page(request, settings.INDEX_FILE)
 
 
 # ---------- league ----------
@@ -210,26 +128,9 @@ def me_view(request, me, ip):
 
 @api("POST")
 def login_view(request, me, ip):
-    if over("ip:" + ip, 10, 900):
-        raise ApiError(429, "Too many failed attempts. Try again in 15 minutes.")
     b = body(request)
-    ident = text(b, "user", 254)
     pw = b["password"][:200] if isinstance(b.get("password"), str) else ""
-    a = Admin.objects.filter(Q(username__iexact=ident) | Q(email__iexact=ident)).first() if ident else None
-    acct = f"acct:{a.id if a else ident.lower()}"
-    if over(acct, 5, 900):
-        raise ApiError(429, "This account is locked for 15 minutes after too many failed attempts.")
-    if a is None or not a.has_usable_password():
-        make_password(pw)                     # same amount of work, so timing doesn't reveal unknown users
-        good = False
-    else:
-        good = a.check_password(pw)
-    if not good:
-        hit("ip:" + ip, 10, 900)
-        hit(acct, 5, 900)
-        audit(ident or "?", "failed login", ip)
-        raise ApiError(401, GENERIC)
-    clear(acct)
+    a = check_login(text(b, "user", 254), pw, ip, eligible=lambda u: u.league_access)
     start_session(request, a)
     audit(a.username, "logged in", ip)
     return {"ok": True, "user": pub(a)}
@@ -409,7 +310,7 @@ def send_invite(request, me, a, ip):
 
 @api("GET", auth=True)
 def admins(request, me, ip):
-    people = sorted(Admin.objects.all(), key=lambda a: (a.role != Admin.OWNER, a.date_joined))
+    people = sorted(Admin.objects.filter(league_access=True), key=lambda a: (a.role != Admin.OWNER, a.date_joined))
     logrows = [{"ts": ms(r.ts), "actor": r.actor, "action": r.action, "ip": r.ip} for r in Audit.objects.order_by("-id")[:40]] if me.role == Admin.OWNER else []
     return {"admins": [pub(a) for a in people], "log": logrows, "smtp": emailer.ready()}
 
@@ -426,7 +327,7 @@ def invite(request, me, ip):
         raise ApiError(400, "Enter a valid email address.")
     if Admin.objects.filter(Q(username__iexact=username) | Q(email__iexact=email) | Q(username__iexact=email) | Q(email__iexact=username)).exists():
         raise ApiError(409, "An admin with that username or email already exists.")
-    a = Admin(username=username, email=email, role=Admin.ADMIN, invited_by=me.username)
+    a = Admin(username=username, email=email, role=Admin.ADMIN, invited_by=me.username, league_access=True)
     a.set_unusable_password()
     a.save()
     audit(me.username, f"invited {username} <{email}>", ip)
@@ -438,7 +339,7 @@ def resend(request, me, ip):
     if hit(f"invite:{me.id}", 20, 3600):
         raise ApiError(429, "Too many invites. Try again later.")
     b = body(request)
-    a = Admin.objects.filter(id=b.get("id")).first() if isinstance(b.get("id"), int) else None
+    a = Admin.objects.filter(id=b.get("id"), league_access=True).first() if isinstance(b.get("id"), int) else None
     if not a or not a.pending:
         raise ApiError(400, "That admin has already joined.")
     audit(me.username, f"re-sent invite to {a.username}", ip)
@@ -448,7 +349,7 @@ def resend(request, me, ip):
 @api("POST", auth=True)
 def remove(request, me, ip):
     b = body(request)
-    a = Admin.objects.filter(id=b.get("id")).first() if isinstance(b.get("id"), int) else None
+    a = Admin.objects.filter(id=b.get("id"), league_access=True).first() if isinstance(b.get("id"), int) else None
     if not a:
         raise ApiError(404, "Not found")
     if a.role == Admin.OWNER:
@@ -457,7 +358,13 @@ def remove(request, me, ip):
         raise ApiError(403, "Only the owner can remove other admins.")
     leaving = a.id == me.id
     name = a.username
-    a.delete()
+    if a.pending and not a.memberships.exists():
+        a.delete()                      # an unused invite: nothing else depends on this account
+    else:
+        a.league_access = False         # keep the account (it may run its own organizations), just remove league access
+        a.save(update_fields=["league_access"])
+        if leaving:
+            logout(request)
     audit(me.username, "left the admin team" if leaving else f"removed admin {name}", ip)
     return {"ok": True}
 
