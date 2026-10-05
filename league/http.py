@@ -4,11 +4,12 @@ import json
 import secrets
 
 from django.conf import settings
-from django.contrib.auth import login, logout
+from django.contrib.auth import get_user_model, login, logout
 from django.contrib.auth.hashers import make_password
 from django.core.exceptions import RequestDataTooBig
 from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
+from django.utils import timezone
 
 from .logic import audit, clear, hit, over
 
@@ -65,6 +66,10 @@ def session_user(request):
     if request.session.get("epoch") != u.session_epoch:
         logout(request)
         return None
+    now = timezone.now()
+    if not u.last_seen or (now - u.last_seen).total_seconds() > 300:     # "last activity", at most one write per 5 minutes
+        get_user_model().objects.filter(pk=u.pk).update(last_seen=now)
+        u.last_seen = now
     return u
 
 
@@ -90,9 +95,12 @@ def check_login(ident, password, ip, eligible=lambda u: True):
     if not good:
         hit("ip:" + ip, 10, 900)
         hit(acct, 5, 900)
-        audit(ident or "?", "failed login", ip)
+        audit(ident or "?", "failed login", ip, resource=f"user:{u.username}" if u else "", status="failed")
         raise ApiError(401, GENERIC)
     clear(acct)
+    if not u.is_active:      # only said after the right password, so it can't be used to probe accounts
+        audit(u.username, "login blocked: account suspended", ip, resource=f"user:{u.username}", status="denied")
+        raise ApiError(403, "This account has been suspended. Contact the platform's support.")
     return u
 
 

@@ -7,6 +7,7 @@ from competitions import api as c
 from competitions import discover
 from competitions import public as pub
 from orgs import api as o
+from superadmin import api as sa
 
 handler404 = "league.http.not_found"
 handler500 = "league.http.server_error"
@@ -50,6 +51,8 @@ urlpatterns = [
 
     # ---- the platform: accounts, organizations, members, invitations ----
     path("app", app_page),
+    path("admin", app_page),
+    re_path(r"^admin/.*$", app_page),
     re_path(r"^app/.*$", app_page),
     path("invite/<str:token>", app_page),
     path("api/auth/me", o.me),
@@ -95,6 +98,45 @@ urlpatterns = [
     path("api/orgs/<slug:slug>/players/<int:player_id>", c.player_detail),
     path("api/orgs/<slug:slug>/announcements", c.announcements),
     path("api/orgs/<slug:slug>/announcements/<int:ann_id>", c.announcement_detail),
+    # ---- super admin (whole platform; every endpoint requires is_superuser) ----
+    path("api/admin/overview", sa.overview),
+    path("api/admin/analytics", sa.analytics),
+    path("api/admin/search", sa.search),
+    path("api/admin/users", sa.users),
+    path("api/admin/users/bulk", sa.users_bulk),
+    path("api/admin/users/<int:uid>", sa.user_detail),
+    path("api/admin/users/<int:uid>/<slug:action>", sa.user_act),
+    path("api/admin/organizations", sa.organizations),
+    path("api/admin/organizations/bulk", sa.organizations_bulk),
+    path("api/admin/organizations/<int:oid>", sa.organization_detail),
+    path("api/admin/organizations/<int:oid>/<slug:action>", sa.organization_act),
+    path("api/admin/competitions", sa.competitions),
+    path("api/admin/competitions/bulk", sa.competitions_bulk),
+    path("api/admin/competitions/<int:cid>", sa.competition_detail),
+    path("api/admin/competitions/<int:cid>/standings", sa.standings),
+    path("api/admin/competitions/<int:cid>/<slug:action>", sa.competition_act),
+    path("api/admin/teams", sa.teams),
+    path("api/admin/teams/bulk", sa.teams_bulk),
+    path("api/admin/teams/<int:tid>/<slug:action>", sa.team_act),
+    path("api/admin/players", sa.players),
+    path("api/admin/matches", sa.matches),
+    path("api/admin/result-changes", sa.result_changes),
+    path("api/admin/groups", sa.groups),
+    path("api/admin/staff", sa.staff),
+    path("api/admin/invitations", sa.invitations),
+    path("api/admin/invitations/<int:iid>/revoke", sa.invitation_revoke),
+    path("api/admin/audit", sa.audit_log),
+    path("api/admin/announcements", sa.announcements),
+    path("api/admin/announcements/<int:aid>", sa.announcement_detail),
+    path("api/admin/org-announcements/<int:aid>", sa.org_announcement),
+    path("api/admin/settings", sa.platform_settings),
+    path("api/admin/settings/test-email", sa.test_email),
+    path("api/admin/system", sa.system),
+    path("api/admin/security/logout-everyone", sa.logout_everyone),
+    path("api/admin/tickets", sa.tickets),
+    path("api/admin/tickets/<int:tid>", sa.ticket_detail),
+    path("api/support", sa.my_support),
+
     # ---- public pages (no login) ----
     path("competitions", discover.competitions),
     path("search", discover.search),

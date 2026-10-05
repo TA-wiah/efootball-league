@@ -27,9 +27,15 @@ KIND_L = {"league": "League", "tournament": "Tournament", "cup": "Cup", "champio
 
 
 # ---------- helpers ----------
+def listed(prefix=""):
+    """What may appear publicly: public visibility, not suspended, and an organization in good standing."""
+    return Q(**{f"{prefix}visibility": "public", f"{prefix}suspended": False, f"{prefix}org__status": "active"})
+
+
 def is_member(request, org_id):
+    """Members of the organization, and platform super admins, may preview things that aren't public."""
     user = session_user(request)
-    return bool(user and Membership.objects.filter(org_id=org_id, user=user).exists())
+    return bool(user and (user.is_superuser or Membership.objects.filter(org_id=org_id, user=user).exists()))
 
 
 def page(request, template, ctx, *, index=True, private=False):
@@ -49,7 +55,10 @@ def page(request, template, ctx, *, index=True, private=False):
 
 def competition_for(request, slug):
     c = Competition.objects.select_related("org").filter(slug=slug).first()
-    if not c or (c.visibility == "private" and not is_member(request, c.org_id)):
+    if not c:
+        raise Http404
+    c.hidden = c.visibility == "private" or c.suspended or c.org.status != "active"
+    if c.hidden and not is_member(request, c.org_id):
         raise Http404
     return c
 
@@ -60,7 +69,7 @@ def logo(kind, obj):
 
 def public_team_ids(team_ids):
     """Teams that get their own public page: those playing in at least one public competition."""
-    return set(Entry.objects.filter(team_id__in=team_ids, competition__visibility="public").values_list("team_id", flat=True))
+    return set(Entry.objects.filter(listed("competition__"), team_id__in=team_ids, team__suspended=False).values_list("team_id", flat=True))
 
 
 def team_view(t, linkable):
@@ -144,13 +153,13 @@ def competition(request, slug, tab=""):
         ctx["sections"] = [(k, [match_view(m, linkable) for m in v]) for k, v in group_by(results, day_label)]
     if tab == "teams":
         ctx["teams"] = [{**team_view(e.team, linkable), "group": e.group, "city": e.team.city} for e in entries]
-    if c.visibility == "public" and tab in ("", "table"):
+    if not c.hidden and c.visibility == "public" and tab in ("", "table"):
         Competition.objects.filter(id=c.id).update(views=F("views") + 1)     # for "popular" (doesn't touch `updated`)
     title = {"": c.name, "table": f"{c.name} table", "fixtures": f"{c.name} fixtures", "results": f"{c.name} results", "teams": f"{c.name} teams"}[tab]
     ctx["title"] = title + (f" {c.season}" if c.season else "")
     ctx["description"] = (c.description[:180] if c.description else
                           f"{ctx['kind']} with {len(entries)} teams: live table, fixtures, results and match details.")
-    return page(request, "competition.html", ctx, index=c.visibility == "public", private=c.visibility == "private")
+    return page(request, "competition.html", ctx, index=c.visibility == "public" and not c.hidden, private=c.hidden)
 
 
 # ---------- match ----------
@@ -196,7 +205,7 @@ def match(request, slug):
     ctx = {"c": c, "m": mv, "events": events, "aggregate": aggregate, "table": table, "same_round": same_round, "referee": m.referee,
            "title": title + (f" {m.home_score}–{m.away_score}" if mv["played"] else ""), "description": desc,
            "logo": logo("competition", c), "notes": m.notes}
-    return page(request, "match.html", ctx, index=c.visibility == "public", private=c.visibility == "private")
+    return page(request, "match.html", ctx, index=c.visibility == "public" and not c.hidden, private=c.hidden)
 
 
 # ---------- team ----------
@@ -205,7 +214,7 @@ def team(request, slug):
     if not t:
         raise Http404
     member = is_member(request, t.org_id)
-    public_comps = list(Competition.objects.filter(entries__team=t, visibility="public").order_by("-created"))
+    public_comps = [] if t.suspended else list(Competition.objects.filter(listed(), entries__team=t).order_by("-created"))
     if not public_comps and not member:
         raise Http404                                          # only shown for teams that play in public competitions
     comp_ids = [c.id for c in public_comps] if not member else list(Competition.objects.filter(entries__team=t).values_list("id", flat=True))
@@ -229,9 +238,9 @@ def team(request, slug):
 # ---------- organization ----------
 def organization(request, slug):
     o = Organization.objects.filter(slug=slug).first()
-    if not o:
+    if not o or (o.status != "active" and not is_member(request, o.id)):
         raise Http404
-    comps = list(o.competitions.filter(visibility="public").order_by("-status", "-created"))
+    comps = list(o.competitions.filter(listed()).order_by("-status", "-created"))
     ms = MATCHES.filter(competition__in=comps)
     teams = list(Team.objects.filter(entries__competition__in=comps).distinct().order_by("name"))
     linkable = {x.id for x in teams}
@@ -242,7 +251,7 @@ def organization(request, slug):
            "recent": [match_view(x, linkable) for x in ms.filter(status="finished").order_by("-kickoff")[:6]],
            "news": list(Announcement.objects.filter(org=o, published=True).filter(Q(competition__isnull=True) | Q(competition__in=comps)).order_by("-pinned", "-created")[:5]),
            "title": o.name, "description": o.description[:180] or f"{o.name}: competitions, tables, fixtures and results."}
-    return page(request, "organization.html", ctx, index=bool(comps))
+    return page(request, "organization.html", ctx, index=bool(comps) and o.status == "active", private=o.status != "active")
 
 
 # ---------- old addresses, robots and sitemap ----------
@@ -258,11 +267,11 @@ def robots(request):
 def sitemap(request):
     base = base_url(request)
     urls = [("/", None), ("/competitions", None)]
-    for c in Competition.objects.filter(visibility="public").only("slug", "updated"):
+    for c in Competition.objects.filter(listed()).only("slug", "updated"):
         urls += [(f"/competition/{c.slug}{t}", c.updated) for t in ("", "/table", "/fixtures", "/results", "/teams")]
-    urls += [(f"/match/{s}", u) for s, u in Match.objects.filter(competition__visibility="public").values_list("slug", "updated")[:20000]]
-    urls += [(f"/team/{s}", None) for s in Team.objects.filter(entries__competition__visibility="public").distinct().values_list("slug", flat=True)]
-    urls += [(f"/organization/{s}", None) for s in Organization.objects.filter(competitions__visibility="public").distinct().values_list("slug", flat=True)]
+    urls += [(f"/match/{s}", u) for s, u in Match.objects.filter(listed("competition__")).values_list("slug", "updated")[:20000]]
+    urls += [(f"/team/{s}", None) for s in Team.objects.filter(listed("entries__competition__"), suspended=False).distinct().values_list("slug", flat=True)]
+    urls += [(f"/organization/{s}", None) for s in Organization.objects.filter(listed("competitions__")).distinct().values_list("slug", flat=True)]
     from xml.sax.saxutils import escape
     body = "".join(f"<url><loc>{escape(base + u)}</loc>{f'<lastmod>{d.date().isoformat()}</lastmod>' if d else ''}</url>" for u, d in urls)
     return HttpResponse(f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{body}</urlset>',

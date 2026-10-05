@@ -8,7 +8,7 @@ from django.utils import timezone
 from orgs.models import Organization
 
 from .models import KINDS, Competition, Match, Team
-from .public import KIND_L, MATCHES, logo, match_view, page, team_view
+from .public import KIND_L, MATCHES, listed, logo, match_view, page, team_view
 
 PER_PAGE = 24
 SORTS = {"featured": "Featured", "popular": "Most popular", "upcoming": "Starting soon", "new": "Newest", "name": "A–Z"}
@@ -16,7 +16,7 @@ STATUSES = {"active": "In progress", "upcoming": "Starting soon", "completed": "
 
 
 def public_competitions():
-    return (Competition.objects.filter(visibility="public").select_related("org")
+    return (Competition.objects.filter(listed()).select_related("org")
             .annotate(team_count=Count("entries", distinct=True),
                       played_count=Count("matches", filter=Q(matches__status="finished"), distinct=True)))
 
@@ -28,7 +28,7 @@ def card(c):
 
 
 def public_team_ids():
-    return set(Team.objects.filter(entries__competition__visibility="public").values_list("id", flat=True))
+    return set(Team.objects.filter(listed("entries__competition__"), suspended=False).values_list("id", flat=True))
 
 
 def upcoming_q():
@@ -45,11 +45,11 @@ def landing(request):
                          .order_by("-views", "-played_count", "-updated")[:6 - len(featured)])
     now = timezone.now()
     linkable = public_team_ids()
-    upcoming = MATCHES.filter(competition__visibility="public", status__in=["scheduled", "live"], kickoff__gte=now).order_by("kickoff")[:6]
-    countries = (Competition.objects.filter(visibility="public").exclude(country="").values("country")
+    upcoming = MATCHES.filter(listed("competition__"), status__in=["scheduled", "live"], kickoff__gte=now).order_by("kickoff")[:6]
+    countries = (Competition.objects.filter(listed()).exclude(country="").values("country")
                  .annotate(n=Count("id")).order_by("-n", "country")[:12])
-    stats = {"competitions": Competition.objects.filter(visibility="public").count(), "teams": len(linkable),
-             "matches": Match.objects.filter(competition__visibility="public", status="finished").count()}
+    stats = {"competitions": Competition.objects.filter(listed()).count(), "teams": len(linkable),
+             "matches": Match.objects.filter(listed("competition__"), status="finished").count()}
     ctx = {"featured": [card(c) for c in featured],
            "popular": [card(c) for c in comps.order_by("-views", "-played_count")[:6]],
            "starting": [card(c) for c in comps.filter(upcoming_q()).order_by(F("start_date").asc(nulls_last=True), "-created")[:6]],
@@ -94,7 +94,7 @@ def competitions(request):
                        "upcoming": [F("start_date").asc(nulls_last=True), "-created"], "new": ["-created"], "name": ["name"]}[sort])
     pager = Paginator(qs, PER_PAGE)
     pg = pager.get_page(g.get("page"))
-    base = Competition.objects.filter(visibility="public")
+    base = Competition.objects.filter(listed())
     countries = base.exclude(country="").values("country").annotate(n=Count("id")).order_by("country")
     regions = base.filter(country__iexact=country).exclude(region="").values("region").annotate(n=Count("id")).order_by("region") if country else []
     params = {k: v for k, v in (("q", q), ("type", kind), ("status", status), ("sort", sort if sort != "featured" else ""),
@@ -120,13 +120,13 @@ def search(request):
         ctx["teams"] = [{**team_view(t, linkable), "city": t.city} for t in
                         Team.objects.filter(id__in=linkable).filter(Q(name__icontains=q) | Q(short_name__icontains=q) | Q(city__icontains=q)).order_by("name")[:12]]
         words = [w.strip() for w in q.replace(" vs ", "|").replace(" v ", "|").split("|") if w.strip()]
-        mq = MATCHES.filter(competition__visibility="public")
+        mq = MATCHES.filter(listed("competition__"))
         if len(words) == 2:      # "Kasoa vs Winneba"
             a, b = words
             mq = mq.filter((Q(home__team__name__icontains=a) & Q(away__team__name__icontains=b)) | (Q(home__team__name__icontains=b) & Q(away__team__name__icontains=a)))
         else:
             mq = mq.filter(Q(home__team__name__icontains=q) | Q(away__team__name__icontains=q))
         ctx["matches"] = [match_view(m, linkable) for m in mq.order_by(F("kickoff").desc(nulls_last=True))[:12]]
-        ctx["orgs"] = list(Organization.objects.filter(competitions__visibility="public", name__icontains=q).distinct().order_by("name")[:8])
+        ctx["orgs"] = list(Organization.objects.filter(listed("competitions__"), name__icontains=q).distinct().order_by("name")[:8])
         ctx["count"] = len(ctx["comps"]) + len(ctx["teams"]) + len(ctx["matches"]) + len(ctx["orgs"])
     return page(request, "search.html", ctx, index=False)

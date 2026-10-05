@@ -76,7 +76,7 @@ footer{text-align:center;color:var(--soft);font-size:13px;padding:30px 16px}
 <nav class="nav" aria-label="Main"><a href="/competitions">Competitions</a><a href="/search" aria-label="Search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span class="long">Search</span></a><a href="/app" class="login">Log in</a></nav>
 <a class="btn sm cta" href="/app/signup?next=/app/new"><span class="long">Create a competition</span><span class="short">Create</span></a></header>
 <main class="w">
-{% if private_preview %}<div class="banner">Private preview: only members of {{ c.org.name|default:"this organization" }} can see this page.</div>{% endif %}
+{% if private_preview %}<div class="banner">Preview: this page isn't public right now (it's private, waiting for approval or suspended). Only the organization's members and platform admins can see it.</div>{% endif %}
 {% block content %}{% endblock %}
 </main>
 <footer>Powered by <a href="{{ app_url }}">Competition Manager</a> · Run your league or tournament for free: teams, fixtures, results and a public table like this one.</footer>

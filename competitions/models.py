@@ -51,7 +51,8 @@ class Competition(Logo):
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+")
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
-    featured = models.BooleanField(default=False)          # set by the platform owner: python manage.py feature <slug>
+    featured = models.BooleanField(default=False)
+    suspended = models.BooleanField(default=False)          # set by a super admin: hidden publicly and read-only          # set by the platform owner: python manage.py feature <slug>
     views = models.PositiveIntegerField(default=0)          # public page views, for "popular"
 
     def __str__(self):
@@ -69,6 +70,7 @@ class Team(Logo):
     colors = models.CharField(max_length=40, blank=True)
     description = models.TextField(blank=True, max_length=2000)
     created = models.DateTimeField(auto_now_add=True)
+    suspended = models.BooleanField(default=False)          # set by a super admin: no public page
 
     def __str__(self):
         return self.name
@@ -116,6 +118,7 @@ class Match(models.Model):
     notes = models.TextField(blank=True, max_length=2000)
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
+    finished_at = models.DateTimeField(null=True, blank=True)   # when the result was entered (for analytics)
 
     class Meta:
         ordering = ["round", "kickoff", "id"]

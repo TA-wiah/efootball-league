@@ -1,4 +1,6 @@
 """Landing page, discovery and search: only public competitions are ever listed."""
+import re
+
 from django.core.management import call_command
 from django.test import Client, TestCase, override_settings
 
@@ -74,7 +76,8 @@ class DiscoverTest(Helpers, TestCase):
         self.assertIn("/team/kasoa-stars", html)
         self.assertIn("/organization/kasoa-community-league", html)
         vs = self.text("/search?q=Kasoa%20vs%20Winneba")
-        self.assertIn("/match/kasoa-stars-vs-winneba-lions", vs)
+        self.assertTrue(re.search(r"/match/(kasoa-stars-vs-winneba-lions|winneba-lions-vs-kasoa-stars)", vs),
+                        "finds the match whichever team was at home")
         for hidden in ("Hidden", "Secret", "Gamma", "Alpha"):
             page = self.text(f"/search?q={hidden}")
             self.assertIn("Nothing found", page, hidden)

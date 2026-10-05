@@ -20,6 +20,9 @@ from league.http import ApiError, base_url, body, check_login, endpoint, ms, sta
 from league.logic import EMAIL_RE, USER_RE, audit, hit, password_problem
 from league.models import Admin
 
+from superadmin import store
+from superadmin.models import PlatformAnnouncement
+
 from .models import Invitation, Membership, Organization, OrgEvent
 from .permissions import OWNER, ORGANIZER, RANK, ROLE_INFO, assignable_roles, can, can_manage, matrix, perms_of
 
@@ -28,8 +31,11 @@ MAX_ORGS_PER_USER = 25
 
 
 # ---------- helpers ----------
-def log(org, actor, action):
-    OrgEvent.objects.create(org=org, actor=getattr(actor, "username", actor or "")[:150], action=action[:300])
+def log(org, actor, action, old=None, new=None):
+    """The organization's own activity feed, mirrored into the platform audit log."""
+    who = getattr(actor, "username", actor or "")[:150]
+    OrgEvent.objects.create(org=org, actor=who, action=action[:300])
+    audit(who, f"{action} ({org.name})", resource=f"organization:{org.slug}", old=old, new=new)
 
 
 def access(user, slug, perm=None):
@@ -37,6 +43,8 @@ def access(user, slug, perm=None):
     m = Membership.objects.select_related("org").filter(org__slug=slug, user=user).first() if user else None
     if not m:
         raise ApiError(404, "Organization not found.")
+    if m.org.status == "suspended":
+        raise ApiError(403, "This organization has been suspended by the platform. Contact support.", suspended=True)
     if perm and not can(m.role, perm):
         raise ApiError(403, f"Your role ({ROLE_INFO[m.role][0]}) doesn't allow that.")
     now = timezone.now()
@@ -61,7 +69,7 @@ def role_json(role):
 
 def org_json(org):
     return {"id": org.id, "name": org.name, "slug": org.slug, "description": org.description, "country": org.country,
-            "region": org.region, "created": ms(org.created)}
+            "region": org.region, "created": ms(org.created), "status": org.status}
 
 
 def member_json(m, me):
@@ -80,7 +88,8 @@ def invitation_json(i):
 def account_json(user):
     if not user:
         return None
-    return {"id": user.id, "username": user.username, "email": user.email or None, "leagueAccess": user.league_access}
+    return {"id": user.id, "username": user.username, "email": user.email or None, "leagueAccess": user.league_access,
+            "superAdmin": user.is_superuser}
 
 
 def unique_slug(name):
@@ -146,8 +155,11 @@ def me(request, user, ip):
     orgs = []
     if user:
         for m in Membership.objects.select_related("org").filter(user=user).order_by("org__name"):
-            orgs.append({**org_json(m.org), **role_json(m.role), "members": m.org.memberships.count()})
-    return {"user": account_json(user), "csrf": get_token(request), "orgs": orgs,
+            orgs.append({**org_json(m.org), **role_json(m.role), "members": m.org.memberships.count(), "status": m.org.status})
+    site = store.site()
+    news = [{"id": a.id, "title": a.title, "body": a.body, "level": a.level} for a in PlatformAnnouncement.objects.filter(active=True).order_by("-created")[:3]] if user else []
+    return {"user": account_json(user), "csrf": get_token(request), "orgs": orgs, "site": {"name": site["name"], "signups": site["allow_signups"],
+            "notice": site["notice"], "supportEmail": site["support_email"]}, "announcements": news,
             "invitations": my_pending_invitations(user).count() if user else 0}
 
 
@@ -158,6 +170,8 @@ def roles(request, user, ip):
 
 @endpoint("POST")
 def signup(request, user, ip):
+    if not store.site()["allow_signups"]:
+        raise ApiError(403, "New sign-ups are closed at the moment. Ask an organizer for an invitation.")
     b = body(request)
     username, email = text(b, "username", 64), text(b, "email", 254)
     password = b.get("password") if isinstance(b.get("password"), str) else ""
@@ -181,7 +195,7 @@ def signup(request, user, ip):
     except IntegrityError:
         raise ApiError(409, "That username or email is taken.") from None
     start_session(request, a)
-    audit(a.username, "signed up", ip)
+    audit(a.username, "signed up", ip, resource=f"user:{a.username}", device=request.META.get("HTTP_USER_AGENT", ""))
     return {"ok": True, "user": account_json(a)}
 
 
@@ -191,7 +205,7 @@ def login_view(request, user, ip):
     password = b["password"][:200] if isinstance(b.get("password"), str) else ""
     a = check_login(text(b, "user", 254), password, ip)
     start_session(request, a)
-    audit(a.username, "logged in", ip)
+    audit(a.username, "logged in", ip, resource=f"user:{a.username}", device=request.META.get("HTTP_USER_AGENT", ""))
     return {"ok": True, "user": account_json(a)}
 
 
@@ -211,16 +225,18 @@ def orgs(request, user, ip):
     name = text(b, "name", 80)
     if len(name) < 2:
         raise ApiError(400, "Give the organization a name (at least 2 characters).")
-    if Membership.objects.filter(user=user, role=OWNER).count() >= MAX_ORGS_PER_USER:
-        raise ApiError(400, f"You can own at most {MAX_ORGS_PER_USER} organizations.")
+    site = store.site()
+    if Membership.objects.filter(user=user, role=OWNER).count() >= site["max_orgs_per_user"] and not user.is_superuser:
+        raise ApiError(400, f"You can own at most {site['max_orgs_per_user']} organizations.")
     if hit(f"neworg:{user.id}", 10, 3600):
         raise ApiError(429, "Too many new organizations. Try again later.")
     with transaction.atomic():
         org = Organization.objects.create(name=name, slug=unique_slug(name), description=text(b, "description", 2000),
-                                          country=text(b, "country", 60), region=text(b, "region", 60), created_by=user)
+                                          country=text(b, "country", 60), region=text(b, "region", 60), created_by=user,
+                                          status="pending" if site["require_org_approval"] and not user.is_superuser else "active")
         Membership.objects.create(org=org, user=user, role=OWNER, last_active=timezone.now())
-    log(org, user, "created the organization")
-    return {"ok": True, "org": org_json(org)}
+    log(org, user, "created the organization" + (" (waiting for approval)" if org.status == "pending" else ""))
+    return {"ok": True, "org": org_json(org), "pending": org.status == "pending"}
 
 
 @endpoint("GET", "PATCH", "DELETE", login_required=True)
@@ -308,7 +324,7 @@ def member_detail(request, user, ip, slug, member_id):
     old = target.role
     target.role = role
     target.save(update_fields=["role"])
-    log(org, user, f"changed {target.user.username} from {ROLE_INFO[old][0]} to {ROLE_INFO[role][0]}")
+    log(org, user, f"changed {target.user.username}'s role", old=ROLE_INFO[old][0], new=ROLE_INFO[role][0])
     return {"ok": True}
 
 

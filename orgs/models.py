@@ -14,6 +14,8 @@ class Organization(models.Model):
     region = models.CharField(max_length=60, blank=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+")
     created = models.DateTimeField(auto_now_add=True)
+    # active: normal · pending: waiting for platform approval (works, but nothing is published) · suspended: blocked
+    status = models.CharField(max_length=10, default="active", db_index=True)
 
     def __str__(self):
         return self.name

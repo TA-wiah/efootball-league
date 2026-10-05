@@ -131,10 +131,15 @@ def match_json(m, detail=False):
 MATCHES = Match.objects.select_related("competition", "home__team", "away__team")
 
 
-def competition_of(org, cslug):
+SUSPENDED = "This competition has been suspended by the platform, so it can't be changed. Contact support."
+
+
+def competition_of(org, cslug, request=None):
     c = org.competitions.filter(slug=cslug).first()
     if not c:
         raise ApiError(404, "Competition not found.")
+    if c.suspended and request is not None and request.method != "GET":
+        raise ApiError(403, SUSPENDED)
     return c
 
 
@@ -220,7 +225,7 @@ def competitions(request, user, ip, slug):
 @endpoint("GET", "PATCH", "DELETE", login_required=True)
 def competition_detail(request, user, ip, slug, cslug):
     org, m = access(user, slug, "org.view")
-    c = competition_of(org, cslug)
+    c = competition_of(org, cslug, request)
     if request.method == "GET":
         return {"competition": comp_json(c, extra=True), "criteria": engine.CRITERIA,
                 "entries": [{"id": e.id, "group": e.group, "pointsAdjustment": e.points_adjustment, "team": team_brief(e.team)}
@@ -238,9 +243,12 @@ def competition_detail(request, user, ip, slug, cslug):
         need(m, "competitions.manage")
     elif set(b) & COMP_CONTENT:
         need(m, "competitions.manage", "content.edit")
+    before = {"status": c.status, "visibility": c.visibility}
     apply_competition(c, b)
     c.save()
-    log(org, user, f"updated {c.name}")
+    after = {"status": c.status, "visibility": c.visibility}
+    changed = before != after
+    log(org, user, f"updated the competition {c.name}", old=before if changed else None, new=after if changed else None)
     return {"ok": True, "competition": comp_json(c, extra=True)}
 
 
@@ -261,14 +269,14 @@ def set_logo(request, obj, label):
 def competition_logo(request, user, ip, slug, cslug):
     org, m = access(user, slug, "org.view")
     need(m, "competitions.manage", "content.edit")
-    return set_logo(request, competition_of(org, cslug), "competition")
+    return set_logo(request, competition_of(org, cslug, request), "competition")
 
 
 # ---------- entries (teams in a competition) ----------
 @endpoint("POST", login_required=True)
 def entries(request, user, ip, slug, cslug):
     org, m = access(user, slug, "competitions.manage")
-    c = competition_of(org, cslug)
+    c = competition_of(org, cslug, request)
     b = body(request)
     ids = b.get("teamIds") if isinstance(b.get("teamIds"), list) else [b.get("teamId")]
     teams = list(org.teams.filter(id__in=[i for i in ids if isinstance(i, int)]))
@@ -288,7 +296,7 @@ def entries(request, user, ip, slug, cslug):
 @endpoint("PATCH", "DELETE", login_required=True)
 def entry_detail(request, user, ip, slug, cslug, entry_id):
     org, m = access(user, slug, "org.view")
-    c = competition_of(org, cslug)
+    c = competition_of(org, cslug, request)
     e = c.entries.select_related("team").filter(id=entry_id).first()
     if not e:
         raise ApiError(404, "Team not found in this competition.")
@@ -315,7 +323,7 @@ def entry_detail(request, user, ip, slug, cslug, entry_id):
 @endpoint("POST", login_required=True)
 def generate(request, user, ip, slug, cslug):
     org, m = access(user, slug, "fixtures.manage")
-    c = competition_of(org, cslug)
+    c = competition_of(org, cslug, request)
     if c.format == "knockout":
         raise ApiError(400, "Knockout competitions don't have a league stage. Use “Draw a knockout round” instead.")
     b = body(request)
@@ -355,7 +363,7 @@ def generate(request, user, ip, slug, cslug):
 def draw(request, user, ip, slug, cslug):
     """A random knockout round between the chosen teams (shuffled on the server)."""
     org, m = access(user, slug, "fixtures.manage")
-    c = competition_of(org, cslug)
+    c = competition_of(org, cslug, request)
     b = body(request)
     ids = b.get("entryIds") if isinstance(b.get("entryIds"), list) else []
     picked = [entry_of(c, i) for i in ids]
@@ -428,10 +436,10 @@ def apply_match(mt, b):
 def comp_matches(request, user, ip, slug, cslug):
     if request.method == "GET":
         org, m = access(user, slug, "org.view")
-        c = competition_of(org, cslug)
+        c = competition_of(org, cslug, request)
         return {"matches": [match_json(x) for x in MATCHES.filter(competition=c).order_by("stage", "round", "leg", "kickoff", "id")]}
     org, m = access(user, slug, "fixtures.manage")
-    c = competition_of(org, cslug)
+    c = competition_of(org, cslug, request)
     mt = Match(competition=c, stage="knockout" if c.format == "knockout" else "league")
     apply_match(mt, body(request))
     mt.slug = engine.match_slug(Match, mt.home, mt.away, mt.kickoff, c.season)
@@ -458,17 +466,19 @@ def org_matches(request, user, ip, slug):
     return {"matches": [match_json(x) for x in qs[:300]]}
 
 
-def match_of(org, match_id):
+def match_of(org, match_id, request=None):
     mt = MATCHES.filter(competition__org=org, id=match_id).first()
     if not mt:
         raise ApiError(404, "Match not found.")
+    if mt.competition.suspended and request is not None and request.method != "GET":
+        raise ApiError(403, SUSPENDED)
     return mt
 
 
 @endpoint("GET", "PATCH", "DELETE", login_required=True)
 def match_detail(request, user, ip, slug, match_id):
     org, m = access(user, slug, "org.view")
-    mt = match_of(org, match_id)
+    mt = match_of(org, match_id, request)
     if request.method == "GET":
         return {"match": match_json(mt, detail=True)}
     if request.method == "DELETE":
@@ -481,17 +491,21 @@ def match_detail(request, user, ip, slug, match_id):
         need(m, "fixtures.manage")
     if set(b) & MATCH_RESULT:
         need(m, "results.enter")
+    before = {"score": [mt.home_score, mt.away_score], "status": mt.status}
     apply_match(mt, b)
+    if mt.status == "finished" and before["status"] != "finished":
+        mt.finished_at = timezone.now()
     mt.save()
-    if mt.status == "finished" and ("homeScore" in b or "status" in b):
-        log(org, user, f"entered the result {mt.home.team.name} {mt.home_score}–{mt.away_score} {mt.away.team.name}")
+    after = {"score": [mt.home_score, mt.away_score], "status": mt.status}
+    if after != before and mt.home and mt.away:
+        log(org, user, f"result {mt.home.team.name} vs {mt.away.team.name} in {mt.competition.name}", old=before, new=after)
     return {"ok": True, "match": match_json(mt, detail=True)}
 
 
 @endpoint("POST", login_required=True)
 def match_events(request, user, ip, slug, match_id):
     org, m = access(user, slug, "results.enter")
-    mt = match_of(org, match_id)
+    mt = match_of(org, match_id, request)
     b = body(request)
     if b.get("kind") not in dict(EVENT_KINDS):
         raise ApiError(400, "Choose what happened (goal, card…).")
@@ -521,7 +535,7 @@ def match_events(request, user, ip, slug, match_id):
 @endpoint("DELETE", login_required=True)
 def match_event_detail(request, user, ip, slug, match_id, event_id):
     org, m = access(user, slug, "results.enter")
-    mt = match_of(org, match_id)
+    mt = match_of(org, match_id, request)
     if not mt.events.filter(id=event_id).delete()[0]:
         raise ApiError(404, "Event not found.")
     return {"ok": True}
@@ -531,7 +545,7 @@ def match_event_detail(request, user, ip, slug, match_id, event_id):
 @endpoint("GET", login_required=True)
 def standings(request, user, ip, slug, cslug):
     org, m = access(user, slug, "org.view")
-    c = competition_of(org, cslug)
+    c = competition_of(org, cslug, request)
     return table_payload(c)
 
 
@@ -551,7 +565,7 @@ def table_payload(c):
 @endpoint("GET", login_required=True)
 def comp_scorers(request, user, ip, slug, cslug):
     org, m = access(user, slug, "org.view")
-    c = competition_of(org, cslug)
+    c = competition_of(org, cslug, request)
     events = MatchEvent.objects.select_related("player", "assist", "match__home__team", "match__away__team").filter(match__competition=c)
     return {"scorers": [{**r, "team": team_brief(r["team"]) if r["team"] else None} for r in engine.scorers(events)[:50]]}
 

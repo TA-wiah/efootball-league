@@ -12,6 +12,9 @@ class Admin(AbstractUser):
     session_epoch = models.PositiveIntegerField(default=0)  # bumped by "log out on all devices"
     # Can edit the original single league (/). Platform sign-ups start without it.
     league_access = models.BooleanField(default=False)
+    last_seen = models.DateTimeField(null=True, blank=True)    # last request while logged in ("active users")
+    # is_superuser (from Django) = platform super admin: sees and manages the whole platform at /admin.
+    # is_active = False means suspended: can't log in, and existing sessions stop working.
 
     class Meta:
         constraints = [
@@ -49,10 +52,16 @@ class Token(models.Model):
 
 
 class Audit(models.Model):
+    """The platform audit log: who did what, to which resource, with the value before and after."""
     ts = models.DateTimeField(auto_now_add=True, db_index=True)
     actor = models.CharField(max_length=254, blank=True)
     action = models.CharField(max_length=300)
     ip = models.CharField(max_length=64, blank=True)
+    resource = models.CharField(max_length=200, blank=True, db_index=True)   # e.g. "user:kofi", "competition:kasoa-league"
+    old = models.TextField(blank=True)
+    new = models.TextField(blank=True)
+    device = models.CharField(max_length=200, blank=True)
+    status = models.CharField(max_length=10, default="ok")                   # ok / failed / denied
 
 
 class Hit(models.Model):

@@ -78,7 +78,7 @@ class PublicPagesTest(Helpers, TestCase):
             self.assertEqual(client.get(f"/match/{m.slug}").status_code, 404)
         r = self.owner.c.get(f"/competition/{cs}")
         self.assertEqual(r.status_code, 200)
-        self.assertIn("Private preview", r.content.decode())
+        self.assertIn("public right now", r.content.decode())
         self.assertEqual(r["Cache-Control"], "private, no-store")
 
     def test_team_and_organization_pages(self):
