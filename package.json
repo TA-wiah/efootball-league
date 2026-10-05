@@ -3,7 +3,12 @@
   "version": "1.0.0",
   "description": "eFootball Champions League site: groups, knockouts, top scorers, Ballon d'Or and awards. Node + SQLite (.db), zero dependencies.",
   "main": "server.js",
-  "scripts": { "start": "node server.js" },
-  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
   "license": "MIT"
 }
