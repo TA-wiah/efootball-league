@@ -219,6 +219,8 @@ table.st th,.dt th,th{font-family:var(--cond);font-size:13px;letter-spacing:.6px
 .chip.on,.tabs2 a.on{color:var(--ink)}
 input:focus,select:focus,textarea:focus{border-color:var(--gold);outline:0}
 .toast{background:#0b2a1a;border-color:var(--pitch)}
+.grp-h{margin:18px 0 6px;background:var(--gold);color:var(--ink);text-align:center;font-family:var(--cond);font-size:21px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;padding:6px 10px;border-radius:8px}
+.st tr.q .tm>span{color:var(--gold)}
 </style></head><body>
 <header class="top"><a class="brand" href="/"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 13v3M8 20h8M9.5 20l.5-4h4l.5 4"/></svg><span>Competition Manager</span></a><nav id="topnav" aria-label="Account"></nav></header>
 <main class="w" id="main"><div class="card note">Loading…</div></main>
@@ -404,7 +406,7 @@ function wzBody(){var d=WZ.d,st=WZ.step,H=function(t,p){return'<h2>'+t+'</h2><p 
   case 1:return H("What kind of organization is it?","This helps people recognise you. You can change it later.")+'<div class="kinds" role="radiogroup" aria-label="Type">'+(ROLES.kinds||[]).map(function(k){
     return'<button type="button" role="radio" aria-checked="'+(d.kind===k.key)+'" class="'+(d.kind===k.key?"on":"")+'" data-k="'+k.key+'"><b>'+esc(k.label)+'</b><small>'+esc(KINDS_D[k.key]||"")+'</small></button>'}).join("")+'</div>';
   case 2:return H("Describe it","One or two sentences for your dashboard and public website. Optional.")+'<label for="wd">Description<textarea id="wd" maxlength="2000" placeholder="Who plays, where and when?">'+esc(d.description)+'</textarea></label>';
-  case 3:return H("Add a logo","Shown on your cards, dashboard and public website. PNG, JPG, GIF or WebP up to 256 KB. Optional.")+
+  case 3:return H("Add a logo","Shown on your cards, dashboard and public website. PNG, JPG, GIF or WebP. Big photos are made smaller for you. Optional.")+
     '<div class="ch" style="margin-top:10px">'+avatar({name:d.name,logo:d.logo,brandColor:d.brandColor},72)+'<div><label for="wl" style="margin:0">Choose an image<input id="wl" type="file" accept="image/png,image/jpeg,image/gif,image/webp"></label>'+(d.logo?'<button type="button" class="btn g sm" id="wlx" style="margin-top:8px">Remove</button>':'')+'</div></div>';
   case 4:return H("Where are you based?","Used on your public website. The time zone helps your team schedule matches.")+
     '<div class="row"><label for="wc">Country<input id="wc" maxlength="60" value="'+esc(d.country)+'" placeholder="Ghana"></label><label for="wr">Region / city<input id="wr" maxlength="60" value="'+esc(d.region)+'" placeholder="Central"></label></div><label for="wt">Time zone'+tzSelect("wt",d.timezone)+'</label>';
@@ -440,8 +442,7 @@ function wzDraw(){var st=WZ.step,d=WZ.d,skip=st>=2&&st<=7;
   document.querySelectorAll("[data-k]").forEach(function(b){b.onclick=function(){d.kind=b.dataset.k;wzDraw()}});
   document.querySelectorAll("[data-c]").forEach(function(b){b.onclick=function(){d.brandColor=b.dataset.c;wzDraw()}});
   if($("wcol"))$("wcol").onchange=function(){d.brandColor=this.value.toLowerCase();wzDraw()};
-  if($("wl"))$("wl").onchange=function(){var fl=this.files[0];if(!fl)return;if(fl.size>256*1024){toast("The logo must be smaller than 256 KB",true);return}
-    if(!/^image\/(png|jpeg|gif|webp)$/.test(fl.type)){toast("Use a PNG, JPG, GIF or WebP image",true);return}var rd=new FileReader();rd.onload=function(){d.logo=rd.result;wzDraw()};rd.readAsDataURL(fl)};
+  if($("wl"))$("wl").onchange=function(){var fl=this.files[0];if(!fl)return;shrinkImage(fl,function(img){d.logo=img;wzDraw()})};
   if($("wlx"))$("wlx").onclick=function(){d.logo=null;wzDraw()};
   if($("wiadd"))$("wiadd").onclick=function(){wzSave();if(d.invites.length>=10){toast("Add up to 10 here; invite more later",true);return}d.invites.push({email:"",role:"organizer"});wzDraw()};
   document.querySelectorAll("[data-ir]").forEach(function(s){s.onchange=function(){d.invites[+s.dataset.ir].role=s.value}});
@@ -524,11 +525,22 @@ function matchList(ms,o){o=o||{};if(!ms.length)return'<p class="note">'+esc(o.em
     :(m.stage==="knockout"?(m.roundName||"Knockout"):(m.group?"Group "+m.group+" · ":"")+(m.roundName||"Round "+m.round));
     if(key!==last){out+='<div class="md">'+esc(key)+'</div>';last=key}out+=matchRow(m,o)});return out}
 function tableHtml(p){if(!p.groups.some(function(g){return g.rows.length}))return'<p class="note">Add teams to the competition to see the table.</p>';
-  return p.groups.map(function(g){return(g.name?'<div class="md">Group '+esc(g.name)+'</div>':'')+'<div class="tbl"><table class="st"><tr><th>#</th><th class="tl">Team</th><th title="Played">P</th><th title="Won">W</th><th title="Drawn">D</th><th title="Lost">L</th><th title="Goals for">GF</th><th title="Goals against">GA</th><th title="Goal difference">GD</th><th title="Points">Pts</th><th class="hide-s">Form</th></tr>'+
+  return p.groups.map(function(g){return(g.name?'<h3 class="grp-h">Group '+esc(g.name)+'</h3>':'')+'<div class="tbl"><table class="st"><tr><th>#</th><th class="tl">Team</th><th title="Played">P</th><th title="Won">W</th><th title="Drawn">D</th><th title="Lost">L</th><th title="Goals for">GF</th><th title="Goals against">GA</th><th title="Goal difference">GD</th><th title="Points">Pts</th><th class="hide-s">Form</th></tr>'+
     g.rows.map(function(r){return'<tr class="'+(p.qualifiersPerGroup&&r.position<=p.qualifiersPerGroup?"q":"")+'"><td>'+r.position+'</td><td class="tl"><span class="tm">'+crest(r.team,22)+'<span>'+esc(r.team.name)+'</span>'+(r.adjustment?' <small class="note">('+(r.adjustment>0?"+":"")+r.adjustment+' pts)</small>':'')+'</span></td><td>'+r.played+'</td><td>'+r.won+'</td><td>'+r.drawn+'</td><td>'+r.lost+'</td><td>'+r.goalsFor+'</td><td>'+r.goalsAgainst+'</td><td>'+(r.goalDifference>0?"+":"")+r.goalDifference+'</td><td class="pts">'+r.points+'</td><td class="hide-s">'+r.form.map(function(f){return'<span class="fm '+f+'">'+f+'</span>'}).join("")+'</td></tr>'}).join("")+'</table></div>'}).join("")+
     '<p class="note">Points: win '+p.pointsSystem.win+' · draw '+p.pointsSystem.draw+' · loss '+p.pointsSystem.loss+'. Level teams are separated by: '+p.tiebreakers.map(esc).join(" → ")+'.'+(p.qualifiersPerGroup?' The top '+p.qualifiersPerGroup+' of each group are marked in gold.':'')+'</p>'}
-function logoPicker(id,url,done){var inp=$(id);if(!inp)return;inp.onchange=function(){var f=inp.files[0];if(!f)return;if(f.size>256*1024){toast("The logo must be smaller than 256 KB",true);return}
-  var rd=new FileReader();rd.onload=function(){api(url,"POST",{image:rd.result}).then(function(r){if(!r.ok){toast(r.data.error||"Upload failed",true);return}toast("Logo updated");done()})};rd.readAsDataURL(f)}}
+// Any photo works: big images are scaled down in the browser (to at most 512 px) before they're uploaded.
+function shrinkImage(file,cb){if(!/^image\/(png|jpeg|gif|webp)$/.test(file.type)){toast("Use a PNG, JPG, GIF or WebP image",true);return}
+  var LIMIT=250*1024,rd=new FileReader();rd.onerror=function(){toast("Couldn't read that image",true)};
+  rd.onload=function(){var src=rd.result;if(file.size<=LIMIT)return cb(src);
+    var img=new Image();img.onerror=function(){toast("That image file is damaged",true)};
+    img.onload=function(){var out=null;[512,384,256].some(function(max){var k=Math.min(1,max/Math.max(img.width,img.height)),c=document.createElement("canvas");
+        c.width=Math.max(1,Math.round(img.width*k));c.height=Math.max(1,Math.round(img.height*k));c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+        return[.9,.8,.65].some(function(q){var d=c.toDataURL("image/webp",q);if(d.indexOf("data:image/webp")!==0)d=c.toDataURL("image/png");out=d;return d.length*.75<=LIMIT})});
+      if(out&&out.length*.75<=LIMIT)cb(out);else toast("That image is too large even after shrinking. Try a simpler logo.",true)};
+    img.src=src};
+  rd.readAsDataURL(file)}
+function logoPicker(id,url,done){var inp=$(id);if(!inp)return;inp.onchange=function(){var f=inp.files[0];if(!f)return;
+  shrinkImage(f,function(img){toast("Uploading logo…");api(url,"POST",{image:img}).then(function(r){inp.value="";if(!r.ok){toast(r.data.error||"Upload failed",true);return}toast("Logo updated");done()})})}}
 function val(id){var e=$(id);return e?e.value:undefined}
 // "Public page" + "Copy public link" for anything visitors can open without logging in.
 function publicLinks(path,label){var url=location.origin+path;return'<div class="actions" style="margin-top:10px"><a class="btn g sm" href="'+esc(path)+'" target="_blank" rel="noopener">'+ic("link")+' '+esc(label||"Public page")+' ↗</a><button type="button" class="btn sm" data-copylink="'+esc(url)+'">'+ic("copy")+' Copy public link</button></div>'}
@@ -787,7 +799,7 @@ function teamPage(id){api(api0("/teams/"+id)).then(function(r){if(!r.ok)return f
     teamPeople(t)+'<form class="card" id="tef" novalidate><div class="gh">Team details</div><div class="row"><label for="ten">Name<input id="ten" maxlength="80" value="'+esc(t.name)+'"'+dis+'></label><label for="tes">Short name<input id="tes" maxlength="12" value="'+esc(t.shortName||"")+'"'+dis+'></label></div>'+
       '<div class="row"><label for="tec">City<input id="tec" maxlength="60" value="'+esc(t.city)+'"'+dis+'></label><label for="tev">Home ground<input id="tev" maxlength="100" value="'+esc(t.venue)+'"'+dis+'></label></div>'+
       '<div class="row"><label for="tef2">Founded<input id="tef2" type="number" min="1800" max="2100" value="'+esc(t.founded||"")+'"'+dis+'></label><label for="tek">Colours<input id="tek" maxlength="40" value="'+esc(t.colors)+'"'+dis+'></label></div>'+
-      '<label for="ted">About<textarea id="ted" maxlength="2000"'+dis+'>'+esc(t.description)+'</textarea></label>'+(can?'<label for="tlogo">Logo (PNG, JPG, GIF or WebP, up to 256 KB)<input id="tlogo" type="file" accept="image/png,image/jpeg,image/gif,image/webp"></label><div class="actions"><button class="btn" id="tsave">Save team</button>'+(full?'<button type="button" class="btn bad" id="tdel">Delete team</button>':'')+'</div>':'')+'</form>';
+      '<label for="ted">About<textarea id="ted" maxlength="2000"'+dis+'>'+esc(t.description)+'</textarea></label>'+(can?'<label for="tlogo">Logo (PNG, JPG, GIF or WebP; big photos are made smaller for you)<input id="tlogo" type="file" accept="image/png,image/jpeg,image/gif,image/webp"></label><div class="actions"><button class="btn" id="tsave">Save team</button>'+(full?'<button type="button" class="btn bad" id="tdel">Delete team</button>':'')+'</div>':'')+'</form>';
   var reload=function(){teamPage(id)};
   bindTeamPeople(t,id);
   if(!can)return;
@@ -916,7 +928,16 @@ function profileSec(){var o=ORG.org,ed=has("org.settings"),dis=ed?"":" disabled"
     api(api0(""),"PATCH",{name:val("sn"),kind:val("sk"),description:val("sd"),country:val("sc"),region:val("sr"),timezone:val("stz")}).then(function(r){
       busy(b,false);if(!r.ok){toast(r.data.error||"Couldn't save",true);return}toast("Saved");reloadOrg("profile")})}}
 function brandingSec(){var o=ORG.org,color=safeColor(o.brandColor);
-  var draw=function(){$("sec").innerHTML='<div class="agrid"><div class="card"><div class="gh">Logo</div><div class="ch">'+avatar(o,80)+'<div><label for="blogo" style="margin:0">Upload a logo (PNG, JPG, GIF or WebP, up to 256 KB)<input id="blogo" type="file" accept="image/png,image/jpeg,image/gif,image/webp"></label>'+
+  $("sec").innerHTML='<div id="bwrap"></div><form class="card" id="bdf" novalidate style="margin-top:14px"><div class="gh">How you’re described</div>'+
+    '<p class="note" style="margin-top:0">Shown on your public website and in the preview when your link is shared on WhatsApp, Facebook or X.</p>'+
+    '<label for="btag">Tagline<input id="btag" maxlength="160" value="'+esc(o.website.tagline)+'" placeholder="eFootball every weekend in Kasoa"></label>'+
+    '<label for="bdesc">Description<textarea id="bdesc" maxlength="2000" placeholder="Who you are, who plays and where.">'+esc(o.description)+'</textarea></label>'+
+    '<div class="note" id="bdn"></div><div class="actions"><button class="btn" id="bdsave">Save description</button></div></form>';
+  var count=function(){var n=(val("btag")||val("bdesc")).trim().length;$("bdn").textContent=n?"Share previews show the first 180 characters of the "+(val("btag").trim()?"tagline":"description")+".":"Without these, share previews show a general line about your organization."};
+  count();$("btag").oninput=count;$("bdesc").oninput=count;
+  $("bdf").onsubmit=function(e){e.preventDefault();var b=$("bdsave");busy(b,true,"Saving…");
+    api(api0(""),"PATCH",{description:val("bdesc"),website:{tagline:val("btag")}}).then(function(r){busy(b,false);if(!r.ok){toast(r.data.error||"Couldn't save",true);return}toast("Description saved");ORG.org=r.data.org;o=ORG.org;loadMe()})};
+  var draw=function(){$("bwrap").innerHTML='<div class="agrid"><div class="card"><div class="gh">Logo</div><div class="ch">'+avatar(o,80)+'<div><label for="blogo" style="margin:0">Upload a logo (PNG, JPG, GIF or WebP; big photos are made smaller for you)<input id="blogo" type="file" accept="image/png,image/jpeg,image/gif,image/webp"></label>'+
       (o.logo?'<button type="button" class="btn g sm" id="blx" style="margin-top:8px">Remove logo</button>':'')+'</div></div></div>'+
     '<div class="card"><div class="gh">Brand colour</div><div class="sw" role="radiogroup" aria-label="Brand colour">'+BRAND_SW.map(function(c){return'<button type="button" role="radio" aria-checked="'+(color===c)+'" aria-label="'+c+'" class="'+(color===c?"on":"")+'" data-c="'+c+'" style="background:'+c+'"></button>'}).join("")+
       '<label style="margin:0 0 0 6px;display:flex;align-items:center;gap:6px">Custom <input id="bcol" type="color" value="'+color+'"></label></div>'+

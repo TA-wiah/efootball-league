@@ -69,6 +69,10 @@ def logo(kind, obj):
     return f"/media/{kind}/{obj.id}/logo?v={obj.version}" if obj.data else None
 
 
+def org_logo(org):
+    return f"/media/org/{org.id}/logo?v={org.logo_version}" if org.logo_data else None
+
+
 def public_team_ids(team_ids):
     """Teams that get their own public page: those playing in at least one public competition."""
     return set(Entry.objects.filter(listed("competition__"), team_id__in=team_ids, team__suspended=False).values_list("team_id", flat=True))
@@ -114,7 +118,7 @@ def standings_view(c, linkable, only_group=None):
         for r in rows:
             r["team"] = team_view(r["team"], linkable)
             r["qualifies"] = c.format == "groups_knockout" and r["position"] <= c.qualifiers_per_group
-        groups.append({"name": g, "rows": rows})
+        groups.append({"name": g, "rows": rows, "through": c.qualifiers_per_group if c.format == "groups_knockout" else 0})
     return groups
 
 
@@ -122,12 +126,12 @@ MATCHES = Match.objects.select_related("competition", "home__team", "away__team"
 
 
 # ---------- competition ----------
-TABS = [("", "Overview"), ("table", "Table"), ("fixtures", "Fixtures"), ("results", "Results"), ("teams", "Teams")]
+TABS = [("", "Overview"), ("table", "Table"), ("fixtures", "Fixtures"), ("results", "Results"), ("knockouts", "Knockouts"), ("teams", "Teams")]
 
 
 def competition(request, slug, tab=""):
     c = competition_for(request, slug)
-    if tab not in dict(TABS):
+    if tab not in dict(TABS) or (tab == "knockouts" and c.format == "league"):
         raise Http404
     entries = list(c.entries.select_related("team").order_by("team__name"))
     linkable = public_team_ids([e.team_id for e in entries])
@@ -135,7 +139,8 @@ def competition(request, slug, tab=""):
     upcoming = [m for m in matches if m.status in ("scheduled", "live", "postponed")]
     results = sorted([m for m in matches if m.status == "finished"], key=lambda m: (m.kickoff is not None, m.kickoff, m.round), reverse=True)
     has_table = c.format != "knockout"
-    ctx = {"c": c, "tab": tab, "tabs": [(t, label) for t, label in TABS if t != "table" or has_table], "logo": logo("competition", c),
+    ctx = {"c": c, "tab": tab, "tabs": [(t, label) for t, label in TABS if (t != "table" or has_table) and (t != "knockouts" or c.format != "league")],
+           "logo": logo("competition", c), "share_image": logo("competition", c) or org_logo(c.org),
            "kind": KIND_L.get(c.kind, "Competition"), "format": FORMAT_L[c.format], "has_table": has_table,
            "team_count": len(entries), "played": len(results), "total": len(matches),
            "points": f"Win {c.points_win} · Draw {c.points_draw} · Loss {c.points_loss}",
@@ -153,11 +158,14 @@ def competition(request, slug, tab=""):
     ctx["show_round"] = tab == "results"
     if tab == "results":
         ctx["sections"] = [(k, [match_view(m, linkable) for m in v]) for k, v in group_by(results, day_label)]
+    if tab == "knockouts":
+        ko = [m for m in matches if m.stage == "knockout"]
+        ctx["rounds"] = group_by([match_view(m, linkable) for m in sorted(ko, key=lambda m: (m.round, m.leg, m.id))], lambda m: m["round"])
     if tab == "teams":
         ctx["teams"] = [{**team_view(e.team, linkable), "group": e.group, "city": e.team.city} for e in entries]
     if not c.hidden and c.visibility == "public" and tab in ("", "table"):
         Competition.objects.filter(id=c.id).update(views=F("views") + 1)     # for "popular" (doesn't touch `updated`)
-    title = {"": c.name, "table": f"{c.name} table", "fixtures": f"{c.name} fixtures", "results": f"{c.name} results", "teams": f"{c.name} teams"}[tab]
+    title = {"": c.name, "table": f"{c.name} table", "fixtures": f"{c.name} fixtures", "results": f"{c.name} results", "teams": f"{c.name} teams", "knockouts": f"{c.name} knockouts"}[tab]
     ctx["title"] = title + (f" {c.season}" if c.season else "")
     ctx["description"] = (c.description[:180] if c.description else
                           f"{ctx['kind']} with {len(entries)} teams: live table, fixtures, results and match details.")
@@ -206,7 +214,7 @@ def match(request, slug):
         desc = f"{title}, {when}. {c.name}, {mv['round']}."
     ctx = {"c": c, "m": mv, "events": events, "aggregate": aggregate, "table": table, "same_round": same_round, "referee": m.referee,
            "title": title + (f" {m.home_score}–{m.away_score}" if mv["played"] else ""), "description": desc,
-           "logo": logo("competition", c), "notes": m.notes}
+           "logo": logo("competition", c), "share_image": logo("competition", c) or org_logo(c.org), "notes": m.notes}
     return page(request, "match.html", ctx, index=c.visibility == "public" and not c.hidden, private=c.hidden)
 
 
@@ -264,7 +272,7 @@ def organization(request, slug):
     now = timezone.now()
     color, ink = brand(o.brand_color)
     ctx = {"o": o, "s": s, "brand": color, "brand_ink": ink, "kind": ORG_KIND_L.get(o.kind, "Organization"),
-           "org_logo": f"/media/org/{o.id}/logo?v={o.logo_version}" if o.logo_data else None,
+           "org_logo": org_logo(o), "share_image": org_logo(o),
            "comps": [{"c": c, "logo": logo("competition", c), "kind": KIND_L.get(c.kind, "Competition"), "teams": c.entries.count()} for c in comps],
            "title": o.name, "description": (s["tagline"] or o.description)[:180] or f"{o.name}: competitions, tables, fixtures and results."}
     if s["show_teams"]:

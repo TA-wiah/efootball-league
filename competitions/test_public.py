@@ -97,3 +97,46 @@ class PublicPagesTest(Helpers, TestCase):
         sm = Client().get("/sitemap.xml").content.decode()
         self.assertIn(f"/competition/{self.cs}/table", sm)
         self.assertIn("/team/kasoa-stars", sm)
+
+    def test_groups_knockouts_and_share_previews(self):
+        cs = self.owner.call("post", self.base + "/competitions", {"name": "Robo Cup", "visibility": "public", "format": "groups_knockout",
+                                                                  "qualifiersPerGroup": 2}).json()["competition"]["slug"]
+        ids = [self.owner.call("post", self.base + "/teams", {"name": f"Side {i}"}).json()["team"]["id"] for i in range(4)]
+        for i, tid in enumerate(ids):
+            self.owner.call("post", f"{self.base}/competitions/{cs}/entries", {"teamId": tid, "group": "AB"[i // 2]})
+        anon = Client()
+        table = anon.get(f"/competition/{cs}/table").content.decode()
+        self.assertIn('class="grp-h">Group A', table)
+        self.assertIn("Top 2 go through", table)
+        r = anon.get(f"/competition/{cs}/knockouts")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("haven't been drawn yet", r.content.decode())
+        entries = self.owner.get(f"{self.base}/competitions/{cs}").json()["entries"]
+        self.owner.call("post", f"{self.base}/competitions/{cs}/draw", {"entryIds": [e["id"] for e in entries], "roundName": "Semi-finals"})
+        self.assertIn("Semi-finals", anon.get(f"/competition/{cs}/knockouts").content.decode())
+        self.assertEqual(anon.get(f"/competition/{self.cs}/knockouts").status_code, 404, "plain leagues have no knockouts")
+        # share previews: no image until there's a logo, then the organization's logo is used
+        self.assertNotIn("og:image", anon.get(f"/competition/{cs}").content.decode())
+        png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+        self.owner.call("post", f"{self.base}/logo", {"image": png})
+        self.owner.call("patch", self.base, {"description": "We play every Sunday.", "website": {"tagline": ""}})
+        for url in (f"/competition/{cs}", f"/org/{self.slug}"):
+            html = anon.get(url).content.decode()
+            self.assertIn('property="og:image" content="http://testserver/media/org/', html, url)
+        self.assertIn('og:description" content="We play every Sunday."', anon.get(f"/org/{self.slug}").content.decode())
+
+    def test_import_original_league_into_existing_competition(self):
+        import json
+        from django.core.management import call_command
+        from django.core.management.base import CommandError
+        from league.models import League
+        League.objects.update_or_create(pk=1, defaults={"data": json.dumps({"g": {"A": ["P1", "P2", "P3", "P4"], "B": ["Q1", "Q2", "Q3", "Q4"]},
+                                                                         "cfg": {"a": 2}, "r": {"A0_0": [2, 1]}, "ui": {"t": "CHAMPIONS LEAGUE"}})})
+        cs = self.owner.call("post", self.base + "/competitions", {"name": "Robotics Championship", "visibility": "public"}).json()["competition"]["slug"]
+        call_command("import_league", self.slug, into=cs, description="Two groups of four.", stdout=__import__("io").StringIO())
+        c = __import__("competitions.models", fromlist=["Competition"]).Competition.objects.get(slug=cs)
+        self.assertEqual((c.format, c.qualifiers_per_group, c.entries.count(), c.matches.count(), c.description), ("groups_knockout", 2, 8, 24, "Two groups of four."))
+        self.assertEqual(c.matches.filter(status="finished").count(), 1, "results come across")
+        with self.assertRaises(CommandError):
+            call_command("import_league", self.slug, into=cs, stdout=__import__("io").StringIO())
+        self.assertEqual(c.entries.count(), 8, "running it twice changes nothing")

@@ -11,7 +11,8 @@
 <meta property="og:title" content="{{ title }}">
 <meta property="og:description" content="{{ description }}">
 <meta property="og:url" content="{{ url }}">
-{% if logo %}<meta property="og:image" content="{{ base }}{{ logo }}">{% endif %}
+{% if share_image or logo %}<meta property="og:image" content="{{ base }}{% firstof share_image logo %}"><meta property="og:image:alt" content="{{ title }}"><meta name="twitter:image" content="{{ base }}{% firstof share_image logo %}">{% endif %}
+<meta name="twitter:title" content="{{ title }}"><meta name="twitter:description" content="{{ description }}">
 <meta name="twitter:card" content="summary">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap">
@@ -205,6 +206,14 @@ th{font-family:var(--cond);font-size:13px}
 .cta-band h2{font-size:34px}
 .toast{background:#0b2a1a;border-color:var(--pitch)}
 .brand,.nav a{white-space:nowrap}
+/* group tables, like the original league page: a gold banner per group, qualifiers in gold */
+.grps{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:16px;align-items:start}.grps>.card{margin:0}
+.grp+.grp{margin-top:18px}.grp-h{margin:0 0 6px;background:var(--gold);color:var(--ink);text-align:center;font-family:var(--cond);font-size:22px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;padding:7px 10px;border-radius:8px}
+.st tr.q .tm a,.st tr.q .tm>span{color:var(--gold)}.grp-n{text-align:center;margin:8px 0 0}
+.bracket{display:flex;gap:14px;overflow-x:auto;padding-bottom:6px}.bracket .rnd{flex:none;width:250px;display:flex;flex-direction:column;gap:8px}
+.bracket .rnd h3{margin:0 0 2px;font-size:15px;letter-spacing:1px;text-transform:uppercase;color:var(--soft)}
+.bm{display:block;background:rgba(255,255,255,.03);border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:8px;padding:8px 10px;color:var(--tx);text-decoration:none;font-size:14px}
+.bm:hover{border-color:var(--line2)}.bm div{display:flex;justify-content:space-between;gap:8px}.bm b{font-family:var(--cond);font-size:17px;color:var(--gold)}.bm .w{font-weight:800}.bm small{color:var(--soft)}
 .filters{align-items:end}.filters label{font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:.3px;text-transform:none;color:var(--tx2)}
 .filters input,.filters select{height:46px;font-family:var(--sans);font-size:15px}.filters .btn{height:46px}
 .filters input:focus,.filters select:focus{border-color:var(--gold)}@media(max-width:720px){.brand .bt{display:none}}

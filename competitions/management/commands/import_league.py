@@ -2,6 +2,7 @@
 
     python manage.py import_league kasoa-community-league
     python manage.py import_league kasoa-community-league --name "Champions League" --season 2026
+    python manage.py import_league robotics-league --into robotics-championship   (fill an existing, empty competition)
 
 Copies: groups and teams, the group-stage fixtures in the same order the old page used, their results, and the goals /
 assists logged in match details. Knockout rounds aren't copied: draw them again in the new competition once the
@@ -45,8 +46,10 @@ class Command(BaseCommand):
         parser.add_argument("org", help="the organization's address (slug), e.g. kasoa-community-league")
         parser.add_argument("--name", default=None)
         parser.add_argument("--season", default="")
+        parser.add_argument("--into", default=None, help="an existing competition (slug) in that organization with no teams yet")
+        parser.add_argument("--description", default=None)
 
-    def handle(self, org, name, season, **options):
+    def handle(self, org, name, season, into=None, description=None, **options):
         o = Organization.objects.filter(slug=org).first()
         if not o:
             raise CommandError(f"No organization with the address {org!r}.")
@@ -59,12 +62,23 @@ class Command(BaseCommand):
             raise CommandError("The original league has no groups.")
         cfg, ui = s.get("cfg") or {}, s.get("ui") or {}
         name = name or (ui.get("t") or "League").title()
+        fields = dict(kind="championship", format="groups_knockout" if len(groups) > 1 else "league", status="active",
+                      description=description if description is not None else ui.get("s", "").title(),
+                      qualifiers_per_group=3 if cfg.get("a") == 3 else 2, tiebreakers=["points", "goal_difference", "goals_for"])
         with transaction.atomic():
-            c = Competition.objects.create(
-                org=o, name=name, slug=engine.unique_slug(Competition, name, "competition"), season=season,
-                kind="championship", format="groups_knockout" if len(groups) > 1 else "league", status="active",
-                description=ui.get("s", "").title(), qualifiers_per_group=3 if cfg.get("a") == 3 else 2,
-                tiebreakers=["points", "goal_difference", "goals_for"])
+            if into:
+                c = o.competitions.filter(slug=into).first()
+                if not c:
+                    raise CommandError(f"{o.name} has no competition with the address {into!r}.")
+                if c.entries.exists() or c.matches.exists():
+                    raise CommandError(f"{c.name} already has teams or matches; nothing was changed.")
+                for k, v in fields.items():
+                    setattr(c, k, v)
+                if season:
+                    c.season = season
+                c.save()
+            else:
+                c = Competition.objects.create(org=o, name=name, slug=engine.unique_slug(Competition, name, "competition"), season=season, **fields)
             made = results = events = 0
             for g, names in groups.items():
                 entries = []

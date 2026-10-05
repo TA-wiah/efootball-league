@@ -32,13 +32,22 @@
     </div>
   </div>
 {% elif tab == "table" %}
-  <section class="card"><div class="gh">{{ c.name }} table</div>{% include "public/_table.html" %}
+  {% if groups|length > 1 %}<div class="grps">{% for g in groups %}<section class="card">{% include "public/_group.html" %}</section>{% endfor %}</div>
+  <section class="card" style="margin-top:16px">{% else %}<section class="card"><div class="gh">{{ c.name }} table</div>{% include "public/_table.html" %}{% endif %}
     <p class="note">Points: {{ points }}. Teams level on points are separated by: {{ tiebreakers|join:" → " }}.{% if c.format == "groups_knockout" %} The top {{ c.qualifiers_per_group }} of each group (gold) go through.{% endif %}</p>
     {% include "public/_share.html" with share_url=url share_text=title %}
   </section>
 {% elif tab == "fixtures" or tab == "results" %}
   <section class="card"><div class="gh">{% if tab == "fixtures" %}Fixtures{% else %}Results{% endif %}</div>
     {% for label, ms in sections %}<div class="md">{{ label }}</div>{% for m in ms %}{% include "public/_match.html" with show_round=show_round %}{% endfor %}{% empty %}<p class="note">{% if tab == "fixtures" %}No upcoming matches.{% else %}No results yet.{% endif %}</p>{% endfor %}
+  </section>
+  <section class="card">{% include "public/_share.html" with share_url=url share_text=title %}</section>
+{% elif tab == "knockouts" %}
+  <section class="card"><div class="gh">Knockouts</div>
+    {% if rounds %}<div class="bracket">{% for name, games in rounds %}<div class="rnd"><h3>{{ name }}</h3>
+      {% for m in games %}<a class="bm" href="/match/{{ m.slug }}"><div><span{% if m.played and m.hs > m.as %} class="w"{% endif %}>{{ m.home.name|default:"To be decided" }}</span><b>{% if m.played %}{{ m.hs }}{% endif %}</b></div><div><span{% if m.played and m.as > m.hs %} class="w"{% endif %}>{{ m.away.name|default:"To be decided" }}</span><b>{% if m.played %}{{ m.as }}{% endif %}</b></div><small>{% if m.leg > 1 %}2nd leg · {% endif %}{% if m.kickoff %}<time datetime="{{ m.kickoff|date:'c' }}" data-f="date">{{ m.kickoff|date:"j M" }}</time>{% else %}Date to be set{% endif %}</small></a>{% endfor %}
+    </div>{% endfor %}</div>
+    {% else %}<p class="note">The knockout rounds haven't been drawn yet.{% if c.format == "groups_knockout" %} The top {{ c.qualifiers_per_group }} of each group go through to them.{% endif %}</p>{% endif %}
   </section>
   <section class="card">{% include "public/_share.html" with share_url=url share_text=title %}</section>
 {% elif tab == "teams" %}
