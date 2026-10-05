@@ -86,7 +86,7 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 1_100_000
 # ---------- accounts ----------
 AUTH_USER_MODEL = "league.Admin"
 PASSWORD_HASHERS = [
-    "django.contrib.auth.hashers.ScryptPasswordHasher",     # also verifies passwords imported from the Node version
+    "django.contrib.auth.hashers.ScryptPasswordHasher",     # strong, memory-hard hashing
     "django.contrib.auth.hashers.PBKDF2PasswordHasher",
 ]
 AUTH_PASSWORD_VALIDATORS = [

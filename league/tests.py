@@ -1,10 +1,6 @@
 """API tests. Run with:  python manage.py test"""
-import base64
-import hashlib
 import json
 import os
-import sqlite3
-import tempfile
 from unittest import mock
 
 from django.conf import settings
@@ -195,28 +191,3 @@ class EnsureAdminTest(TestCase):
             call_command("ensure_admin", stdout=open(os.devnull, "w"))
         a = Admin.objects.get(username="boss")
         self.assertEqual((a.role, a.email, a.session_epoch), (Admin.OWNER, "boss@example.com", epoch))
-
-
-class ImportNodeTest(TestCase):
-    def test_import_keeps_passwords(self):
-        path = os.path.join(tempfile.mkdtemp(), "league.db")
-        db = sqlite3.connect(path)
-        salt = "0123456789abcdef0123456789abcdef"
-        node_hash = hashlib.scrypt(PASS.encode(), salt=salt.encode(), n=16384, r=8, p=1, dklen=64).hex()   # what Node stored
-        db.executescript("""CREATE TABLE state(id INTEGER PRIMARY KEY, json TEXT, updated TEXT);
-            CREATE TABLE admins(id INTEGER PRIMARY KEY, username TEXT, email TEXT, role TEXT, salt TEXT, hash TEXT, must_change INTEGER, created INTEGER, invited_by TEXT, last_login INTEGER);
-            CREATE TABLE draws(id INTEGER PRIMARY KEY, ts INTEGER, by TEXT, kind TEXT, result TEXT, role TEXT);""")
-        db.execute("INSERT INTO state VALUES(1,?,?)", (json.dumps({**LEAGUE, "rev": 7}), ""))
-        db.execute("INSERT INTO admins VALUES(1,'boss','boss@example.com','owner',?,?,0,1700000000000,NULL,NULL)", (salt, node_hash))
-        db.execute("INSERT INTO draws VALUES(1,1700000000000,'boss','groups',?, 'owner')", (json.dumps({"groups": LEAGUE["g"], "order": []}),))
-        db.commit()
-        db.close()
-        call_command("import_node_db", path, stdout=open(os.devnull, "w"))
-        self.assertEqual(Client().get("/api/state").json()["g"], LEAGUE["g"])
-        c = Client(enforce_csrf_checks=True)
-        csrf = c.get("/api/me").json()["csrf"]
-        r = c.post("/api/login", json.dumps({"user": "boss", "password": PASS}), content_type="application/json", HTTP_X_CSRF=csrf)
-        self.assertEqual(r.status_code, 200, "the Node password still works")
-        self.assertTrue(Admin.objects.get(username="boss").password.startswith("scrypt$16384$"))
-        self.assertEqual(len(Client().get("/api/draws").json()["draws"]), 1)
-        _ = base64   # (kept for readers: the import converts the hex hash to base64)

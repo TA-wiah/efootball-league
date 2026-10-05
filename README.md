@@ -36,9 +36,6 @@ python manage.py runserver 3000
 Without `ADMIN_PASSWORD`, the very first start creates a user `admin` with a random one-time password, printed by
 `ensure_admin`; you must choose a new password after logging in. The first account becomes the **owner**.
 
-**Coming from the Node version?** `python manage.py import_node_db data/league.db` brings over the league, the draws
-and the admins. Admins keep their passwords.
-
 ## Put it online
 The host's disk is often wiped on restart (free Koyeb wipes it whenever the app sleeps). So use a **Postgres database**
 for the league, for example a free one from **Neon** (neon.tech, no credit card):
@@ -112,12 +109,12 @@ Nobody can read a password: only a one-way hash is stored. Set `ADMIN_USER` and 
 
 ## Checks
 - `python manage.py test` runs the automated tests (login, lockouts, CSRF, two editors, validation, draws, invites,
-  email, importing the Node database). Run it after every change, before you deploy.
+  email). Run it after every change, before you deploy.
 - `GET /api/health` answers `{"ok": true}` when the server and database are working.
 
 ## Files
 - `league/`: the Django app: `views.py` (the API), `logic.py` (rules, draws, validation), `models.py` (database tables),
-  `emailer.py` (Brevo/Resend/SMTP), `management/commands/` (`ensure_admin`, `import_node_db`, `backup`), `tests.py`
+  `emailer.py` (Brevo/Resend/SMTP), `management/commands/` (`ensure_admin`, `backup`), `tests.py`
 - `league_site/settings.py`: all settings, read from environment variables / `.env`
 - `public/index.html`: the whole page (HTML, CSS and the JavaScript that runs in the browser)
 - `seed.json`: the starting league for a new database
