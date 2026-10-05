@@ -1,0 +1,230 @@
+"""Competitions: fixture generation, standings with tie-breakers, results, permissions and isolation."""
+import base64
+import itertools
+from collections import Counter
+from types import SimpleNamespace as NS
+
+from django.test import TestCase
+
+from orgs.tests import Browser, Helpers
+
+from . import engine
+from .models import Match
+
+PNG = "data:image/png;base64," + base64.b64encode(b"\x89PNG\r\n\x1a\n" + b"\x00" * 64).decode()
+SVG = "data:image/svg+xml;base64," + base64.b64encode(b"<svg onload=alert(1)>").decode()
+
+
+class EngineTest(TestCase):
+    def test_round_robin_everyone_meets_everyone_once_per_leg(self):
+        for n in range(2, 11):
+            for legs in (1, 2):
+                fx = engine.round_robin(range(n), legs)
+                pairs = Counter(frozenset((h, a)) for _, h, a in fx)
+                self.assertEqual(len(pairs), n * (n - 1) // 2, (n, legs))
+                self.assertTrue(all(v == legs for v in pairs.values()), (n, legs))
+                for rnd, games in itertools.groupby(sorted(fx), key=lambda x: x[0]):
+                    teams = [t for _, h, a in games for t in (h, a)]
+                    self.assertEqual(len(teams), len(set(teams)), "no team plays twice in a round")
+                if legs == 2:
+                    homes = Counter(h for _, h, _ in fx)
+                    self.assertTrue(all(homes[t] == n - 1 for t in range(n)), "double round robin: equal home games")
+
+    def _table(self, results, tiebreakers=None, pts=(3, 1, 0), adjust=None):
+        comp = NS(points_win=pts[0], points_draw=pts[1], points_loss=pts[2], tiebreakers=tiebreakers or [])
+        teams = {n: NS(id=i, team=NS(name=n), points_adjustment=(adjust or {}).get(n, 0)) for i, n in enumerate("ABCD")}
+        ms = [NS(id=k, home_id=teams[h].id, away_id=teams[a].id, home_score=x, away_score=y, kickoff=None, round=k)
+              for k, (h, a, x, y) in enumerate(results)]
+        return [r["team"].name for r in engine.standings(comp, list(teams.values()), ms)], engine.standings(comp, list(teams.values()), ms)
+
+    def test_points_and_goal_difference(self):
+        order, rows = self._table([("A", "B", 3, 0), ("C", "D", 1, 1), ("A", "C", 0, 1), ("B", "D", 2, 0)])
+        self.assertEqual(order, ["C", "A", "B", "D"])
+        a = rows[1]
+        self.assertEqual((a["played"], a["won"], a["lost"], a["goalsFor"], a["goalsAgainst"], a["goalDifference"], a["points"]),
+                         (2, 1, 1, 3, 1, 2, 3))
+        self.assertEqual(a["form"], ["W", "L"])
+
+    def test_head_to_head_beats_goal_difference_when_configured(self):
+        # A and B both on 3 points; B has the better goal difference, but A beat B.
+        res = [("A", "B", 1, 0), ("B", "D", 6, 0), ("C", "A", 1, 0), ("C", "B", 1, 0)]   # A and B both on 3 points
+        gd_first = self._table(res, ["points", "goal_difference"])[0]
+        h2h_first = self._table(res, ["points", "head_to_head_points", "goal_difference"])[0]
+        self.assertLess(gd_first.index("B"), gd_first.index("A"))
+        self.assertLess(h2h_first.index("A"), h2h_first.index("B"))
+
+    def test_custom_points_and_adjustments(self):
+        order, rows = self._table([("A", "B", 1, 1), ("C", "D", 2, 1)], pts=(2, 1, 0), adjust={"C": -3})
+        self.assertEqual({r["team"].name: r["points"] for r in rows}, {"A": 1, "B": 1, "C": -1, "D": 0})
+        self.assertEqual(order[-1], "C")
+
+
+class CompetitionApiTest(Helpers, TestCase):
+    def setUp(self):
+        self.owner = self.signup("boss")
+        self.slug = self.new_org(self.owner)
+        self.base = f"/api/orgs/{self.slug}"
+
+    def comp(self, **extra):
+        r = self.owner.call("post", self.base + "/competitions", {"name": "Sunday League", "season": "2026/27", **extra})
+        self.assertEqual(r.status_code, 200, r.json())
+        return r.json()["competition"]["slug"]
+
+    def teams(self, names):
+        return [self.owner.call("post", self.base + "/teams", {"name": n, "venue": f"{n} Park"}).json()["team"]["id"] for n in names]
+
+    def setup_league(self, names="ABCD", **extra):
+        cs = self.comp(**extra)
+        ids = self.teams([f"Team {n}" for n in names])
+        self.assertEqual(self.owner.call("post", f"{self.base}/competitions/{cs}/entries", {"teamIds": ids}).json()["added"], len(ids))
+        return cs, ids
+
+    def test_full_league_flow(self):
+        cs, ids = self.setup_league()
+        r = self.owner.call("post", f"{self.base}/competitions/{cs}/generate", {"legs": 2, "start": "2026-10-04T15:00:00Z", "daysBetween": 7})
+        self.assertEqual(r.json()["created"], 12)
+        ms = self.owner.get(f"{self.base}/competitions/{cs}/matches").json()["matches"]
+        self.assertEqual(len(ms), 12)
+        self.assertTrue(all(m["venue"].endswith("Park") and m["kickoff"] for m in ms))
+        self.assertEqual(self.owner.call("post", f"{self.base}/competitions/{cs}/generate", {}).status_code, 409, "asks before replacing")
+        first = ms[0]
+        r = self.owner.call("patch", f"{self.base}/matches/{first['id']}", {"homeScore": 2, "awayScore": 1})
+        self.assertEqual(r.json()["match"]["status"], "finished")
+        self.assertEqual(self.owner.call("post", f"{self.base}/competitions/{cs}/generate", {"replace": True}).status_code, 409, "results protect fixtures")
+        table = self.owner.get(f"{self.base}/competitions/{cs}/standings").json()
+        top = table["groups"][0]["rows"][0]
+        self.assertEqual((top["team"]["name"], top["points"], top["played"]), (first["home"]["name"], 3, 1))
+        self.assertEqual(len(table["groups"][0]["rows"]), 4)
+        summary = self.owner.get(f"{self.base}/summary").json()
+        self.assertEqual((summary["competitions"], summary["teams"], summary["completed"]), (1, 4, 1))
+
+    def test_groups_get_separate_fixtures_and_tables(self):
+        cs = self.comp(format="groups_knockout")
+        a = self.teams(["A1", "A2", "A3"])
+        b = self.teams(["B1", "B2", "B3", "B4"])
+        self.owner.call("post", f"{self.base}/competitions/{cs}/entries", {"teamIds": a, "group": "A"})
+        self.owner.call("post", f"{self.base}/competitions/{cs}/entries", {"teamIds": b, "group": "B"})
+        self.assertEqual(self.owner.call("post", f"{self.base}/competitions/{cs}/generate", {}).json()["created"], 3 + 6)
+        self.assertTrue(all(m.home.group == m.away.group == m.group for m in Match.objects.all()), "no cross-group games")
+        groups = self.owner.get(f"{self.base}/competitions/{cs}/standings").json()["groups"]
+        self.assertEqual([(g["name"], len(g["rows"])) for g in groups], [("A", 3), ("B", 4)])
+
+    def test_knockout_draw_and_events(self):
+        cs, ids = self.setup_league("ABCDEF", format="knockout")
+        entries = [e["id"] for e in self.owner.get(f"{self.base}/competitions/{cs}").json()["entries"]]
+        self.assertEqual(self.owner.call("post", f"{self.base}/competitions/{cs}/draw", {"entryIds": entries[:3]}).status_code, 400)
+        r = self.owner.call("post", f"{self.base}/competitions/{cs}/draw", {"entryIds": entries[:4], "roundName": "Semi-finals", "legs": 2}).json()
+        self.assertEqual(len(r["matches"]), 4)
+        m = r["matches"][0]
+        home_team = m["home"]["id"]
+        p = self.owner.call("post", f"{self.base}/teams/{home_team}/players", {"name": "Kwame", "number": 9, "position": "FW"}).json()["player"]
+        other = self.owner.call("post", f"{self.base}/teams/{m['away']['id']}/players", {"name": "Not Here"}).json()["player"]
+        ev = self.owner.call("post", f"{self.base}/matches/{m['id']}/events", {"kind": "goal", "side": "home", "minute": 23, "playerId": p["id"], "assistName": "Ama"})
+        self.assertEqual(ev.status_code, 200)
+        self.assertEqual(self.owner.call("post", f"{self.base}/matches/{m['id']}/events", {"kind": "goal", "side": "home", "playerId": other["id"]}).status_code, 400,
+                         "a player from the other team can't score for this one")
+        scorers = self.owner.get(f"{self.base}/competitions/{cs}/scorers").json()["scorers"]
+        self.assertEqual([(s["name"], s["goals"]) for s in scorers][:1], [("Kwame", 1)])
+        self.assertIn(("Ama", 0, 1), [(s["name"], s["goals"], s["assists"]) for s in scorers])
+
+    def test_roles_enforced_by_the_server(self):
+        cs, ids = self.setup_league()
+        self.owner.call("post", f"{self.base}/competitions/{cs}/generate", {})
+        match = self.owner.get(f"{self.base}/competitions/{cs}/matches").json()["matches"][0]["id"]
+        people = {}
+        for role in ["editor", "moderator", "viewer", "admin"]:
+            people[role] = self.signup(role + "1")
+            self.invite_and_join(self.owner, self.slug, people[role], role)
+        for role, b in people.items():
+            staff, scorer = role == "admin", role in ("admin", "editor")
+            self.assertEqual(b.call("post", self.base + "/competitions", {"name": "New Cup"}).status_code, 200 if staff else 403, role)
+            self.assertEqual(b.call("patch", f"{self.base}/matches/{match}", {"homeScore": 1, "awayScore": 0}).status_code, 200 if scorer else 403, role)
+            self.assertEqual(b.call("patch", f"{self.base}/matches/{match}", {"roundName": "Opening day"}).status_code, 200 if staff else 403, role)
+            self.assertEqual(b.call("post", self.base + "/teams", {"name": f"{role} FC"}).status_code, 200 if scorer else 403, role)
+            self.assertEqual(b.call("patch", f"{self.base}/competitions/{cs}", {"description": "x"}).status_code, 200 if scorer else 403, role)
+            self.assertEqual(b.call("patch", f"{self.base}/competitions/{cs}", {"pointsWin": 2}).status_code, 200 if staff else 403, role)
+            self.assertEqual(b.get(f"{self.base}/competitions/{cs}/standings").status_code, 200, "everyone can read")
+        ed = people["editor"]
+        self.assertEqual(ed.call("delete", f"{self.base}/competitions/{cs}", {"confirm": "Sunday League"}).status_code, 403)
+        self.assertEqual(ed.call("post", f"{self.base}/competitions/{cs}/generate", {"replace": True}).status_code, 403)
+
+    def test_other_organizations_cannot_touch_anything(self):
+        cs, ids = self.setup_league()
+        self.owner.call("post", f"{self.base}/competitions/{cs}/generate", {})
+        match = self.owner.get(f"{self.base}/competitions/{cs}/matches").json()["matches"][0]["id"]
+        mallory = self.signup("mallory")
+        own = self.new_org(mallory, "Mallory League")
+        mine = f"/api/orgs/{own}"
+        mallory.call("post", mine + "/competitions", {"name": "Mallory Cup"})
+        # through their own organization, using the victim's IDs
+        self.assertEqual(mallory.call("post", f"{mine}/competitions/mallory-cup/entries", {"teamIds": ids[:2]}).status_code, 400)
+        self.assertEqual(mallory.call("patch", f"{mine}/matches/{match}", {"homeScore": 9, "awayScore": 0}).status_code, 404)
+        self.assertEqual(mallory.call("patch", f"{mine}/teams/{ids[0]}", {"name": "Hacked"}).status_code, 404)
+        self.assertEqual(mallory.get(f"{mine}/teams/{ids[0]}").status_code, 404)
+        # through the victim's organization
+        for url in [f"{self.base}/competitions", f"{self.base}/competitions/{cs}/standings", f"{self.base}/matches/{match}", f"{self.base}/teams"]:
+            self.assertEqual(mallory.get(url).status_code, 404, url)
+        self.assertEqual(Match.objects.get(id=match).home_score, None)
+
+    def test_deleting_is_protected(self):
+        cs, ids = self.setup_league("AB")
+        self.owner.call("post", f"{self.base}/competitions/{cs}/generate", {})
+        entry = self.owner.get(f"{self.base}/competitions/{cs}").json()["entries"][0]["id"]
+        self.assertEqual(self.owner.call("delete", f"{self.base}/teams/{ids[0]}").status_code, 409)
+        self.assertEqual(self.owner.call("delete", f"{self.base}/competitions/{cs}/entries/{entry}").status_code, 409)
+        self.assertEqual(self.owner.call("delete", f"{self.base}/competitions/{cs}", {"confirm": "nope"}).status_code, 400)
+        self.assertEqual(self.owner.call("delete", f"{self.base}/competitions/{cs}", {"confirm": "Sunday League"}).status_code, 200)
+        self.assertEqual(self.owner.call("delete", f"{self.base}/teams/{ids[0]}").status_code, 200, "free once its matches are gone")
+
+    def test_deleting_an_organization_removes_everything(self):
+        cs, ids = self.setup_league("ABC")
+        self.owner.call("post", f"{self.base}/competitions/{cs}/generate", {})
+        self.assertEqual(self.owner.call("delete", self.base, {"confirm": "Kasoa Community League"}).status_code, 200)
+        self.assertEqual(Match.objects.count(), 0)
+
+    def test_logos(self):
+        cs = self.comp(visibility="private")
+        self.assertEqual(self.owner.call("post", f"{self.base}/competitions/{cs}/logo", {"image": SVG}).status_code, 400, "SVG can carry scripts")
+        url = self.owner.call("post", f"{self.base}/competitions/{cs}/logo", {"image": PNG}).json()["logo"]
+        r = self.owner.get(url)
+        self.assertEqual((r.status_code, r["Content-Type"]), (200, "image/png"))
+        self.assertEqual(Browser().get(url).status_code, 404, "private competition logos need membership")
+        self.owner.call("patch", f"{self.base}/competitions/{cs}", {"visibility": "public"})
+        self.assertEqual(Browser().get(url).status_code, 200)
+
+    def test_announcements_permissions(self):
+        ed, mod = self.signup("eddie"), self.signup("modo")
+        self.invite_and_join(self.owner, self.slug, ed, "editor")
+        self.invite_and_join(self.owner, self.slug, mod, "moderator")
+        a = ed.call("post", self.base + "/announcements", {"title": "Kick-off moved", "body": "15:00 now"}).json()["announcement"]["id"]
+        self.assertEqual(mod.call("post", self.base + "/announcements", {"title": "x"}).status_code, 403)
+        self.assertEqual(ed.call("patch", f"{self.base}/announcements/{a}", {"title": "Kick-off moved to 15:00"}).status_code, 200)
+        self.assertEqual(mod.call("patch", f"{self.base}/announcements/{a}", {"published": False}).status_code, 200, "moderators can unpublish")
+        self.assertEqual(mod.call("patch", f"{self.base}/announcements/{a}", {"title": "changed"}).status_code, 403)
+        self.assertEqual(mod.call("delete", f"{self.base}/announcements/{a}").status_code, 200)
+
+
+class ImportLeagueTest(Helpers, TestCase):
+    def test_original_league_becomes_a_competition(self):
+        import json as _json
+
+        from django.core.management import call_command
+
+        from league.models import League
+        owner = self.signup("boss")
+        slug = self.new_org(owner)
+        state = {"g": {"A": ["Ama", "Bo", "Cee", "Dee"], "B": ["E1", "E2", "E3", "E4", "E5"]},
+                 "r": {"A0_0": [2, 1], "B0_0": [0, 3]},     # old page: matchday 1, first match of each group
+                 "ev": {"r.A0_0": [{"s": 0, "m": 12, "p": "Haaland", "a": "Saka"}]},
+                 "cfg": {"a": 2}, "ui": {"t": "CHAMPIONS LEAGUE", "s": "eFOOTBALL LEAGUE"}}
+        League.objects.create(pk=1, data=_json.dumps(state), rev=1)
+        call_command("import_league", slug, stdout=open(__import__("os").devnull, "w"))
+        c = owner.get(f"/api/orgs/{slug}/competitions").json()["competitions"][0]
+        self.assertEqual((c["name"], c["format"], c["teams"], c["matches"], c["finished"]), ("Champions League", "groups_knockout", 9, 12 + 20, 2))
+        a = Match.objects.get(group="A", round=1, home__team__name="Ama")
+        self.assertEqual((a.away.team.name, a.home_score, a.away_score), ("Dee", 2, 1), "same pairing as the old page (FX4)")
+        self.assertEqual([(e.player_name, e.assist_name, e.minute) for e in a.events.all()], [("Haaland", "Saka", 12)])
+        b = Match.objects.get(group="B", round=1, home_score=0)
+        self.assertEqual((b.home.team.name, b.away.team.name, b.away_score), ("E2", "E5", 3), "old page's circle method for 5 teams (E1 rests)")
+        table = owner.get(f"/api/orgs/{slug}/competitions/{c['slug']}/standings").json()["groups"]
+        self.assertEqual(table[0]["rows"][0]["team"]["name"], "Ama")

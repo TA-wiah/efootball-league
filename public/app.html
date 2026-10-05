@@ -53,6 +53,23 @@ details summary{cursor:pointer;color:var(--gold);font-weight:800;padding:4px 0}
 .auth{max-width:440px;margin:24px auto}.tabs2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px}.tabs2 a{text-align:center;padding:10px;border-radius:10px;background:var(--card2);color:var(--soft);text-decoration:none;font-weight:800}.tabs2 a.on{background:var(--gold);color:#080e30}
 .toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:20;max-width:min(92vw,520px);background:#123d2a;border:1px solid var(--ok);color:#d4ffe4;border-radius:12px;padding:12px 16px;font-weight:700;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.5)}.toast.bad{background:#4a1427;border-color:var(--bad);color:#ffd5dc}.toast[hidden]{display:none}
 .empty{text-align:center;padding:30px 16px}.empty .ic{width:44px;height:44px;color:var(--gold)}
+.pill.draft{background:#3a3f5c}.pill.active,.pill.finished{background:#1d5c3c;color:#d4ffe4}.pill.completed,.pill.scheduled{background:#2d418c}.pill.live{background:#ff5d73;color:#fff}.pill.postponed{background:#6b4a05;color:#ffe9b0}.pill.cancelled{background:#5a1a2d;color:#ffd5dc}
+.crest{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;object-fit:cover;flex:none;color:#fff;font-size:10px;font-weight:900;border:2px solid rgba(255,255,255,.85);background:#2d418c;overflow:hidden}img.crest{background:#fff}
+.md{color:var(--gold);font-size:12px;font-weight:800;letter-spacing:1px;margin:16px 0 4px;text-transform:uppercase}
+.mrow{display:grid;grid-template-columns:150px 1fr auto 1fr;gap:10px;align-items:center;padding:10px 8px;border-radius:10px;color:var(--tx);text-decoration:none;border-top:1px solid var(--line)}.mrow:hover{background:var(--card2)}
+.mrow .mt{display:flex;flex-direction:column;font-size:11px;color:var(--soft)}.mh{display:flex;align-items:center;gap:6px;justify-content:flex-end;font-weight:700;text-align:right;min-width:0}.ma{display:flex;align-items:center;gap:6px;font-weight:700;min-width:0}.mh span,.ma span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ms{text-align:center;min-width:70px;display:flex;flex-direction:column;align-items:center;gap:2px}.sc{font-size:17px}.ko{color:var(--soft);font-size:13px}
+@media(max-width:620px){.mrow{grid-template-columns:1fr auto 1fr}.mrow .mt{grid-column:1/-1;flex-direction:row;flex-wrap:wrap;gap:8px}}
+table.st td,table.st th{text-align:center;padding:8px 4px}.st .tl{text-align:left}.st .tm{display:flex;align-items:center;gap:6px;font-weight:700}.st .pts{font-weight:900;color:var(--gold)}.st tr.q td:first-child{box-shadow:inset 3px 0 var(--gold)}
+.fm{display:inline-block;width:18px;height:18px;border-radius:4px;font-size:10px;font-weight:900;line-height:18px;margin:0 1px;text-align:center}.fm.W{background:#1d8a4f}.fm.D{background:#6b6f8c}.fm.L{background:#b03a52}
+@media(max-width:620px){.hide-s{display:none}}
+.subtabs{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}.subtabs a{text-decoration:none}
+.board{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;text-align:center}.board .t{display:flex;flex-direction:column;align-items:center;gap:8px;font-weight:800;font-size:16px}.board .big{font-size:42px;font-weight:900;white-space:nowrap}
+.ev{display:flex;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line);font-size:14px}.ev.away{flex-direction:row-reverse;text-align:right}.ev i{font-style:normal;color:var(--gold);font-weight:800;min-width:30px}
+.picks{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.picks label{display:flex;align-items:center;gap:6px;margin:0;background:var(--card2);border:1px solid var(--line);border-radius:9px;padding:7px 10px;color:var(--tx);font-size:13px;font-weight:600;cursor:pointer}.picks input{width:auto;margin:0;accent-color:var(--gold)}
+.inline input,.inline select{margin:0;padding:7px;font-size:13px}td.inline{min-width:70px}
+.ch{display:flex;align-items:center;gap:10px}.big-crest{width:56px;height:56px}
+.search{max-width:320px}
 @media (prefers-reduced-motion:no-preference){#main>*{animation:rise .35s cubic-bezier(.2,.8,.2,1) both}.toast{animation:rise .3s both}}
 @keyframes rise{from{opacity:0;transform:translateY(12px)}}
 </style></head><body>
@@ -108,7 +125,7 @@ function route(){topnav();var p=location.pathname.replace(/\/+$/,"")||"/",m;
   if(!ME)return go("/app/login?next="+encodeURIComponent(location.pathname),true);
   if(p==="/app")return dashboard();
   if(p==="/app/new")return createOrgView();
-  if((m=p.match(/^\/app\/org\/([a-z0-9-]+)(?:\/([a-z]+))?$/)))return orgView(m[1],m[2]||"overview");
+  if((m=p.match(/^\/app\/org\/([a-z0-9-]+)(?:\/([a-z]+)(?:\/(.+))?)?$/)))return orgView(m[1],m[2]||"overview",m[3]);
   main('<div class="card empty"><h2>Page not found</h2><p class="note">That page doesn\'t exist.</p><a class="btn" href="/app" data-nav>Go to my organizations</a></div>')}
 
 // ---------- log in / sign up ----------
@@ -150,31 +167,262 @@ function createOrgView(){document.title="New organization · Competition Manager
       if(!r.ok){$("msg").innerHTML=errBox(r);return}toast("Organization created");loadMe().then(function(){go("/app/org/"+r.data.org.slug)})})}}
 
 // ---------- one organization ----------
-var SECTIONS=[["overview","Overview"],["competitions","Competitions",1],["teams","Teams",1],["players","Players",1],["fixtures","Fixtures",1],["matches","Matches",1],
-  ["results","Results",1],["tables","League tables",1],["members","Members"],["invitations","Invitations","members.invite"],["announcements","Announcements",1],["settings","Settings"]];
+var SECTIONS=[["overview","Overview"],["competitions","Competitions"],["teams","Teams"],["players","Players"],["fixtures","Fixtures"],["matches","Matches"],
+  ["results","Results"],["tables","League tables"],["members","Members"],["invitations","Invitations","members.invite"],["announcements","Announcements"],["settings","Settings"]];
 var ORG=null;
 function has(p){return ORG&&ORG.me.perms.indexOf(p)>=0}
-function orgView(slug,section){
+function api0(path){return"/api/orgs/"+ORG.org.slug+path}
+function app0(path){return"/app/org/"+ORG.org.slug+(path||"")}
+var LOADING='<div class="card note">Loading…</div>';
+function fail(r){$("sec").innerHTML='<div class="card">'+errBox(r)+'</div>'}
+function orgView(slug,section,rest){
   Promise.all([api("/api/orgs/"+slug),loadRoles()]).then(function(res){var r=res[0];
     if(!r.ok){main('<div class="card empty"><h2>Organization not found</h2><p class="note">It doesn\'t exist, or you\'re not a member. Ask its owner for an invitation.</p><a class="btn" href="/app" data-nav>My organizations</a></div>');return}
-    ORG=r.data;var o=ORG.org,base="/app/org/"+o.slug;document.title=o.name+" · Competition Manager";
-    var nav=SECTIONS.filter(function(s){return typeof s[2]!=="string"||has(s[2])}).map(function(s){
-      return s[2]===1?'<span title="Arrives in the next update">'+esc(s[1])+'<span class="pill soon">soon</span></span>':'<a href="'+base+(s[0]==="overview"?"":"/"+s[0])+'" data-nav class="'+(s[0]===section?"on":"")+'"'+(s[0]===section?' aria-current="page"':'')+'>'+esc(s[1])+'</a>'}).join("");
+    ORG=r.data;var o=ORG.org,base="/app/org/"+o.slug,navOn=section==="match"?"matches":section;document.title=o.name+" · Competition Manager";
+    var nav=SECTIONS.filter(function(s){return!s[2]||has(s[2])}).map(function(s){
+      return'<a href="'+base+(s[0]==="overview"?"":"/"+s[0])+'" data-nav class="'+(s[0]===navOn?"on":"")+'"'+(s[0]===navOn?' aria-current="page"':'')+'>'+esc(s[1])+'</a>'}).join("");
     main('<div style="margin-bottom:14px"><a href="/app" data-nav class="note" style="color:var(--soft)">← My organizations</a><h1>'+esc(o.name)+'</h1><div class="note">'+pill(ORG.me.role,ORG.me.roleLabel)+(o.region||o.country?' · '+esc([o.region,o.country].filter(Boolean).join(", ")):"")+'</div></div>'+
       '<div class="layout"><nav class="side" aria-label="Organization sections">'+nav+'</nav><section id="sec"></section></div>');
     var on=document.querySelector(".side .on");if(on&&on.scrollIntoView)on.scrollIntoView({block:"nearest",inline:"center"});
-    var S={overview:overview,members:membersSec,invitations:invitationsSec,settings:settingsSec}[section];
-    if(!S||(section==="invitations"&&!has("members.invite")))$("sec").innerHTML=soon(section);else S()})}
-function soon(section){var s=SECTIONS.filter(function(x){return x[0]===section})[0];
-  return'<div class="card empty">'+ic("trophy")+'<h2>'+esc(s?s[1]:"This section")+' arrive in the next update</h2><p class="note">Competitions, teams, players, fixtures, results, league tables and announcements are being added next. Your members and invitations are ready to use now.</p></div>'}
+    var S={overview:overview,members:membersSec,invitations:invitationsSec,settings:settingsSec,competitions:competitionsSec,teams:teamsSec,players:playersSec,
+      fixtures:function(){matchesSec("upcoming")},results:function(){matchesSec("results")},matches:function(){matchesSec("all")},tables:tablesSec,announcements:announcementsSec,match:matchPage}[section];
+    if(!S||(section==="invitations"&&!has("members.invite"))){$("sec").innerHTML='<div class="card empty"><h2>Page not found</h2></div>';return}
+    $("sec").innerHTML=LOADING;S(rest)})}
 
+// ---------- shared pieces ----------
+var KIND_L={league:"League",tournament:"Tournament",cup:"Cup",championship:"Championship",friendly:"Friendly series",other:"Other"};
+var FMT_L={league:"League: everyone plays everyone",groups_knockout:"Groups, then knockouts",knockout:"Knockout only"};
+var VIS_L={"public":"Public: listed and shareable",unlisted:"Unlisted: only people with the link","private":"Private: members only"};
+var ST_L={draft:"Draft",active:"In progress",completed:"Completed"};
+var MST_L={scheduled:"Scheduled",live:"Live",finished:"Full time",postponed:"Postponed",cancelled:"Cancelled"};
+var EV_L={goal:"Goal",penalty_goal:"Penalty goal",own_goal:"Own goal",yellow:"Yellow card",second_yellow:"Second yellow",red:"Red card",substitution:"Substitution"};
+var POS_L={"":"—",GK:"Goalkeeper",DF:"Defender",MF:"Midfielder",FW:"Forward"};
+function opts(map,val){return Object.keys(map).map(function(k){return'<option value="'+esc(k)+'"'+(String(k)===String(val)?" selected":"")+'>'+esc(map[k])+'</option>'}).join("")}
+function crest(t,size){size=size||28;var st='width:'+size+'px;height:'+size+'px';if(!t)return'<span class="crest" style="'+st+'">?</span>';
+  if(t.logo)return'<img class="crest" src="'+esc(t.logo)+'" alt="" style="'+st+'">';var h=0,n=t.name||"";for(var i=0;i<n.length;i++)h=(h*31+n.charCodeAt(i))%360;
+  return'<span class="crest" style="'+st+';background:hsl('+h+',55%,38%)">'+esc((t.shortName||n).replace(/[^A-Za-z0-9]/g,"").slice(0,3).toUpperCase())+'</span>'}
+function cCrest(c,size){size=size||36;return c.logo?'<img class="crest" src="'+esc(c.logo)+'" alt="" style="width:'+size+'px;height:'+size+'px">':'<span class="crest" style="width:'+size+'px;height:'+size+'px;background:#33260a;color:var(--gold)">'+ic("trophy")+'</span>'}
+function when(iso){if(!iso)return"Date to be set";var d=new Date(iso);return d.toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"short"})+" · "+d.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"})}
+function toLocal(iso){if(!iso)return"";var d=new Date(iso),p=function(x){return String(x).padStart(2,"0")};return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+"T"+p(d.getHours())+":"+p(d.getMinutes())}
+function fromLocal(v){return v?new Date(v).toISOString():null}
+function intOrNull(v){return v===""||v==null?null:parseInt(v,10)}
+function scoreHtml(m){return m.homeScore==null?'<span class="ko">'+(m.kickoff?new Date(m.kickoff).toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"}):"vs")+'</span>'
+  :'<b class="sc">'+m.homeScore+' – '+m.awayScore+'</b>'+(m.homePens!=null?'<small class="note">'+m.homePens+'–'+m.awayPens+' pens</small>':'')}
+function matchRow(m,o){o=o||{};var t=function(x){return x?crest(x,24)+'<span>'+esc(x.shortName||x.name)+'</span>':'<span class="note">To be decided</span>'};
+  return'<a class="mrow" href="'+app0("/match/"+m.id)+'" data-nav><span class="mt">'+(o.comp?'<b>'+esc(m.competition.name)+'</b>':'')+(o.by==="date"?'<span>'+esc(m.roundName||("Round "+m.round))+(m.group?' · Group '+esc(m.group):'')+(m.leg>1?' · 2nd leg':'')+'</span>':(m.leg>1?'<span>2nd leg</span>':''))+'<span>'+when(m.kickoff)+'</span></span>'+
+    '<span class="mh">'+t(m.home)+'</span><span class="ms">'+scoreHtml(m)+(m.status!=="scheduled"&&m.status!=="finished"?'<span class="pill '+m.status+'">'+esc(MST_L[m.status])+'</span>':'')+'</span><span class="ma">'+t(m.away)+'</span></a>'}
+function matchList(ms,o){o=o||{};if(!ms.length)return'<p class="note">'+esc(o.empty||"No matches yet.")+'</p>';var out="",last=null;
+  ms.forEach(function(m){var key=o.by==="date"?(m.kickoff?new Date(m.kickoff).toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"long",year:"numeric"}):"Date to be set")
+    :(m.stage==="knockout"?(m.roundName||"Knockout"):(m.group?"Group "+m.group+" · ":"")+(m.roundName||"Round "+m.round));
+    if(key!==last){out+='<div class="md">'+esc(key)+'</div>';last=key}out+=matchRow(m,o)});return out}
+function tableHtml(p){if(!p.groups.some(function(g){return g.rows.length}))return'<p class="note">Add teams to the competition to see the table.</p>';
+  return p.groups.map(function(g){return(g.name?'<div class="md">Group '+esc(g.name)+'</div>':'')+'<div class="tbl"><table class="st"><tr><th>#</th><th class="tl">Team</th><th title="Played">P</th><th title="Won">W</th><th title="Drawn">D</th><th title="Lost">L</th><th title="Goals for">GF</th><th title="Goals against">GA</th><th title="Goal difference">GD</th><th title="Points">Pts</th><th class="hide-s">Form</th></tr>'+
+    g.rows.map(function(r){return'<tr class="'+(p.qualifiersPerGroup&&r.position<=p.qualifiersPerGroup?"q":"")+'"><td>'+r.position+'</td><td class="tl"><span class="tm">'+crest(r.team,22)+'<span>'+esc(r.team.name)+'</span>'+(r.adjustment?' <small class="note">('+(r.adjustment>0?"+":"")+r.adjustment+' pts)</small>':'')+'</span></td><td>'+r.played+'</td><td>'+r.won+'</td><td>'+r.drawn+'</td><td>'+r.lost+'</td><td>'+r.goalsFor+'</td><td>'+r.goalsAgainst+'</td><td>'+(r.goalDifference>0?"+":"")+r.goalDifference+'</td><td class="pts">'+r.points+'</td><td class="hide-s">'+r.form.map(function(f){return'<span class="fm '+f+'">'+f+'</span>'}).join("")+'</td></tr>'}).join("")+'</table></div>'}).join("")+
+    '<p class="note">Points: win '+p.pointsSystem.win+' · draw '+p.pointsSystem.draw+' · loss '+p.pointsSystem.loss+'. Level teams are separated by: '+p.tiebreakers.map(esc).join(" → ")+'.'+(p.qualifiersPerGroup?' The top '+p.qualifiersPerGroup+' of each group are marked in gold.':'')+'</p>'}
+function logoPicker(id,url,done){var inp=$(id);if(!inp)return;inp.onchange=function(){var f=inp.files[0];if(!f)return;if(f.size>256*1024){toast("The logo must be smaller than 256 KB",true);return}
+  var rd=new FileReader();rd.onload=function(){api(url,"POST",{image:rd.result}).then(function(r){if(!r.ok){toast(r.data.error||"Upload failed",true);return}toast("Logo updated");done()})};rd.readAsDataURL(f)}}
+function val(id){var e=$(id);return e?e.value:undefined}
+
+// ---------- overview ----------
 function overview(){var o=ORG.org,st=ORG.stats,mine=(ROLES.permissions||[]).filter(function(p){return has(p.key)});
-  $("sec").innerHTML='<div class="stats"><div class="stat"><b>'+st.members+'</b><span>Members</span></div>'+(has("members.invite")?'<div class="stat"><b>'+st.pendingInvitations+'</b><span>Pending invitations</span></div>':'')+
-    '<div class="stat"><b>—</b><span>Competitions (next update)</span></div><div class="stat"><b>—</b><span>Upcoming matches (next update)</span></div></div>'+
-    (o.description?'<div class="card"><div class="gh">ABOUT</div><p style="margin:0;white-space:pre-wrap">'+esc(o.description)+'</p></div>':'')+
-    (has("members.invite")?'<div class="card"><div class="gh">GET YOUR TEAM ON BOARD</div><p class="note" style="margin-top:0">Invite organizers, editors and moderators to help run your competitions. Each person only gets the access their role allows.</p><a class="btn" href="/app/org/'+esc(o.slug)+'/invitations" data-nav>'+ic("plus")+' Invite member</a></div>':'')+
-    '<div class="card"><div class="gh">WHAT YOU CAN DO HERE</div><p class="note" style="margin-top:0">As '+esc(ORG.me.roleLabel)+':</p><ul style="margin:0;padding-left:20px">'+mine.map(function(p){return'<li>'+esc(p.label)+'</li>'}).join("")+'</ul></div>'+
-    '<div class="card"><div class="gh">RECENT ACTIVITY</div><div class="feed">'+(ORG.events.length?ORG.events.map(function(e){return'<div>'+ago(e.ts)+' · <b>'+esc(e.actor||"—")+'</b> '+esc(e.action)+'</div>'}).join(""):'<div>Nothing yet.</div>')+'</div></div>'}
+  api(api0("/summary")).then(function(r){var s=r.data||{};
+    $("sec").innerHTML='<div class="stats"><div class="stat"><b>'+(s.activeCompetitions||0)+'</b><span>Active competitions</span></div><div class="stat"><b>'+(s.teams||0)+'</b><span>Registered teams</span></div>'+
+      '<div class="stat"><b>'+(s.upcoming||0)+'</b><span>Upcoming matches</span></div><div class="stat"><b>'+(s.completed||0)+'</b><span>Completed matches</span></div>'+
+      '<div class="stat"><b>'+st.members+'</b><span>Members</span></div>'+(has("members.invite")?'<div class="stat"><b>'+st.pendingInvitations+'</b><span>Pending invitations</span></div>':'')+'</div>'+
+      (!s.competitions&&has("competitions.manage")?'<div class="card"><div class="gh">GET STARTED</div><ol style="margin:0;padding-left:20px;line-height:1.9"><li><a href="'+app0("/teams")+'" data-nav>Add your teams</a></li><li><a href="'+app0("/competitions")+'" data-nav>Create a competition</a> and enter the teams</li><li>Generate the fixtures, then enter results as matches are played</li><li>The league table updates by itself</li></ol></div>':'')+
+      '<div class="card"><div class="gh">NEXT MATCHES</div>'+matchList(s.nextMatches||[],{comp:1,by:"date",empty:"No upcoming matches with a date."})+'</div>'+
+      '<div class="card"><div class="gh">RECENT RESULTS</div>'+matchList(s.recentResults||[],{comp:1,by:"date",empty:"No results yet."})+'</div>'+
+      (o.description?'<div class="card"><div class="gh">ABOUT</div><p style="margin:0;white-space:pre-wrap">'+esc(o.description)+'</p></div>':'')+
+      '<div class="card"><div class="gh">WHAT YOU CAN DO HERE</div><p class="note" style="margin-top:0">As '+esc(ORG.me.roleLabel)+':</p><ul style="margin:0;padding-left:20px">'+mine.map(function(p){return'<li>'+esc(p.label)+'</li>'}).join("")+'</ul></div>'+
+      '<div class="card"><div class="gh">RECENT ACTIVITY</div><div class="feed">'+(ORG.events.length?ORG.events.map(function(e){return'<div>'+ago(e.ts)+' · <b>'+esc(e.actor||"—")+'</b> '+esc(e.action)+'</div>'}).join(""):'<div>Nothing yet.</div>')+'</div></div>'})}
+
+// ---------- competitions ----------
+function competitionsSec(rest){if(rest){var parts=rest.split("/");return competitionDetail(parts[0],parts[1]||"overview")}
+  api(api0("/competitions")).then(function(r){if(!r.ok)return fail(r);var cs=r.data.competitions;
+    $("sec").innerHTML='<div class="card"><div class="gh">COMPETITIONS</div>'+(has("competitions.manage")?'<div class="actions" style="margin:0 0 12px"><button class="btn sm" id="newc">'+ic("plus")+' New competition</button></div><div id="cform"></div>':'')+
+      (cs.length?'<div class="grid">'+cs.map(function(c){return'<a class="oc" href="'+app0("/competitions/"+c.slug)+'" data-nav><span class="ch">'+cCrest(c)+'<b style="margin:0">'+esc(c.name)+'</b></span><small style="display:block;margin-top:8px">'+esc([c.season,KIND_L[c.kind]].filter(Boolean).join(" · "))+'</small><div style="margin-top:8px"><span class="pill '+c.status+'">'+esc(ST_L[c.status])+'</span> <span class="pill">'+esc(VIS_L[c.visibility].split(":")[0])+'</span></div><small style="display:block;margin-top:6px">'+c.teams+' teams · '+c.finished+' of '+c.matches+' matches played</small></a>'}).join("")+'</div>'
+        :'<div class="empty">'+ic("trophy")+'<h2>No competitions yet</h2><p class="note">A competition can be a league, a cup, a school championship or any tournament.</p></div>')+'</div>';
+    if($("newc"))$("newc").onclick=function(){$("cform").innerHTML=compForm(null);bindCompForm(null);$("cn").focus()}})}
+function compForm(c,crit){var v=function(k,d){return c&&c[k]!=null?c[k]:d},tb=c?c.tiebreakers:["points","goal_difference","goals_for","head_to_head_points","wins"];
+  crit=crit||{goal_difference:"Goal difference",goals_for:"Goals scored",goals_against:"Fewest goals conceded",wins:"Wins",away_goals:"Away goals scored",head_to_head_points:"Head-to-head points",head_to_head_goal_difference:"Head-to-head goal difference",head_to_head_goals_for:"Head-to-head goals scored"};
+  var critOpts=function(sel){var m={"":"— none —"};Object.keys(crit).forEach(function(k){if(k!=="points")m[k]=crit[k]});return opts(m,sel||"")};
+  var structural=!c||has("competitions.manage");
+  return'<form class="card" id="cf" novalidate style="background:var(--card2)"><div class="gh">'+(c?"COMPETITION SETTINGS":"NEW COMPETITION")+'</div>'+
+    (structural?'<label for="cn">Name<input id="cn" maxlength="100" value="'+esc(v("name",""))+'" placeholder="e.g. Kasoa Sunday League"></label>'+
+    '<div class="row"><label for="cs">Season<input id="cs" maxlength="30" value="'+esc(v("season",""))+'" placeholder="2026/27"></label><label for="ck">Type<select id="ck">'+opts(KIND_L,v("kind","league"))+'</select></label></div>'+
+    '<div class="row"><label for="cfm">Format<select id="cfm">'+opts(FMT_L,v("format","league"))+'</select></label><label for="cv">Who can see it<select id="cv">'+opts(VIS_L,v("visibility","public"))+'</select></label></div>'+
+    '<div class="row"><label for="csd">Start date<input id="csd" type="date" value="'+esc(v("startDate",""))+'"></label><label for="ced">End date<input id="ced" type="date" value="'+esc(v("endDate",""))+'"></label></div>'+
+    '<div class="row"><label for="cco">Country<input id="cco" maxlength="60" value="'+esc(v("country",ORG.org.country||""))+'"></label><label for="cre">Region / city<input id="cre" maxlength="60" value="'+esc(v("region",ORG.org.region||""))+'"></label></div>'+
+    (c?'<label for="cst">Status<select id="cst">'+opts(ST_L,v("status","draft"))+'</select></label>':'')+
+    '<details style="margin-top:12px"'+(c?" open":"")+'><summary>Points, legs and tie-breakers</summary><div class="row"><label for="pw">Points for a win<input id="pw" type="number" min="0" max="10" value="'+v("pointsWin",3)+'"></label><label for="pd">Points for a draw<input id="pd" type="number" min="0" max="10" value="'+v("pointsDraw",1)+'"></label></div>'+
+    '<div class="row"><label for="pl">Points for a loss<input id="pl" type="number" min="0" max="10" value="'+v("pointsLoss",0)+'"></label><label for="lg">Teams meet<select id="lg">'+opts({1:"Once",2:"Twice (home and away)"},v("legs",1))+'</select></label></div>'+
+    '<div class="row"><label for="mt">Maximum teams (optional)<input id="mt" type="number" min="2" max="500" value="'+esc(v("maxTeams",""))+'"></label><label for="qg">Qualify from each group<input id="qg" type="number" min="0" max="32" value="'+v("qualifiersPerGroup",2)+'"></label></div>'+
+    '<p class="note" style="margin:10px 0 0">When teams have the same points, separate them by:</p><div class="row">'+[1,2,3,4].map(function(i){return'<label for="tb'+i+'">'+["1st","2nd","3rd","4th"][i-1]+'<select id="tb'+i+'">'+critOpts(tb[i])+'</select></label>'}).join("")+'</div></details>':'')+
+    '<label for="cd">Description<textarea id="cd" maxlength="5000">'+esc(v("description",""))+'</textarea></label><label for="cr">Rules<textarea id="cr" maxlength="10000" placeholder="Match length, squad rules, discipline…">'+esc(v("rules",""))+'</textarea></label>'+
+    '<div class="actions"><button class="btn" id="cgo">'+(c?"Save settings":"Create competition")+'</button></div><div id="cmsg"></div></form>'}
+function bindCompForm(c){$("cf").onsubmit=function(e){e.preventDefault();var b=$("cgo"),d={description:val("cd"),rules:val("cr")};
+  if($("cn"))Object.assign(d,{name:val("cn"),season:val("cs"),kind:val("ck"),format:val("cfm"),visibility:val("cv"),startDate:val("csd")||null,endDate:val("ced")||null,country:val("cco"),region:val("cre"),
+    pointsWin:+val("pw"),pointsDraw:+val("pd"),pointsLoss:+val("pl"),legs:+val("lg"),maxTeams:intOrNull(val("mt")),qualifiersPerGroup:+val("qg"),
+    tiebreakers:["points",val("tb1"),val("tb2"),val("tb3"),val("tb4")].filter(Boolean)});
+  if($("cst"))d.status=val("cst");
+  busy(b,true,"Saving…");api(c?api0("/competitions/"+c.slug):api0("/competitions"),c?"PATCH":"POST",d).then(function(r){busy(b,false);
+    if(!r.ok){$("cmsg").innerHTML=errBox(r);return}toast(c?"Saved":"Competition created");go(app0("/competitions/"+r.data.competition.slug+(c?"/settings":"/teams")),!!c)})}}
+
+var CTABS=[["overview","Overview"],["teams","Teams"],["fixtures","Fixtures & results"],["table","Table"],["scorers","Top scorers"],["settings","Settings"]];
+function competitionDetail(cslug,tab){api(api0("/competitions/"+cslug)).then(function(r){if(!r.ok)return fail(r);var C=r.data.competition,E=r.data.entries;
+  var tabs=CTABS.filter(function(t){return t[0]!=="settings"||has("competitions.manage")||has("content.edit")});
+  $("sec").innerHTML='<div class="card"><div class="ch">'+cCrest(C,52)+'<div><h2 style="margin:0">'+esc(C.name)+'</h2><div class="note">'+esc([C.season,KIND_L[C.kind],FMT_L[C.format].split(":")[0]].filter(Boolean).join(" · "))+' · <span class="pill '+C.status+'">'+esc(ST_L[C.status])+'</span></div></div></div>'+
+    '<div class="subtabs">'+tabs.map(function(t){return'<a class="chip'+(t[0]===tab?" on":"")+'" href="'+app0("/competitions/"+C.slug+(t[0]==="overview"?"":"/"+t[0]))+'" data-nav>'+esc(t[1])+'</a>'}).join("")+'</div></div><div id="ctab">'+LOADING+'</div>';
+  ({overview:compOverview,teams:compTeams,fixtures:compFixtures,table:compTable,scorers:compScorers,settings:compSettings}[tab]||compOverview)(C,E,r.data.criteria)})}
+function compOverview(C,E){var info=[["Format",FMT_L[C.format]],["Season",C.season],["Dates",(C.startDate||"?")+" → "+(C.endDate||"?")],["Teams",C.teams+(C.maxTeams?" of "+C.maxTeams:"")],["Matches played",C.finished+" of "+C.matches],["Points",C.pointsWin+" for a win, "+C.pointsDraw+" for a draw, "+C.pointsLoss+" for a loss"],["Visibility",VIS_L[C.visibility]],["Where",[C.region,C.country].filter(Boolean).join(", ")]];
+  $("ctab").innerHTML=(C.description?'<div class="card"><div class="gh">ABOUT</div><p style="margin:0;white-space:pre-wrap">'+esc(C.description)+'</p></div>':'')+
+    '<div class="card"><div class="gh">AT A GLANCE</div><table>'+info.filter(function(x){return x[1]&&x[1]!=="? → ?"}).map(function(x){return'<tr><td class="note" style="width:40%">'+esc(x[0])+'</td><td>'+esc(x[1])+'</td></tr>'}).join("")+'</table></div>'+
+    (C.rules?'<div class="card"><div class="gh">RULES</div><p style="margin:0;white-space:pre-wrap">'+esc(C.rules)+'</p></div>':'')+
+    (!E.length&&has("competitions.manage")?'<div class="card"><p style="margin:0">Next step: <a href="'+app0("/competitions/"+C.slug+"/teams")+'" data-nav>add teams to this competition</a>.</p></div>':'')}
+function compTeams(C,E){var canC=has("competitions.manage"),canP=has("standings.manage");
+  api(api0("/teams")).then(function(r){var all=r.data.teams||[],inIds=E.map(function(e){return e.team.id}),free=all.filter(function(t){return inIds.indexOf(t.id)<0});
+    $("ctab").innerHTML='<div class="card"><div class="gh">TEAMS IN THIS COMPETITION · '+E.length+'</div>'+(E.length?'<div class="tbl"><table><tr><th>Team</th>'+(C.format!=="league"||E.some(function(e){return e.group})?'<th>Group</th>':'')+'<th>Points adjustment</th><th></th></tr>'+E.map(function(e){
+      return'<tr><td><span class="tm" style="display:flex;align-items:center;gap:8px;font-weight:700">'+crest(e.team,26)+esc(e.team.name)+'</span></td>'+(C.format!=="league"||E.some(function(x){return x.group})?'<td class="inline">'+(canC?'<input data-eg="'+e.id+'" value="'+esc(e.group)+'" maxlength="10" style="width:70px" aria-label="Group">':esc(e.group||"—"))+'</td>':'')+
+        '<td class="inline">'+(canP?'<input data-ep="'+e.id+'" type="number" min="-99" max="99" value="'+e.pointsAdjustment+'" style="width:80px" aria-label="Points adjustment">':(e.pointsAdjustment||"—"))+'</td><td>'+(canC?'<button class="btn bad sm" data-er="'+e.id+'">Remove</button>':'')+'</td></tr>'}).join("")+'</table></div>':'<p class="note">No teams yet.</p>')+'</div>'+
+      (canC?'<div class="card"><div class="gh">ADD TEAMS</div>'+(free.length?'<div class="picks" id="picks">'+free.map(function(t){return'<label><input type="checkbox" value="'+t.id+'">'+crest(t,20)+esc(t.name)+'</label>'}).join("")+'</div>'+
+        (C.format!=="league"?'<label for="ag" style="max-width:200px">Group (e.g. A)<input id="ag" maxlength="10"></label>':'')+'<div class="actions"><button class="btn" id="addt">Add selected teams</button><a class="btn g" href="'+app0("/teams")+'" data-nav>Create a new team</a></div>'
+        :'<p class="note">'+(all.length?"All your teams are already in this competition.":"You have no teams yet.")+' <a href="'+app0("/teams")+'" data-nav>Create teams</a> first.</p>')+'</div>':'');
+    var reload=function(){competitionDetail(C.slug,"teams")};
+    if($("addt"))$("addt").onclick=function(){var ids=[].slice.call(document.querySelectorAll("#picks input:checked")).map(function(x){return+x.value});if(!ids.length){toast("Tick at least one team",true);return}
+      api(api0("/competitions/"+C.slug+"/entries"),"POST",{teamIds:ids,group:val("ag")||""}).then(function(r){if(!r.ok){toast(r.data.error,true);return}toast(r.data.added+" team(s) added");reload()})};
+    document.querySelectorAll("[data-eg]").forEach(function(i){i.onchange=function(){api(api0("/competitions/"+C.slug+"/entries/"+i.dataset.eg),"PATCH",{group:i.value.trim()}).then(function(r){toast(r.ok?"Group saved":r.data.error,!r.ok)})}});
+    document.querySelectorAll("[data-ep]").forEach(function(i){i.onchange=function(){api(api0("/competitions/"+C.slug+"/entries/"+i.dataset.ep),"PATCH",{pointsAdjustment:+i.value||0}).then(function(r){toast(r.ok?"Adjustment saved":r.data.error,!r.ok)})}});
+    document.querySelectorAll("[data-er]").forEach(function(b){b.onclick=function(){if(!armed(b,"Sure?"))return;api(api0("/competitions/"+C.slug+"/entries/"+b.dataset.er),"DELETE",{}).then(function(r){if(!r.ok){toast(r.data.error,true);return}toast("Removed");reload()})}})})}
+function compFixtures(C,E){var canF=has("fixtures.manage");
+  api(api0("/competitions/"+C.slug+"/matches")).then(function(r){if(!r.ok)return fail(r);var ms=r.data.matches,teamOpts='<option value="">To be decided</option>'+E.map(function(e){return'<option value="'+e.id+'">'+esc(e.team.name)+'</option>'}).join("");
+    var tools=!canF?'':(C.format!=="knockout"?'<details class="card"'+(ms.some(function(m){return m.stage==="league"})?'':' open')+'><summary>'+ic("plus")+' Generate league fixtures</summary><p class="note">Every team plays every other team'+(C.format==="groups_knockout"?" in its group":"")+'. The order is shuffled at random by the server.</p>'+
+        '<div class="row"><label for="gl">Teams meet<select id="gl">'+opts({1:"Once",2:"Twice (home and away)"},C.legs)+'</select></label><label for="gs">First kick-off (optional)<input id="gs" type="datetime-local"></label></div><label for="gd" style="max-width:240px">Days between rounds<input id="gd" type="number" min="0" max="60" value="7"></label>'+
+        '<div class="actions"><button class="btn" id="gen">Generate fixtures</button></div></details>':'')+
+      (C.format!=="league"?'<details class="card"><summary>'+ic("plus")+' Draw a knockout round</summary><p class="note">Tick the teams that go through. The server pairs them at random.</p><div class="picks" id="dpicks">'+E.map(function(e){return'<label><input type="checkbox" value="'+e.id+'">'+crest(e.team,20)+esc(e.team.name)+'</label>'}).join("")+'</div>'+
+        '<div class="row"><label for="dn">Round name<input id="dn" maxlength="40" placeholder="Quarter-finals"></label><label for="dl">Legs<select id="dl">'+opts({1:"One match",2:"Two legs (home and away)"},1)+'</select></label></div><label for="ds" style="max-width:300px">First kick-off (optional)<input id="ds" type="datetime-local"></label><div class="actions"><button class="btn" id="dgo">Draw the round</button></div></details>':'')+
+      '<details class="card"><summary>'+ic("plus")+' Add a single match</summary><div class="row"><label for="mh">Home<select id="mh">'+teamOpts+'</select></label><label for="ma">Away<select id="ma">'+teamOpts+'</select></label></div>'+
+        '<div class="row"><label for="mstg">Stage<select id="mstg">'+opts({league:"League stage (counts in the table)",knockout:"Knockout"},C.format==="knockout"?"knockout":"league")+'</select></label><label for="mrn">Round name<input id="mrn" maxlength="40" placeholder="Matchday 1 / Final"></label></div>'+
+        '<div class="row"><label for="mk">Kick-off<input id="mk" type="datetime-local"></label><label for="mgp">Group (optional)<input id="mgp" maxlength="10"></label></div><div class="actions"><button class="btn" id="madd">Add match</button></div></details>';
+    $("ctab").innerHTML=tools+'<div class="card"><div class="gh">FIXTURES & RESULTS · '+ms.length+'</div>'+(has("results.enter")?'<p class="note" style="margin-top:0">Open a match to enter its score, goals and cards.</p>':'')+matchList(ms,{empty:canF?"No matches yet. Use the tools above to create them.":"No matches yet."})+'</div>';
+    var reload=function(){competitionDetail(C.slug,"fixtures")};
+    if($("gen"))$("gen").onclick=function(){var b=$("gen"),d={legs:+val("gl"),start:fromLocal(val("gs")),daysBetween:+val("gd")};if(b.dataset.replace)d.replace=true;busy(b,true,"Generating…");
+      api(api0("/competitions/"+C.slug+"/generate"),"POST",d).then(function(r){busy(b,false);if(r.ok){toast(r.data.created+" matches created");reload();return}
+        if(r.data.needsConfirm){b.dataset.replace="1";b.textContent="Tap again to replace the existing fixtures";return}toast(r.data.error,true)})};
+    if($("dgo"))$("dgo").onclick=function(){var ids=[].slice.call(document.querySelectorAll("#dpicks input:checked")).map(function(x){return+x.value});
+      api(api0("/competitions/"+C.slug+"/draw"),"POST",{entryIds:ids,roundName:val("dn"),legs:+val("dl"),start:fromLocal(val("ds"))}).then(function(r){if(!r.ok){toast(r.data.error,true);return}toast("Round drawn");reload()})};
+    if($("madd"))$("madd").onclick=function(){api(api0("/competitions/"+C.slug+"/matches"),"POST",{homeId:intOrNull(val("mh")),awayId:intOrNull(val("ma")),stage:val("mstg"),roundName:val("mrn"),kickoff:fromLocal(val("mk")),group:val("mgp")}).then(function(r){
+      if(!r.ok){toast(r.data.error,true);return}toast("Match added");reload()})}})}
+function compTable(C){api(api0("/competitions/"+C.slug+"/standings")).then(function(r){if(!r.ok)return fail(r);
+  $("ctab").innerHTML='<div class="card"><div class="gh">'+(C.format==="knockout"?"KNOCKOUT COMPETITION":"LEAGUE TABLE")+'</div>'+(C.format==="knockout"?'<p class="note">Knockout-only competitions have no league table. See Fixtures & results.</p>':tableHtml(r.data))+'</div>'})}
+function compScorers(C){api(api0("/competitions/"+C.slug+"/scorers")).then(function(r){if(!r.ok)return fail(r);var s=r.data.scorers;
+  $("ctab").innerHTML='<div class="card"><div class="gh">TOP SCORERS</div>'+(s.length?'<div class="tbl"><table><tr><th>#</th><th>Player</th><th>Team</th><th>Goals</th><th>Assists</th></tr>'+s.map(function(x,i){return'<tr><td>'+(i+1)+'</td><td><b>'+esc(x.name)+'</b></td><td>'+(x.team?esc(x.team.name):"—")+'</td><td class="pts" style="color:var(--gold);font-weight:900">'+x.goals+'</td><td>'+x.assists+'</td></tr>'}).join("")+'</table></div>'
+    :'<p class="note">Goals logged on match pages show up here.</p>')+'</div>'})}
+function compSettings(C,E,crit){$("ctab").innerHTML=compForm(C,crit)+'<div class="card"><div class="gh">LOGO</div><div class="ch">'+cCrest(C,64)+'<div><label for="clogo" style="margin:0">PNG, JPG, GIF or WebP, up to 256 KB<input id="clogo" type="file" accept="image/png,image/jpeg,image/gif,image/webp"></label>'+(C.logo?'<button class="btn g sm" id="clr" style="margin-top:8px">Remove logo</button>':'')+'</div></div></div>'+
+  (has("competitions.manage")?'<div class="card" style="border:1px solid var(--bad)"><div class="gh" style="background:var(--bad);color:#fff">DELETE COMPETITION</div><p class="note" style="margin-top:0">Deletes the competition with all its fixtures and results. Teams stay in your organization.</p><label for="cdel">Type <b style="color:var(--tx)">'+esc(C.name)+'</b> to confirm<input id="cdel" autocomplete="off"></label><div class="actions"><button class="btn bad" id="cdg">Delete competition</button></div></div>':'');
+  bindCompForm(C);logoPicker("clogo",api0("/competitions/"+C.slug+"/logo"),function(){competitionDetail(C.slug,"settings")});
+  if($("clr"))$("clr").onclick=function(){api(api0("/competitions/"+C.slug+"/logo"),"DELETE",{}).then(function(){competitionDetail(C.slug,"settings")})};
+  if($("cdg"))$("cdg").onclick=function(){if(val("cdel")!==C.name){toast("Type the exact name to confirm",true);return}if(!armed($("cdg"),"Really delete?"))return;
+    api(api0("/competitions/"+C.slug),"DELETE",{confirm:val("cdel")}).then(function(r){if(!r.ok){toast(r.data.error,true);return}toast("Competition deleted");go(app0("/competitions"))})}}
+
+// ---------- one match ----------
+function matchPage(id){api(api0("/matches/"+id)).then(function(r){if(!r.ok)return fail(r);var m=r.data.match,canR=has("results.enter"),canF=has("fixtures.manage");
+  var t=function(x){return'<div class="t">'+crest(x,56)+'<span>'+(x?esc(x.name):'<span class="note">To be decided</span>')+'</span></div>'};
+  var evs=m.events.map(function(e){return'<div class="ev '+e.side+'"><i>'+(e.minute!=null?e.minute+"'":"")+'</i><span><b>'+esc(EV_L[e.kind])+'</b> · '+esc(e.playerName||"Unknown player")+(e.assistName?' <span class="note">(assist '+esc(e.assistName)+')</span>':'')+(e.note?' <span class="note">'+esc(e.note)+'</span>':'')+'</span>'+(canR?'<button class="btn g sm" data-xe="'+e.id+'" aria-label="Delete event">✕</button>':'')+'</div>'}).join("");
+  var squad=function(side){return'<option value="">Type a name instead…</option>'+(m.players[side]||[]).map(function(p){return'<option value="'+p.id+'">'+(p.number!=null?p.number+". ":"")+esc(p.name)+'</option>'}).join("")};
+  $("sec").innerHTML='<div class="card"><a class="note" style="color:var(--soft)" href="'+app0("/competitions/"+m.competition.slug+"/fixtures")+'" data-nav>← '+esc(m.competition.name)+'</a><p class="note" style="text-align:center;margin:8px 0 14px">'+esc(m.roundName||("Round "+m.round))+(m.group?' · Group '+esc(m.group):'')+(m.leg>1?' · 2nd leg':'')+'<br>'+when(m.kickoff)+(m.venue?' · '+esc(m.venue):'')+'</p>'+
+    '<div class="board">'+t(m.home)+'<div><div class="big">'+(m.homeScore==null?"– : –":m.homeScore+" : "+m.awayScore)+'</div>'+(m.homePens!=null?'<div class="note">Penalties '+m.homePens+'–'+m.awayPens+'</div>':'')+'<span class="pill '+m.status+'">'+esc(MST_L[m.status])+'</span></div>'+t(m.away)+'</div></div>'+
+    (canR?'<form class="card" id="rf" novalidate><div class="gh">RESULT & MATCH INFO</div><div class="row"><label for="hs">'+esc(m.home?m.home.name:"Home")+' goals<input id="hs" type="number" min="0" max="99" value="'+(m.homeScore==null?"":m.homeScore)+'"></label><label for="as">'+esc(m.away?m.away.name:"Away")+' goals<input id="as" type="number" min="0" max="99" value="'+(m.awayScore==null?"":m.awayScore)+'"></label></div>'+
+      (m.stage==="knockout"?'<div class="row"><label for="hp">Penalties (home, if any)<input id="hp" type="number" min="0" max="99" value="'+(m.homePens==null?"":m.homePens)+'"></label><label for="ap">Penalties (away)<input id="ap" type="number" min="0" max="99" value="'+(m.awayPens==null?"":m.awayPens)+'"></label></div>':'')+
+      '<div class="row"><label for="mst">Status<select id="mst">'+opts(MST_L,m.status)+'</select></label><label for="mko">Kick-off<input id="mko" type="datetime-local" value="'+toLocal(m.kickoff)+'"></label></div>'+
+      '<div class="row"><label for="mv">Venue<input id="mv" maxlength="100" value="'+esc(m.venue||"")+'"></label><label for="mref">Referee<input id="mref" maxlength="100" value="'+esc(m.referee||"")+'"></label></div><label for="mnotes">Notes<textarea id="mnotes" maxlength="2000">'+esc(m.notes||"")+'</textarea></label>'+
+      '<div class="actions"><button class="btn" id="rsave">Save</button></div><div id="rmsg"></div></form>':'')+
+    '<div class="card"><div class="gh">MATCH EVENTS</div>'+(evs||'<p class="note">No goals or cards logged yet.</p>')+
+      (canR&&m.home&&m.away?'<form id="ef" novalidate style="margin-top:12px"><div class="row"><label for="ek">What happened<select id="ek">'+opts(EV_L,"goal")+'</select></label><label for="esd">Team<select id="esd">'+opts({home:m.home.name,away:m.away.name},"home")+'</select></label></div>'+
+        '<div class="row"><label for="ep">Player<select id="ep">'+squad("home")+'</select></label><label for="epn">…or name<input id="epn" maxlength="80" placeholder="Player name"></label></div>'+
+        '<div class="row"><label for="ea">Assist (optional)<select id="ea">'+squad("home")+'</select></label><label for="ean">…or name<input id="ean" maxlength="80"></label></div><label for="emin" style="max-width:160px">Minute<input id="emin" type="number" min="0" max="150"></label>'+
+        '<div class="actions"><button class="btn" id="eadd">Add event</button></div></form>':'')+'</div>'+
+    (canF?'<details class="card"><summary>Match setup</summary><div id="setup" class="note">Loading…</div></details>':'');
+  var reload=function(){matchPage(id)};
+  if($("rf"))$("rf").onsubmit=function(e){e.preventDefault();var d={homeScore:intOrNull(val("hs")),awayScore:intOrNull(val("as")),status:val("mst"),kickoff:fromLocal(val("mko")),venue:val("mv"),referee:val("mref"),notes:val("mnotes")};
+    if(d.homeScore!=null&&d.awayScore!=null&&d.status==="scheduled")d.status="finished";if($("hp")){d.homePens=intOrNull(val("hp"));d.awayPens=intOrNull(val("ap"))}
+    var b=$("rsave");busy(b,true,"Saving…");api(api0("/matches/"+id),"PATCH",d).then(function(r){busy(b,false);if(!r.ok){$("rmsg").innerHTML=errBox(r);return}toast("Match saved");reload()})};
+  if($("esd"))$("esd").onchange=function(){var s=val("esd");$("ep").innerHTML=squad(s);$("ea").innerHTML=squad(s)};
+  if($("ef"))$("ef").onsubmit=function(e){e.preventDefault();api(api0("/matches/"+id+"/events"),"POST",{kind:val("ek"),side:val("esd"),minute:intOrNull(val("emin")),playerId:intOrNull(val("ep")),playerName:val("epn"),assistId:intOrNull(val("ea")),assistName:val("ean")}).then(function(r){
+    if(!r.ok){toast(r.data.error,true);return}toast("Event added");reload()})};
+  document.querySelectorAll("[data-xe]").forEach(function(b){b.onclick=function(){api(api0("/matches/"+id+"/events/"+b.dataset.xe),"DELETE",{}).then(function(r){if(r.ok)reload();else toast(r.data.error,true)})}});
+  if(canF)api(api0("/competitions/"+m.competition.slug)).then(function(cr){var E=cr.data.entries||[],o='<option value="">To be decided</option>'+E.map(function(e){return'<option value="'+e.id+'">'+esc(e.team.name)+'</option>'}).join("");
+    $("setup").innerHTML='<div class="row"><label for="sh">Home<select id="sh">'+o+'</select></label><label for="sa">Away<select id="sa">'+o+'</select></label></div><div class="row"><label for="srn">Round name<input id="srn" maxlength="40" value="'+esc(m.roundName||"")+'"></label><label for="sgp">Group<input id="sgp" maxlength="10" value="'+esc(m.group||"")+'"></label></div>'+
+      '<div class="actions"><button class="btn g" id="ssave">Save setup</button><button class="btn bad" id="sdel">Delete match</button></div>';
+    $("sh").value=m.home?m.home.entryId:"";$("sa").value=m.away?m.away.entryId:"";
+    $("ssave").onclick=function(){api(api0("/matches/"+id),"PATCH",{homeId:intOrNull(val("sh")),awayId:intOrNull(val("sa")),roundName:val("srn"),group:val("sgp")}).then(function(r){if(!r.ok){toast(r.data.error,true);return}toast("Saved");reload()})};
+    $("sdel").onclick=function(){if(!armed($("sdel"),"Sure? Delete"))return;api(api0("/matches/"+id),"DELETE",{}).then(function(r){if(!r.ok){toast(r.data.error,true);return}toast("Match deleted");go(app0("/competitions/"+m.competition.slug+"/fixtures"))})}})})}
+
+// ---------- organization-wide match lists ----------
+function matchesSec(view){var titles={upcoming:"FIXTURES: UPCOMING MATCHES",results:"RESULTS",all:"ALL MATCHES"};
+  api(api0("/competitions")).then(function(cr){var cs=cr.data.competitions||[],sel=new URLSearchParams(location.search).get("competition")||"";
+    var load=function(){api(api0("/matches?view="+view+(sel?"&competition="+encodeURIComponent(sel):""))).then(function(r){if(!r.ok)return fail(r);
+      $("mlist").innerHTML=matchList(r.data.matches,{comp:!sel,by:view==="all"?"round":"date",empty:view==="upcoming"?"No upcoming matches.":view==="results"?"No results yet.":"No matches yet."})})};
+    $("sec").innerHTML='<div class="card"><div class="gh">'+titles[view]+'</div>'+(cs.length>1?'<label for="mf" style="max-width:320px;margin-top:0">Competition<select id="mf"><option value="">All competitions</option>'+cs.map(function(c){return'<option value="'+esc(c.slug)+'"'+(c.slug===sel?" selected":"")+'>'+esc(c.name)+'</option>'}).join("")+'</select></label>':'')+'<div id="mlist">'+LOADING+'</div></div>';
+    if($("mf"))$("mf").onchange=function(){sel=val("mf");history.replaceState(null,"",location.pathname+(sel?"?competition="+encodeURIComponent(sel):""));load()};load()})}
+function tablesSec(){api(api0("/competitions")).then(function(cr){var cs=(cr.data.competitions||[]).filter(function(c){return c.format!=="knockout"});
+  if(!cs.length){$("sec").innerHTML='<div class="card empty">'+ic("trophy")+'<h2>No league tables yet</h2><p class="note">Create a league or group competition to get a table.</p></div>';return}
+  var sel=new URLSearchParams(location.search).get("competition")||cs[0].slug;
+  $("sec").innerHTML='<div class="card"><div class="gh">LEAGUE TABLES</div><label for="tf" style="max-width:320px;margin-top:0">Competition<select id="tf">'+cs.map(function(c){return'<option value="'+esc(c.slug)+'"'+(c.slug===sel?" selected":"")+'>'+esc(c.name)+'</option>'}).join("")+'</select></label><div id="tout">'+LOADING+'</div></div>';
+  var load=function(){api(api0("/competitions/"+sel+"/standings")).then(function(r){$("tout").innerHTML=r.ok?tableHtml(r.data):errBox(r)})};
+  $("tf").onchange=function(){sel=val("tf");history.replaceState(null,"",location.pathname+"?competition="+encodeURIComponent(sel));load()};load()})}
+
+// ---------- teams & players ----------
+function teamsSec(rest){if(rest)return teamPage(+rest);
+  api(api0("/teams")).then(function(r){if(!r.ok)return fail(r);var ts=r.data.teams;
+    $("sec").innerHTML='<div class="card"><div class="gh">TEAMS · '+ts.length+'</div>'+(has("teams.manage")?'<form id="tf" class="row" novalidate style="align-items:end;margin-bottom:12px"><label for="tn" style="margin:0">New team name<input id="tn" maxlength="80" placeholder="e.g. Kasoa Stars"></label><div><button class="btn" id="tadd">'+ic("plus")+' Add team</button></div></form>':'')+
+      (ts.length?'<div class="grid">'+ts.map(function(t){return'<a class="oc" href="'+app0("/teams/"+t.id)+'" data-nav><span class="ch">'+crest(t,36)+'<b style="margin:0">'+esc(t.name)+'</b></span><small style="display:block;margin-top:8px">'+esc([t.city,t.venue].filter(Boolean).join(" · ")||"No details yet")+'</small><small>'+t.playerCount+' player'+(t.playerCount===1?"":"s")+'</small></a>'}).join("")+'</div>'
+        :'<p class="note">No teams yet. Add the clubs or sides that will play in your competitions.</p>')+'</div>';
+    if($("tf"))$("tf").onsubmit=function(e){e.preventDefault();var b=$("tadd");busy(b,true);api(api0("/teams"),"POST",{name:val("tn")}).then(function(r){busy(b,false);if(!r.ok){toast(r.data.error,true);return}toast("Team added");teamsSec()})}})}
+function teamPage(id){api(api0("/teams/"+id)).then(function(r){if(!r.ok)return fail(r);var t=r.data.team,can=has("teams.manage");
+  var dis=can?"":" disabled",ps=t.players;
+  $("sec").innerHTML='<div class="card"><a class="note" style="color:var(--soft)" href="'+app0("/teams")+'" data-nav>← Teams</a><div class="ch" style="margin-top:8px">'+crest(t,56)+'<div><h2 style="margin:0">'+esc(t.name)+'</h2><div class="note">'+esc([t.city,t.venue].filter(Boolean).join(" · "))+'</div></div></div>'+
+    (t.competitions.length?'<p class="note">Plays in: '+t.competitions.map(function(c){return'<a href="'+app0("/competitions/"+c.slug)+'" data-nav>'+esc(c.name)+'</a>'}).join(", ")+'</p>':'')+'</div>'+
+    '<div class="card"><div class="gh">SQUAD · '+ps.length+'</div>'+(ps.length?'<div class="tbl"><table><tr><th>No.</th><th>Name</th><th>Position</th><th>Active</th><th></th></tr>'+ps.map(function(p){return'<tr><td class="inline"><input data-pn="'+p.id+'" type="number" min="0" max="999" value="'+(p.number==null?"":p.number)+'" style="width:64px"'+dis+' aria-label="Number"></td>'+
+      '<td class="inline"><input data-pa="'+p.id+'" maxlength="80" value="'+esc(p.name)+'"'+dis+' aria-label="Name"></td><td class="inline"><select data-pp="'+p.id+'"'+dis+' aria-label="Position">'+opts(POS_L,p.position)+'</select></td><td><input type="checkbox" data-pc="'+p.id+'"'+(p.active?" checked":"")+dis+' aria-label="Active" style="width:auto"></td><td>'+(can?'<button class="btn bad sm" data-px="'+p.id+'">Remove</button>':'')+'</td></tr>'}).join("")+'</table></div>':'<p class="note">No players yet.</p>')+
+      (can?'<form id="pf" novalidate class="row" style="margin-top:10px;grid-template-columns:2fr 1fr 1fr auto;align-items:end"><label for="npn" style="margin:0">Player name<input id="npn" maxlength="80"></label><label for="npno" style="margin:0">Number<input id="npno" type="number" min="0" max="999"></label><label for="npp" style="margin:0">Position<select id="npp">'+opts(POS_L,"")+'</select></label><div><button class="btn" id="padd">Add</button></div></form>':'')+'</div>'+
+    '<form class="card" id="tef" novalidate><div class="gh">TEAM DETAILS</div><div class="row"><label for="ten">Name<input id="ten" maxlength="80" value="'+esc(t.name)+'"'+dis+'></label><label for="tes">Short name<input id="tes" maxlength="12" value="'+esc(t.shortName||"")+'"'+dis+'></label></div>'+
+      '<div class="row"><label for="tec">City<input id="tec" maxlength="60" value="'+esc(t.city)+'"'+dis+'></label><label for="tev">Home ground<input id="tev" maxlength="100" value="'+esc(t.venue)+'"'+dis+'></label></div>'+
+      '<div class="row"><label for="tef2">Founded<input id="tef2" type="number" min="1800" max="2100" value="'+esc(t.founded||"")+'"'+dis+'></label><label for="tek">Colours<input id="tek" maxlength="40" value="'+esc(t.colors)+'"'+dis+'></label></div>'+
+      '<label for="ted">About<textarea id="ted" maxlength="2000"'+dis+'>'+esc(t.description)+'</textarea></label>'+(can?'<label for="tlogo">Logo (PNG, JPG, GIF or WebP, up to 256 KB)<input id="tlogo" type="file" accept="image/png,image/jpeg,image/gif,image/webp"></label><div class="actions"><button class="btn" id="tsave">Save team</button><button type="button" class="btn bad" id="tdel">Delete team</button></div>':'')+'</form>';
+  var reload=function(){teamPage(id)};
+  if(!can)return;
+  $("tef").onsubmit=function(e){e.preventDefault();api(api0("/teams/"+id),"PATCH",{name:val("ten"),shortName:val("tes"),city:val("tec"),venue:val("tev"),founded:intOrNull(val("tef2")),colors:val("tek"),description:val("ted")}).then(function(r){if(!r.ok){toast(r.data.error,true);return}toast("Team saved");reload()})};
+  logoPicker("tlogo",api0("/teams/"+id+"/logo"),reload);
+  $("tdel").onclick=function(){if(!armed($("tdel"),"Sure? Delete team"))return;api(api0("/teams/"+id),"DELETE",{}).then(function(r){if(!r.ok){toast(r.data.error,true);return}toast("Team deleted");go(app0("/teams"))})};
+  $("pf").onsubmit=function(e){e.preventDefault();api(api0("/teams/"+id+"/players"),"POST",{name:val("npn"),number:intOrNull(val("npno")),position:val("npp")}).then(function(r){if(!r.ok){toast(r.data.error,true);return}reload()})};
+  var patch=function(pid,d){api(api0("/players/"+pid),"PATCH",d).then(function(r){toast(r.ok?"Saved":r.data.error,!r.ok)})};
+  document.querySelectorAll("[data-pn]").forEach(function(i){i.onchange=function(){patch(i.dataset.pn,{number:intOrNull(i.value)})}});
+  document.querySelectorAll("[data-pa]").forEach(function(i){i.onchange=function(){patch(i.dataset.pa,{name:i.value})}});
+  document.querySelectorAll("[data-pp]").forEach(function(i){i.onchange=function(){patch(i.dataset.pp,{position:i.value})}});
+  document.querySelectorAll("[data-pc]").forEach(function(i){i.onchange=function(){patch(i.dataset.pc,{active:i.checked})}});
+  document.querySelectorAll("[data-px]").forEach(function(b){b.onclick=function(){if(!armed(b,"Sure?"))return;api(api0("/players/"+b.dataset.px),"DELETE",{}).then(function(r){if(r.ok)reload();else toast(r.data.error,true)})}})})}
+function playersSec(){api(api0("/players")).then(function(r){if(!r.ok)return fail(r);var ps=r.data.players;
+  var draw=function(q){q=(q||"").toLowerCase();var rows=ps.filter(function(p){return!q||p.name.toLowerCase().indexOf(q)>=0||p.team.name.toLowerCase().indexOf(q)>=0});
+    $("plist").innerHTML=rows.length?'<div class="tbl"><table><tr><th>No.</th><th>Player</th><th>Position</th><th>Team</th></tr>'+rows.map(function(p){return'<tr><td>'+(p.number==null?"":p.number)+'</td><td><b>'+esc(p.name)+'</b>'+(p.active?'':' <span class="pill">inactive</span>')+'</td><td>'+esc(POS_L[p.position||""])+'</td><td><a href="'+app0("/teams/"+p.team.id)+'" data-nav>'+esc(p.team.name)+'</a></td></tr>'}).join("")+'</table></div>':'<p class="note">No players found.</p>'};
+  $("sec").innerHTML='<div class="card"><div class="gh">PLAYERS · '+ps.length+'</div><p class="note" style="margin-top:0">Players are added on each team\'s page.</p><input id="pq" class="search" placeholder="Search players or teams" aria-label="Search players"><div id="plist" style="margin-top:10px"></div></div>';
+  draw();$("pq").oninput=function(){draw(val("pq"))}})}
+
+// ---------- announcements ----------
+function announcementsSec(){Promise.all([api(api0("/announcements")),api(api0("/competitions"))]).then(function(res){var r=res[0];if(!r.ok)return fail(r);var as=r.data.announcements,cs=res[1].data.competitions||[];
+  var canE=has("content.edit"),canM=has("content.moderate");
+  $("sec").innerHTML=(canE?'<form class="card" id="af2" novalidate><div class="gh">NEW ANNOUNCEMENT</div><label for="at">Title<input id="at" maxlength="140"></label><label for="ab">Message<textarea id="ab" maxlength="5000"></textarea></label>'+
+    '<div class="row"><label for="ac">About<select id="ac"><option value="">The whole organization</option>'+cs.map(function(c){return'<option value="'+esc(c.slug)+'">'+esc(c.name)+'</option>'}).join("")+'</select></label><label style="display:flex;align-items:center;gap:8px;margin-top:28px"><input id="apin" type="checkbox" style="width:auto;margin:0"> Pin to the top</label></div>'+
+    '<div class="actions"><button class="btn" id="apost">Post announcement</button></div></form>':'')+
+    '<div class="card"><div class="gh">ANNOUNCEMENTS</div>'+(as.length?as.map(function(a){var mine=a.authorId===ME.id;
+      return'<div style="border-top:1px solid var(--line);padding:12px 0"><b style="font-size:16px">'+esc(a.title)+'</b> '+(a.pinned?'<span class="pill">Pinned</span> ':'')+(a.published?'':'<span class="pill revoked">Hidden</span> ')+(a.competition?'<span class="pill">'+esc(a.competition.name)+'</span>':'')+
+        '<div class="note">'+esc(a.author||"—")+' · '+date(a.created)+'</div><p style="white-space:pre-wrap;margin:8px 0">'+esc(a.body)+'</p><div class="actions" style="margin-top:4px">'+
+        (canE||canM?'<button class="btn g sm" data-apub="'+a.id+'" data-v="'+(a.published?0:1)+'">'+(a.published?"Hide":"Publish")+'</button><button class="btn g sm" data-apin="'+a.id+'" data-v="'+(a.pinned?0:1)+'">'+(a.pinned?"Unpin":"Pin")+'</button>':'')+
+        ((mine&&canE)||canM?'<button class="btn bad sm" data-adel="'+a.id+'">Delete</button>':'')+'</div></div>'}).join(""):'<p class="note">No announcements yet.'+(canE?' Post news, schedule changes or results summaries here.':'')+'</p>')+'</div>';
+  var reload=function(){announcementsSec()};
+  if($("af2"))$("af2").onsubmit=function(e){e.preventDefault();api(api0("/announcements"),"POST",{title:val("at"),body:val("ab"),competition:val("ac")||null,pinned:$("apin").checked}).then(function(r){if(!r.ok){toast(r.data.error,true);return}toast("Posted");reload()})};
+  document.querySelectorAll("[data-apub]").forEach(function(b){b.onclick=function(){api(api0("/announcements/"+b.dataset.apub),"PATCH",{published:b.dataset.v==="1"}).then(function(r){if(r.ok)reload();else toast(r.data.error,true)})}});
+  document.querySelectorAll("[data-apin]").forEach(function(b){b.onclick=function(){api(api0("/announcements/"+b.dataset.apin),"PATCH",{pinned:b.dataset.v==="1"}).then(function(r){if(r.ok)reload();else toast(r.data.error,true)})}});
+  document.querySelectorAll("[data-adel]").forEach(function(b){b.onclick=function(){if(!armed(b,"Sure?"))return;api(api0("/announcements/"+b.dataset.adel),"DELETE",{}).then(function(r){if(r.ok)reload();else toast(r.data.error,true)})}});})}
 
 function matrix(){return'<details class="card"><summary>What each role can do</summary><div class="tbl" style="margin-top:10px"><table class="mx"><tr><th>Permission</th>'+ROLES.roles.map(function(r){return'<th>'+esc(r.label)+'</th>'}).join("")+'</tr>'+
   ROLES.permissions.map(function(p){return'<tr><td>'+esc(p.label)+'</td>'+ROLES.roles.map(function(r){var y=p.roles.indexOf(r.key)>=0;return'<td class="'+(y?"y":"n")+'" aria-label="'+(y?"yes":"no")+'">'+(y?"✓":"–")+'</td>'}).join("")+'</tr>'}).join("")+

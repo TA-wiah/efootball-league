@@ -92,8 +92,29 @@ can belong to many organizations with a different role in each, and each organiz
 - People can only give roles below their own; ownership moves only through "Transfer ownership".
 - Every action is checked **on the server** (`orgs/permissions.py` is the single list of who can do what). Non-members
   get "not found" for an organization, so private organizations stay invisible.
-- Competitions, teams, players, fixtures, results, tables and public pages arrive in the next phases. The original
-  league site at `/` keeps working; only its existing editors can edit it.
+- The original league site at `/` keeps working; only its existing editors can edit it.
+
+### Competitions (inside an organization)
+One generic system runs any competition: a Champions League, a school cup or a Sunday league. Each competition sets:
+name, logo, description, country/region, season, type, dates, visibility (public / unlisted / private), status, format
+(league, groups then knockouts, or knockout only), points for a win/draw/loss, tie-breakers in order (goal difference,
+goals scored, fewest conceded, wins, away goals, head-to-head points / goal difference / goals), how often teams meet,
+maximum teams and how many qualify from each group.
+
+- **Teams and players** belong to the organization and can play in several competitions. Logos are stored in the
+  database (PNG/JPG/GIF/WebP up to 256 KB; SVG is refused because it can carry scripts).
+- **Fixtures**: generated automatically (everyone plays everyone, once or home and away, per group), shuffled by the
+  server, with dates spaced from a first kick-off. Knockout rounds are drawn at random between the teams you tick.
+  Single matches can also be added by hand. Fixtures with results can't be regenerated.
+- **Results**: score, penalties, status, kick-off, venue, referee and match events (goals, cards, substitutions)
+  with players from the squad or typed names. Tables, form and top scorers update automatically.
+- **Points adjustments** (e.g. −3 for a sanction) and **announcements** (pinned, hidden, per competition).
+- Who can do what: organizers/admins build competitions and fixtures; editors enter results, update teams and
+  content; moderators hide or delete announcements; viewers read. All checked on the server.
+- **Bring your original league in**: `python manage.py import_league <organization-address>` copies its groups,
+  teams, group fixtures (same order as the old page), results and logged goals into a new competition.
+  Knockout rounds aren't copied; draw them again once the group stage is complete.
+- Public competition pages and shareable links come next.
 
 ## Fair random draws
 - **Group draw** (Players tab): the **server** shuffles the players into groups with the operating system's
@@ -134,6 +155,7 @@ Nobody can read a password: only a one-way hash is stored. Set `ADMIN_USER` and 
 - `GET /api/health` answers `{"ok": true}` when the server and database are working.
 
 ## Files
+- `competitions/`: competitions, teams, players, matches: `models.py`, `engine.py` (fixtures, standings, tie-breakers), `api.py`, `tests.py`, `management/commands/import_league.py`
 - `orgs/`: the platform: `models.py` (organizations, memberships, invitations), `permissions.py` (roles), `api.py`, `tests.py`
 - `public/app.html`: the platform pages (sign-up, dashboards, members, invitations)
 - `league/`: the original league app: `views.py` (the API), `logic.py` (rules, draws, validation), `models.py` (database tables),

@@ -36,7 +36,9 @@ class Browser:
         return self.c.get(url)
 
 
-class PlatformTest(TestCase):
+class Helpers:
+    """Shared by the platform and competition tests."""
+
     def signup(self, name, email=None):
         b = Browser()
         r = b.call("post", "/api/auth/signup", {"username": name, "email": email or f"{name}@example.com", "password": PW})
@@ -57,6 +59,8 @@ class PlatformTest(TestCase):
     def member_id(self, b, slug, username):
         return next(m["id"] for m in b.get(f"/api/orgs/{slug}/members").json()["members"] if m["username"] == username)
 
+
+class PlatformTest(Helpers, TestCase):
     # ---------- accounts ----------
     def test_signup_login_logout(self):
         b = self.signup("kofi")

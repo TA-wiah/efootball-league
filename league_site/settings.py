@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "league",
     "orgs",
+    "competitions",
 ]
 MIDDLEWARE = [
     "league.middleware.health",                       # answers /api/health before host checks

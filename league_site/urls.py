@@ -2,7 +2,8 @@ from django.conf import settings
 from django.urls import path, re_path
 
 from league import views as v
-from league.http import serve_page
+from league.http import not_found, serve_page
+from competitions import api as c
 from orgs import api as o
 
 handler404 = "league.http.not_found"
@@ -66,4 +67,30 @@ urlpatterns = [
     path("api/invitations/<str:token>/accept", o.invitation_accept),
     path("api/me/invitations", o.my_invitations),
     path("api/me/invitations/<int:inv_id>/accept", o.my_invitation_accept),
+
+    # ---- competitions, teams, matches (inside an organization) ----
+    path("api/orgs/<slug:slug>/summary", c.summary),
+    path("api/orgs/<slug:slug>/competitions", c.competitions),
+    path("api/orgs/<slug:slug>/competitions/<slug:cslug>", c.competition_detail),
+    path("api/orgs/<slug:slug>/competitions/<slug:cslug>/logo", c.competition_logo),
+    path("api/orgs/<slug:slug>/competitions/<slug:cslug>/entries", c.entries),
+    path("api/orgs/<slug:slug>/competitions/<slug:cslug>/entries/<int:entry_id>", c.entry_detail),
+    path("api/orgs/<slug:slug>/competitions/<slug:cslug>/generate", c.generate),
+    path("api/orgs/<slug:slug>/competitions/<slug:cslug>/draw", c.draw),
+    path("api/orgs/<slug:slug>/competitions/<slug:cslug>/matches", c.comp_matches),
+    path("api/orgs/<slug:slug>/competitions/<slug:cslug>/standings", c.standings),
+    path("api/orgs/<slug:slug>/competitions/<slug:cslug>/scorers", c.comp_scorers),
+    path("api/orgs/<slug:slug>/matches", c.org_matches),
+    path("api/orgs/<slug:slug>/matches/<int:match_id>", c.match_detail),
+    path("api/orgs/<slug:slug>/matches/<int:match_id>/events", c.match_events),
+    path("api/orgs/<slug:slug>/matches/<int:match_id>/events/<int:event_id>", c.match_event_detail),
+    path("api/orgs/<slug:slug>/teams", c.teams),
+    path("api/orgs/<slug:slug>/teams/<int:team_id>", c.team_detail),
+    path("api/orgs/<slug:slug>/teams/<int:team_id>/logo", c.team_logo),
+    path("api/orgs/<slug:slug>/teams/<int:team_id>/players", c.team_players),
+    path("api/orgs/<slug:slug>/players", c.players),
+    path("api/orgs/<slug:slug>/players/<int:player_id>", c.player_detail),
+    path("api/orgs/<slug:slug>/announcements", c.announcements),
+    path("api/orgs/<slug:slug>/announcements/<int:ann_id>", c.announcement_detail),
+    path("media/<str:kind>/<int:obj_id>/logo", lambda r, kind, obj_id: c.logo_file(r, kind, obj_id) if kind in ("competition", "team") else not_found(r)),
 ]
