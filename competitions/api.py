@@ -11,7 +11,7 @@ from django.http import HttpResponse
 from django.utils import timezone
 
 from league.http import ApiError, body, endpoint, ms, session_user, text
-from orgs.api import access, log
+from orgs.api import access, create_invitation, invitation_json, log, team_invite_roles
 from orgs.models import Membership
 from orgs.permissions import ROLE_INFO, STAFF_ROLES, can
 
@@ -625,7 +625,12 @@ def team_of(org, team_id):
 def team_detail(request, user, ip, slug, team_id):
     if request.method == "GET":
         org, m = access(user, slug, "org.view")
-        return {"team": team_json(team_of(org, team_id), players=True)}
+        t = team_of(org, team_id)
+        mine = m.teams.filter(id=t.id).exists()
+        people = [{"id": x.id, "username": x.user.username, "role": x.role, "roleLabel": ROLE_INFO[x.role][0]}
+                  for x in t.assigned_staff.select_related("user").order_by("role", "user__username")]
+        return {"team": {**team_json(t, players=True), "members": people, "mine": mine,
+                         "inviteRoles": team_invite_roles(m) if (mine or can(m.role, "members.invite", org)) else []}}
     if request.method == "PATCH":
         org, m, t = team_access(user, slug, team_id)
         apply_team(t, body(request))
@@ -645,6 +650,24 @@ def team_detail(request, user, ip, slug, team_id):
             raise ApiError(409, f"{name} is still used by matches.") from None
         log(org, user, f"deleted the team {name}")
         return {"ok": True}
+
+
+@endpoint("GET", "POST", login_required=True)
+def team_invitations(request, user, ip, slug, team_id):
+    """Invite players and coaches straight into a team (team managers for their own teams; staff for any team)."""
+    org, m = access(user, slug, "org.view")
+    t = team_of(org, team_id)
+    roles = team_invite_roles(m)
+    if not roles or not (can(m.role, "members.invite", org) or m.teams.filter(id=t.id).exists()):
+        raise ApiError(403, f"Your role ({ROLE_INFO[m.role][0]}) can't invite people to {t.name}.")
+    if request.method == "GET":
+        rows = t.invitations.select_related("invited_by", "accepted_by").prefetch_related("teams").order_by("-id")[:100]
+        return {"invitations": [invitation_json(i) for i in rows], "roles": roles}
+    b = body(request)
+    role = text(b, "role", 20)
+    if role not in roles:
+        raise ApiError(403, f"Your role ({ROLE_INFO[m.role][0]}) can't invite people as {ROLE_INFO.get(role, ('that role',))[0]}.")
+    return create_invitation(request, org, user, role, text(b, "email", 254).lower(), teams=[t])
 
 
 @endpoint("POST", "DELETE", login_required=True)

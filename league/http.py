@@ -139,7 +139,7 @@ def serve_page(request, path):
     if path not in _pages or settings.DEBUG:
         _pages[path] = path.read_text(encoding="utf-8")
     nonce = secrets.token_urlsafe(16)
-    csp = (f"default-src 'self'; script-src 'nonce-{nonce}'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
+    csp = (f"default-src 'self'; script-src 'nonce-{nonce}'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; "
            "connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
     return HttpResponse(_pages[path].replace("<script>", f'<script nonce="{nonce}">'), content_type="text/html; charset=utf-8",
                         headers={"Content-Security-Policy": csp, "Cache-Control": "no-store"})

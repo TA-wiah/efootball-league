@@ -343,3 +343,34 @@ class PortalTest(Helpers, TestCase):
         old = Client().get(f"/organization/{slug}")
         self.assertEqual((old.status_code, old["Location"]), (301, f"/org/{slug}"), "old links keep working")
 
+    def test_team_manager_invites_people_to_their_team(self):
+        boss, tm = self.signup("boss"), self.signup("tmanager")
+        slug = self.new_org(boss)
+        lions = boss.call("post", f"/api/orgs/{slug}/teams", {"name": "Lions"}).json()["team"]["id"]
+        tigers = boss.call("post", f"/api/orgs/{slug}/teams", {"name": "Tigers"}).json()["team"]["id"]
+        self.invite_and_join(boss, slug, tm, "team_manager")
+        boss.call("patch", f"/api/orgs/{slug}/members/{self.member_id(boss, slug, 'tmanager')}", {"teams": [lions]})
+        url = f"/api/orgs/{slug}/teams/{lions}/invitations"
+        self.assertEqual(tm.get(f"/api/orgs/{slug}/teams/{lions}").json()["team"]["inviteRoles"], ["coach", "player"])
+        self.assertEqual(tm.call("post", f"/api/orgs/{slug}/teams/{tigers}/invitations", {"role": "player"}).status_code, 403, "not their team")
+        self.assertEqual(tm.call("post", url, {"role": "team_manager"}).status_code, 403, "only coaches and players")
+        self.assertEqual(tm.call("post", f"/api/orgs/{slug}/invitations", {"role": "player"}).status_code, 403, "no org-wide invitations")
+        r = tm.call("post", url, {"role": "player"})
+        self.assertEqual(r.status_code, 200, r.json())
+        kofi = self.signup("kofi9")
+        self.assertEqual(kofi.call("post", f"/api/invitations/{r.json()['link'].rsplit('/', 1)[1]}/accept").status_code, 200)
+        m = Membership.objects.get(org__slug=slug, user__username="kofi9")
+        self.assertEqual((m.role, list(m.teams.values_list("id", flat=True))), ("player", [lions]), "joins the team")
+        team = tm.get(f"/api/orgs/{slug}/teams/{lions}").json()["team"]
+        self.assertIn("kofi9", [x["username"] for x in team["members"]])
+        self.assertEqual(len(tm.get(url).json()["invitations"]), 1)
+        # revoke their own team's invitations, but not others'
+        inv2 = tm.call("post", url, {"role": "coach"}).json()["invitation"]["id"]
+        other = boss.call("post", f"/api/orgs/{slug}/invitations", {"role": "player"}).json()["invitation"]["id"]
+        self.assertEqual(tm.call("post", f"/api/orgs/{slug}/invitations/{inv2}/revoke").status_code, 200)
+        self.assertEqual(tm.call("post", f"/api/orgs/{slug}/invitations/{other}/revoke").status_code, 403)
+        # the owner can switch it off
+        boss.call("patch", f"/api/orgs/{slug}/permissions", {"permissions": {"team.invite": []}})
+        self.assertEqual(tm.call("post", url, {"role": "player"}).status_code, 403)
+        # an admin can invite into any team, including team managers
+        self.assertEqual(boss.call("post", f"/api/orgs/{slug}/teams/{tigers}/invitations", {"role": "team_manager"}).status_code, 200)

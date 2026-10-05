@@ -24,7 +24,7 @@ from superadmin import store
 from superadmin.models import PlatformAnnouncement
 
 from .models import ORG_KINDS, WEBSITE_DEFAULTS, Invitation, Membership, Organization, OrgEvent
-from .permissions import (ADMIN, OWNER, RANK, ROLE_INFO, STAFF_ROLES, TEAM_ROLES, assignable_roles, can, can_manage, clean_overrides,
+from .permissions import (ADMIN, COACH, OWNER, PLAYER, RANK, TEAM_MANAGER, ROLE_INFO, STAFF_ROLES, TEAM_ROLES, assignable_roles, can, can_manage, clean_overrides,
                           matrix, perms_of)
 
 INVITE_DAYS = 7
@@ -99,13 +99,51 @@ def member_json(m, me):
     return {"id": m.id, "username": m.user.username, "email": m.user.email if (staff or m.user_id == me.user_id) else None,
             **role_json(m.role), "status": "active", "joined": ms(m.joined), "lastActive": ms(m.last_active),
             "you": m.user_id == me.user_id, "canManage": m.user_id != me.user_id and can_manage(me.role, m.role, me.org),
-            "staff": m.role in STAFF_ROLES, "teams": [{"id": t.id, "name": t.name} for t in m.teams.all()] if m.role in TEAM_ROLES else []}
+            "staff": m.role in STAFF_ROLES, "teams": [{"id": t.id, "name": t.name} for t in m.teams.all()] if m.role in TEAM_ROLES or m.role == PLAYER else []}
 
 
 def invitation_json(i):
     return {"id": i.id, "kind": "email" if i.email else "link", "email": i.email or None, **role_json(i.role), "status": i.state,
             "created": ms(i.created), "expires": ms(i.expires), "invitedBy": getattr(i.invited_by, "username", None),
-            "acceptedBy": getattr(i.accepted_by, "username", None), "acceptedAt": ms(i.accepted_at)}
+            "acceptedBy": getattr(i.accepted_by, "username", None), "acceptedAt": ms(i.accepted_at),
+            "teams": [{"id": t.id, "name": t.name} for t in i.teams.all()]}
+
+
+def team_invite_roles(m):
+    """Roles this member may invite into a team: staff with members.invite (incl. team managers), otherwise team staff
+    with team.invite may bring in coaches and players. Always strictly below their own role."""
+    if can(m.role, "members.invite", m.org):
+        pool = [TEAM_MANAGER, COACH, PLAYER]
+    elif can(m.role, "team.invite", m.org):
+        pool = [COACH, PLAYER]
+    else:
+        return []
+    allowed = assignable_roles(m.role)
+    return [r for r in pool if r in allowed]
+
+
+def create_invitation(request, org, user, role, email, teams=()):
+    if email:
+        if not EMAIL_RE.fullmatch(email):
+            raise ApiError(400, "Enter a valid email address, or leave it empty to create an invitation link.")
+        if org.memberships.filter(user__email__iexact=email).exists():
+            raise ApiError(409, "Someone with that email is already a member.")
+        if org.invitations.filter(email__iexact=email, status=Invitation.PENDING, expires__gt=timezone.now()).exists():
+            raise ApiError(409, "That email already has a pending invitation. Resend or revoke it below.")
+    if hit(f"orginvite:{org.id}", 50, 3600):
+        raise ApiError(429, "Too many invitations. Try again later.")
+    with transaction.atomic():
+        inv = Invitation(org=org, email=email, role=role, invited_by=user)
+        token = new_invitation_token(inv)
+        inv.save()
+        if teams:
+            inv.teams.set(teams)
+    link = f"{base_url(request)}/invite/{token}"
+    emailed, note = send_invitation_email(request, inv, link)
+    where = f" to {', '.join(t.name for t in teams)}" if teams else ""
+    log(org, user, f"invited {email or 'someone with a link'} as {ROLE_INFO[role][0]}{where}")
+    return {"ok": True, "invitation": invitation_json(inv), "link": link, "emailed": emailed,
+            "note": note or ("" if emailed else "Copy the link and send it yourself (WhatsApp, Telegram, email…).")}
 
 
 def account_json(user):
@@ -165,7 +203,10 @@ def join(user, inv):
             raise ApiError(403, f"This invitation was sent to {mask(inv.email)}. Log in with the account that uses that email to accept it.")
         if Membership.objects.filter(org=inv.org, user=user).exists():
             raise ApiError(409, f"You're already a member of {inv.org.name}.")
-        Membership.objects.create(org=inv.org, user=user, role=inv.role, last_active=timezone.now())
+        mem = Membership.objects.create(org=inv.org, user=user, role=inv.role, last_active=timezone.now())
+        teams = list(inv.teams.filter(org=inv.org))
+        if teams:
+            mem.teams.add(*teams)
         inv.status, inv.accepted_by, inv.accepted_at = Invitation.ACCEPTED, user, timezone.now()
         inv.save(update_fields=["status", "accepted_by", "accepted_at"])
     log(inv.org, user, f"joined as {ROLE_INFO[inv.role][0]}")
@@ -488,35 +529,24 @@ def clean_website(w):
 def invitations(request, user, ip, slug):
     org, m = access(user, slug, "members.invite")
     if request.method == "GET":
-        rows = org.invitations.select_related("invited_by", "accepted_by").order_by("-id")[:200]
+        rows = org.invitations.select_related("invited_by", "accepted_by").prefetch_related("teams").order_by("-id")[:200]
         return {"invitations": [invitation_json(i) for i in rows], "assignable": assignable_roles(m.role)}
     b = body(request)
     role, email = text(b, "role", 20), text(b, "email", 254).lower()
     if role not in assignable_roles(m.role):
         raise ApiError(403, f"Your role ({ROLE_INFO[m.role][0]}) can't invite people as {ROLE_INFO.get(role, ('that role',))[0]}.")
-    if email:
-        if not EMAIL_RE.fullmatch(email):
-            raise ApiError(400, "Enter a valid email address, or leave it empty to create an invitation link.")
-        if org.memberships.filter(user__email__iexact=email).exists():
-            raise ApiError(409, "Someone with that email is already a member.")
-        if org.invitations.filter(email__iexact=email, status=Invitation.PENDING, expires__gt=timezone.now()).exists():
-            raise ApiError(409, "That email already has a pending invitation. Resend or revoke it below.")
-    if hit(f"orginvite:{org.id}", 50, 3600):
-        raise ApiError(429, "Too many invitations. Try again later.")
-    inv = Invitation(org=org, email=email, role=role, invited_by=user)
-    token = new_invitation_token(inv)
-    inv.save()
-    link = f"{base_url(request)}/invite/{token}"
-    emailed, note = send_invitation_email(request, inv, link)
-    log(org, user, f"invited {email or 'someone with a link'} as {ROLE_INFO[role][0]}")
-    return {"ok": True, "invitation": invitation_json(inv), "link": link, "emailed": emailed,
-            "note": note or ("" if emailed else "Copy the link and send it yourself (WhatsApp, Telegram, email…).")}
+    return create_invitation(request, org, user, role, email)
 
 
 @endpoint("POST", login_required=True)
 def invitation_action(request, user, ip, slug, inv_id, action):
-    org, m = access(user, slug, "members.invite")
+    org, m = access(user, slug, "org.view")
     inv = org.invitations.select_related("invited_by").filter(id=inv_id).first()
+    if not can(m.role, "members.invite", org):
+        # team staff may only touch invitations to their own teams
+        mine = inv and inv.role in team_invite_roles(m) and inv.teams.exists() and not inv.teams.exclude(id__in=m.teams.values("id")).exists()
+        if not mine:
+            raise ApiError(403, f"Your role ({ROLE_INFO[m.role][0]}) doesn't allow that.")
     if not inv:
         raise ApiError(404, "Invitation not found.")
     if RANK[inv.role] >= RANK[m.role]:

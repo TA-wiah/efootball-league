@@ -39,6 +39,7 @@ PERMISSIONS = [
     ("standings.manage", "Manage league tables (points adjustments)", _MGMT, True),
     ("teams.manage", "Manage all teams and players", _MGMT | {EDITOR}, True),
     ("teams.manage_assigned", "Manage the teams they're assigned to", {TEAM_MANAGER, COACH}, True),
+    ("team.invite", "Invite players and coaches to the teams they're assigned to", {TEAM_MANAGER}, True),
     ("content.edit", "Edit competition information and news", _MGMT | {EDITOR}, True),
     ("content.moderate", "Moderate announcements and content", _MGMT | {MODERATOR}, True),
     ("org.settings", "Edit organization profile, branding and public website", {OWNER, ADMIN}, True),

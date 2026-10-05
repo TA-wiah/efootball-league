@@ -66,6 +66,7 @@ class Invitation(models.Model):
     status = models.CharField(max_length=10, default=PENDING)   # pending / accepted / revoked ("expired" is worked out)
     accepted_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
     accepted_at = models.DateTimeField(null=True, blank=True)
+    teams = models.ManyToManyField("competitions.Team", blank=True, related_name="invitations")   # joins these teams on accepting
 
     @property
     def state(self):

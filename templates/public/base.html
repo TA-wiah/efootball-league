@@ -4,7 +4,7 @@
 <title>{{ title }} · Competition Manager</title>
 <meta name="description" content="{{ description }}">
 {% if not index %}<meta name="robots" content="noindex">{% endif %}
-<meta name="theme-color" content="#050d1f">
+<meta name="theme-color" content="#07132b">
 <link rel="canonical" href="{{ url }}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Competition Manager">
@@ -13,6 +13,8 @@
 <meta property="og:url" content="{{ url }}">
 {% if logo %}<meta property="og:image" content="{{ base }}{{ logo }}">{% endif %}
 <meta name="twitter:card" content="summary">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap">
 <style>
 :root{
   --bg:#050d1f;--bg2:#0a1a3a;--card:#0e1f45;--card2:#0a1735;--raise:#16246200;--line:rgba(140,170,255,.16);--line2:rgba(140,170,255,.28);
@@ -162,6 +164,47 @@ footer{border-top:1px solid var(--line);margin-top:30px;background:rgba(0,0,0,.1
 @media(max-width:620px){.foot{grid-template-columns:1fr 1fr}.foot .about{grid-column:1/-1}}
 .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#0f3a28;border:1px solid var(--ok);color:#d4ffe4;border-radius:12px;padding:11px 18px;font-weight:700;display:none;z-index:30;box-shadow:var(--shadow)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+/* ---------- matchday theme: floodlit night pitch, gold scorebug, condensed broadcast type ---------- */
+:root{--bg:#07132b;--bg2:#0b1d3f;--card:#0e2148;--card2:#0a1834;--line:rgba(140,170,255,.15);--line2:rgba(140,170,255,.28);--gold:#f5c400;--gold2:#e0b000;--btn:#f5c400;--btn2:#e3b400;
+  --ink:#07132b;--link:#8ab8ff;--pitch:#13904a;--bad:#e5243b;--r:12px;--cond:"Barlow Condensed","Arial Narrow","Roboto Condensed",sans-serif;--sans:"Barlow",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{font-family:var(--sans);background:radial-gradient(1100px 520px at 88% -12%,rgba(255,240,200,.09),transparent 60%),
+  repeating-linear-gradient(90deg,rgba(255,255,255,.018) 0 88px,transparent 88px 176px),linear-gradient(180deg,var(--bg) 0%,var(--bg2) 100%);background-attachment:fixed;background-color:var(--bg)}
+a{color:var(--link)}::selection{background:rgba(245,196,0,.4)}
+h1,h2,h3,.hero h1,.hero2 h1,.page-h,.h2{font-family:var(--cond);font-weight:800;letter-spacing:.2px}
+.hero h1{font-size:38px;line-height:1}.page-h{font-size:40px}.h2{font-size:30px}
+.hero2 h1{font-size:68px;line-height:.95;letter-spacing:-.5px;text-transform:uppercase;max-width:900px}
+.hero2 h1 span{background:none;color:inherit;-webkit-text-fill-color:currentColor}
+@media(max-width:620px){.hero2 h1{font-size:44px}.hero h1{font-size:28px}}
+.top{background:rgba(7,19,43,.88)}
+.top:after{content:"";position:absolute;left:0;bottom:-2px;width:150px;height:3px;background:var(--gold);transform:skewX(-24deg);transform-origin:left bottom}
+.brand{font-family:var(--cond);font-size:21px;font-weight:800;letter-spacing:.3px}
+.brand .mark{background:var(--gold);color:var(--ink);border-radius:8px;box-shadow:none}
+.nav a{font-family:var(--cond);font-size:16px;font-weight:700;letter-spacing:.3px}
+.btn{color:var(--ink);font-family:var(--cond);font-weight:700;font-size:16px;letter-spacing:.3px;border-radius:8px;box-shadow:0 8px 20px -12px rgba(245,196,0,.7)}
+.btn:hover{filter:brightness(1.08)}.btn.g{color:var(--tx)}.btn.sm{font-size:14px;border-radius:7px}
+.tabs a{font-family:var(--cond);font-size:16px}.tabs a.on{color:var(--ink);box-shadow:none}
+.steps li:before{color:var(--ink);border-radius:6px;font-family:var(--cond)}
+.gh{font-family:var(--cond);font-size:17px;font-weight:700;letter-spacing:.8px;color:var(--tx)}
+.gh:before{width:5px;height:16px;border-radius:1px;background:var(--gold);box-shadow:none;transform:skewX(-16deg)}
+.pill{font-family:var(--cond);font-size:12.5px;letter-spacing:.4px;border-radius:3px;padding:2px 8px}
+.card,.ccard,.tile,.feat div,.aud section,.steps li{border-radius:var(--r)}
+.eyebrow{background:rgba(245,196,0,.08);border-color:rgba(245,196,0,.35);color:#ffe27a}
+.stats3 b{font-family:var(--cond);font-size:38px}
+/* the scorebug */
+.sc{font-family:var(--cond);font-weight:800;font-size:20px;letter-spacing:1.5px;color:var(--ink);background:var(--gold);border:0;border-radius:0;padding:1px 13px;clip-path:polygon(7px 0,100% 0,calc(100% - 7px) 100%,0 100%)}
+.ko{font-family:var(--cond);font-weight:700;font-size:15px;border-radius:0;clip-path:polygon(6px 0,100% 0,calc(100% - 6px) 100%,0 100%)}
+.board .big{font-family:var(--cond);font-size:76px;font-weight:800;color:var(--gold);text-shadow:none;letter-spacing:4px}
+@media(max-width:560px){.board .big{font-size:52px}}
+th{font-family:var(--cond);font-size:13px}
+.st .pts{font-family:var(--cond);font-size:19px}.st tr.q td:first-child{color:var(--tx);box-shadow:inset 3px 0 var(--pitch)}.st tr.hl td{background:rgba(245,196,0,.08)}
+.fm{font-family:var(--cond);font-size:12px;border-radius:3px}.fm.W{background:var(--pitch)}.fm.L{background:#c0263a}
+.ev .min{font-family:var(--cond);font-size:17px}
+.md{font-family:var(--cond);font-size:14px}
+.crest.trophy{background:radial-gradient(circle at 30% 25%,#16306a,#0a1834);color:var(--gold);border-color:rgba(245,196,0,.6)}
+.cta-band{background:radial-gradient(600px 200px at 80% 0,rgba(245,196,0,.18),transparent),repeating-linear-gradient(90deg,rgba(255,255,255,.03) 0 60px,transparent 60px 120px),linear-gradient(135deg,#0f2a63,#0a1834)}
+.cta-band h2{font-size:34px}
+.toast{background:#0b2a1a;border-color:var(--pitch)}
+.brand,.nav a{white-space:nowrap}@media(max-width:720px){.brand .bt{display:none}}
 </style></head><body>
 <header class="top"><div class="top-in">
   <a class="brand" href="/" aria-label="Competition Manager home"><span class="mark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 13v3M8 20h8M9.5 20l.5-4h4l.5 4"/></svg></span><span class="bt">Competition Manager</span></a>
