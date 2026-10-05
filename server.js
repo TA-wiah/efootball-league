@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS tokens(hash TEXT PRIMARY KEY, admin_id INTEGER NOT NU
 CREATE TABLE IF NOT EXISTS draws(id INTEGER PRIMARY KEY, ts INTEGER NOT NULL, by TEXT NOT NULL, kind TEXT NOT NULL, result TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY, ts INTEGER NOT NULL, actor TEXT, action TEXT NOT NULL, ip TEXT);
 `);
+if (!db.prepare("SELECT 1 AS x FROM pragma_table_info('draws') WHERE name='role'").get()) db.exec('ALTER TABLE draws ADD COLUMN role TEXT');
 // Old schema: sessions(token, expires) held raw tokens with no owner – replace it.
 if (!db.prepare("SELECT 1 AS x FROM pragma_table_info('sessions') WHERE name='admin_id'").get()) {
   db.exec(`DROP TABLE IF EXISTS sessions;
@@ -80,7 +81,8 @@ const audit = (actor, action, ip) => db.prepare('INSERT INTO audit(ts,actor,acti
 const pub = a => ({ id: a.id, username: a.username, email: a.email, role: a.role, pending: !a.hash, mustChange: !!a.must_change, lastLogin: a.last_login, created: a.created, invitedBy: a.invited_by });
 
 // ---------- bootstrap login ----------
-(async () => {
+// The port only opens once this has finished, so the first login can't race the password setup.
+const ready = (async () => {
   const weak = E.ADMIN_PASSWORD && pwProblem(E.ADMIN_PASSWORD, E.ADMIN_USER || 'admin');
   if (weak) console.error(`!! ADMIN_PASSWORD was NOT applied: ${weak} Fix it in .env and restart.`);
   if (E.ADMIN_PASSWORD && !weak) {
@@ -278,9 +280,9 @@ function writeState(s) {
 }
 // Fisher–Yates with the OS's cryptographic random generator: nobody, including admins, can predict or steer it.
 function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = crypto.randomInt(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; }
-function recordDraw(by, kind, result) {
+function recordDraw(me, kind, result) {
   const ts = Date.now();
-  const id = db.prepare('INSERT INTO draws(ts,by,kind,result) VALUES(?,?,?,?)').run(ts, by, kind, JSON.stringify(result)).lastInsertRowid;
+  const id = db.prepare('INSERT INTO draws(ts,by,role,kind,result) VALUES(?,?,?,?,?)').run(ts, me.username, me.role, kind, JSON.stringify(result)).lastInsertRowid;
   return { id: Number(id), ts, kind };
 }
 const ok = { ok: true };
@@ -402,8 +404,13 @@ const routes = {
   },
 
   // ----- official random draws -----
-  'GET /api/draws': (req, res) => send(res, 200, { draws: db.prepare('SELECT id, ts, by, kind, result FROM draws ORDER BY id DESC LIMIT 30').all()
-    .map(d => ({ ...d, result: JSON.parse(d.result) })) }),
+  // Only the current draws: the latest group draw, plus the knockout draw made after it (if any).
+  'GET /api/draws': (req, res) => {
+    const g = db.prepare("SELECT * FROM draws WHERE kind='groups' ORDER BY id DESC LIMIT 1").get();
+    const k = db.prepare("SELECT * FROM draws WHERE kind='knockout' AND id>? ORDER BY id DESC LIMIT 1").get(g ? g.id : 0);
+    const roleOf = d => d.role || (db.prepare('SELECT role FROM admins WHERE username=?').get(d.by) || {}).role || 'admin';
+    send(res, 200, { draws: [k, g].filter(Boolean).map(d => ({ id: d.id, ts: d.ts, by: d.by, role: roleOf(d), kind: d.kind, result: JSON.parse(d.result) })) });
+  },
   'POST /api/draw/groups': async (req, res, { me, ip }) => {
     if (!me) return send(res, 401, { error: 'login required' });
     const b = await json(req, 20000), G = +b.groups, seen = new Set();
@@ -430,7 +437,7 @@ const routes = {
       drawn.forEach((n, i) => { g[slots[i]].push(n); order.push([slots[i], n]); });
     }
     const prev = readState();
-    const dl = recordDraw(me.username, 'groups', { groups: g, order, pots: !!b.pots });
+    const dl = recordDraw(me, 'groups', { groups: g, order, pots: !!b.pots });
     const s = { g, r: {}, k: {}, st: {}, ev: {}, cfg: prev.cfg || {}, ui: prev.ui, aw: { bd: '', c: ((prev.aw && prev.aw.c) || []).map(c => ({ t: c.t, n: '' })) }, dl };
     writeState(s); audit(me.username, `ran the group draw (#${dl.id})`, ip);
     send(res, 200, { state: s, draw: dl, result: { groups: g, order, pots: !!b.pots } });
@@ -448,7 +455,7 @@ const routes = {
     const drawn = pots.map(shuffle);
     prev.kd = drawn.flat().map(x => x.k); prev.k = {};
     for (const k of Object.keys(prev.ev || {})) if (k.startsWith('k.')) delete prev.ev[k];
-    prev.dl = recordDraw(me.username, 'knockout', { pots: drawn });
+    prev.dl = recordDraw(me, 'knockout', { pots: drawn });
     writeState(prev); audit(me.username, `ran the knockout draw (#${prev.dl.id})`, ip);
     send(res, 200, { state: prev, draw: prev.dl, result: { pots: drawn } });
   },
@@ -555,11 +562,11 @@ const server = http.createServer(async (req, res) => {
   }
 });
 server.headersTimeout = 10000; server.requestTimeout = 20000; server.keepAliveTimeout = 5000;
-server.listen(PORT, () => {
+ready.then(() => server.listen(PORT, () => {
   console.log(`League site running on http://localhost:${PORT}`);
   console.log(smtpReady() ? `Email: sending through ${SMTP.host}:${SMTP.port}` : 'Email: SMTP not set (invite links will be shown in the admin panel instead).');
   if (!APP_URL) console.log('Tip: set APP_URL (e.g. https://league.example.com) so emailed links are correct and password reset is enabled.');
-});
+}));
 
 process.on('unhandledRejection', e => console.error('Unhandled error:', e));
 // Hosts stop containers with SIGTERM: finish open requests, then close the database cleanly.

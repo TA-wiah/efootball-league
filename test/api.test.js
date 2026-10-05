@@ -113,7 +113,9 @@ test('group draw is random, respects pots, and is published', async () => {
   const dup = await call(s, 'POST', '/api/draw/groups', { players: ['x', 'X', 'y', 'z'], groups: 2 });
   assert.equal(dup.status, 400);
   const pub = await (await fetch(B + '/api/draws')).json();
-  assert.ok(pub.draws.length >= 12 && pub.draws[0].kind === 'groups');
+  assert.equal(pub.draws.length, 1, 'only the current draw is shown');
+  assert.equal(pub.draws[0].kind, 'groups');
+  assert.equal(pub.draws[0].role, 'owner');
 });
 
 test('knockout pairings can only come from the server draw, once', async () => {
@@ -126,6 +128,8 @@ test('knockout pairings can only come from the server draw, once', async () => {
   assert.equal(first.status, 200);
   assert.equal((await first.json()).state.kd.length, 4);
   assert.equal((await call(s, 'POST', '/api/draw/knockout', { pots })).status, 409, 'no quiet redraws');
+  const pub = await (await fetch(B + '/api/draws')).json();
+  assert.deepEqual(pub.draws.map(d => d.kind), ['knockout', 'groups'], 'current knockout draw + the group draw it belongs to');
 });
 
 test('admins: invite link works once, then the new admin can log in', async () => {
