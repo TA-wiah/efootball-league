@@ -4,6 +4,7 @@ from django.urls import path, re_path
 from league import views as v
 from league.http import not_found, serve_page
 from competitions import api as c
+from competitions import discover
 from competitions import public as pub
 from orgs import api as o
 
@@ -25,7 +26,7 @@ def app_page(request, **kwargs):
 
 urlpatterns = [
     # ---- the original league page and its API ----
-    path("", v.index),          # landing page replaces this when HOME_PAGE=platform (phase 4, in progress)
+    path("", discover.home),     # the landing page (or the original league when HOME_PAGE=league)
     path("classic", v.index),
     path("index.html", v.index),
     path("api/state", state),
@@ -95,6 +96,8 @@ urlpatterns = [
     path("api/orgs/<slug:slug>/announcements", c.announcements),
     path("api/orgs/<slug:slug>/announcements/<int:ann_id>", c.announcement_detail),
     # ---- public pages (no login) ----
+    path("competitions", discover.competitions),
+    path("search", discover.search),
     path("competition/<slug:slug>", pub.competition),
     path("competition/<slug:slug>/<slug:tab>", pub.competition),
     path("league/<slug:slug>", pub.league_alias),

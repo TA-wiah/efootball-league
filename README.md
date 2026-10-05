@@ -136,6 +136,20 @@ preview and search engines can index it:
 - `/league/{slug}/…` links redirect to `/competition/{slug}/…`. `/sitemap.xml` and `/robots.txt` are generated.
 - Set `TIME_ZONE` (e.g. `Africa/Accra`) to group results by your local day. Visitors always see times in their own zone.
 
+### Landing page, discovery and search
+- **`/`** is the platform's landing page: what it does, buttons to *Create a competition*, *Register your league*,
+  *Manage your tournament* and *Register your team*, sections for league organizers, teams, organizers and fans,
+  how it works, featured / popular / starting-soon competitions, upcoming matches and browsing by country.
+- **`/competitions`** lists public competitions with search, filters (type, country, region, status) and sorting
+  (featured, most popular, starting soon, newest, A–Z), 24 per page.
+- **`/search?q=…`** finds public competitions, teams, matches (try "Kasoa vs Winneba") and organizers.
+- Unlisted and private competitions never appear in any of these.
+- **Featured**: the platform owner picks them with `python manage.py feature <competition-address>` (`--off` to undo).
+  **Popular** counts public page views.
+- **The original single league** now lives at **`/classic`** (its invite and reset links point there). Set
+  `HOME_PAGE=league` to keep it at `/` instead of the landing page. To move it into the platform for good, use
+  `python manage.py import_league <organization-address>`.
+
 ## Fair random draws
 - **Group draw** (Players tab): the **server** shuffles the players into groups with the operating system's
   cryptographic random generator, so the organizer can't pick or predict groups. A player's place in the group also

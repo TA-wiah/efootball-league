@@ -7,7 +7,7 @@ Visibility:  public   → listed, indexed, shareable
 import secrets
 from collections import OrderedDict
 
-from django.db.models import Q
+from django.db.models import F, Q
 from django.http import Http404, HttpResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
@@ -144,6 +144,8 @@ def competition(request, slug, tab=""):
         ctx["sections"] = [(k, [match_view(m, linkable) for m in v]) for k, v in group_by(results, day_label)]
     if tab == "teams":
         ctx["teams"] = [{**team_view(e.team, linkable), "group": e.group, "city": e.team.city} for e in entries]
+    if c.visibility == "public" and tab in ("", "table"):
+        Competition.objects.filter(id=c.id).update(views=F("views") + 1)     # for "popular" (doesn't touch `updated`)
     title = {"": c.name, "table": f"{c.name} table", "fixtures": f"{c.name} fixtures", "results": f"{c.name} results", "teams": f"{c.name} teams"}[tab]
     ctx["title"] = title + (f" {c.season}" if c.season else "")
     ctx["description"] = (c.description[:180] if c.description else
@@ -255,7 +257,7 @@ def robots(request):
 
 def sitemap(request):
     base = base_url(request)
-    urls = []
+    urls = [("/", None), ("/competitions", None)]
     for c in Competition.objects.filter(visibility="public").only("slug", "updated"):
         urls += [(f"/competition/{c.slug}{t}", c.updated) for t in ("", "/table", "/fixtures", "/results", "/teams")]
     urls += [(f"/match/{s}", u) for s, u in Match.objects.filter(competition__visibility="public").values_list("slug", "updated")[:20000]]

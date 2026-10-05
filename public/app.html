@@ -156,8 +156,8 @@ function dashboard(){document.title="My organizations · Competition Manager";
     document.querySelectorAll("[data-acc]").forEach(function(b){b.onclick=function(){busy(b,true,"Joining…");api("/api/me/invitations/"+b.dataset.acc+"/accept","POST",{}).then(function(r){
       if(!r.ok){busy(b,false);toast(r.data.error||"Couldn't accept",true);return}toast("You joined "+r.data.org.name);loadMe().then(function(){go("/app/org/"+r.data.org.slug)})})}})})}
 
-function createOrgView(){document.title="New organization · Competition Manager";
-  main('<form class="card" id="cf" style="max-width:640px" novalidate><div class="gh">CREATE AN ORGANIZATION</div><p class="note" style="margin-top:0">For example “Kasoa Community League”, “St. Mary\'s School Sports” or “Accra Corporate Cup”. You\'ll be its <b>owner</b> and can invite others afterwards.</p>'+
+function createOrgView(){var team=new URLSearchParams(location.search).get("intent")==="team";document.title=(team?"Register your team":"New organization")+" · Competition Manager";
+  main('<form class="card" id="cf" style="max-width:640px" novalidate><div class="gh">'+(team?"REGISTER YOUR TEAM":"CREATE AN ORGANIZATION")+'</div><p class="note" style="margin-top:0">'+(team?'Create a home for your club, e.g. “Kasoa Stars FC”. Then add your team and squad under Teams, and share it with league organizers so they can invite you.':'For example “Kasoa Community League”, “St. Mary\'s School Sports” or “Accra Corporate Cup”.')+' You\'ll be its <b>owner</b> and can invite others afterwards.</p>'+
   '<label for="n">Name<input id="n" maxlength="80" required></label><label for="d">Description (optional)<textarea id="d" maxlength="2000" placeholder="What is it? Who plays?"></textarea></label>'+
   '<div class="row"><label for="c">Country<input id="c" maxlength="60" placeholder="Ghana"></label><label for="r">Region / city<input id="r" maxlength="60" placeholder="Central"></label></div>'+
   '<div class="actions"><button class="btn" id="go">Create organization</button><a class="btn g" href="/app" data-nav>Cancel</a></div><div id="msg"></div></form>');

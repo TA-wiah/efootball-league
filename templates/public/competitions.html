@@ -1,0 +1,18 @@
+{% extends "public/base.html" %}
+{% block content %}
+<h1 style="margin:6px 0 4px">{% if filtered %}{{ title }}{% else %}Browse competitions{% endif %}</h1>
+<p class="note" style="margin:0 0 14px">Leagues, cups, school and community tournaments. {{ total }} found. <a href="/app/signup?next=/app/new">Add yours →</a></p>
+<form class="card filters" method="get" action="/competitions" role="search">
+  <label class="wide">Search<input name="q" value="{{ q }}" placeholder="Name, organizer, place or season" maxlength="80"></label>
+  <label>Type<select name="type"><option value="">Any</option>{% for k, label in kinds %}<option value="{{ k }}"{% if k == kind %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+  <label>Country<select name="country"><option value="">Any</option>{% for c in countries %}<option value="{{ c.country }}"{% if c.country|lower == country|lower %} selected{% endif %}>{{ c.country }} ({{ c.n }})</option>{% endfor %}</select></label>
+  <label>Status<select name="status"><option value="">Any</option>{% for k, label in statuses %}<option value="{{ k }}"{% if k == status %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+  <label>Sort<select name="sort">{% for k, label in sorts %}<option value="{{ k }}"{% if k == sort %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+  <button class="btn">Apply</button>
+  {% if region %}<input type="hidden" name="region" value="{{ region }}">{% endif %}
+</form>
+{% if regions %}<div class="chips" style="margin-bottom:14px"><a href="?country={{ country|urlencode }}" class="{% if not region %}on{% endif %}">All of {{ country }}</a>{% for r in regions %}<a href="?country={{ country|urlencode }}&amp;region={{ r.region|urlencode }}" class="{% if r.region|lower == region|lower %}on{% endif %}">{{ r.region }} <small>{{ r.n }}</small></a>{% endfor %}</div>{% endif %}
+{% if cards %}<div class="cards">{% for x in cards %}{% include "public/_card.html" %}{% endfor %}</div>
+{% else %}<section class="card" style="text-align:center"><h2>No competitions found</h2><p class="note">Try fewer filters, or be the first: create a competition for your area.</p><a class="btn" href="/app/signup?next=/app/new">Create a competition</a> <a class="btn g" href="/competitions">Clear filters</a></section>{% endif %}
+{% if pg.paginator.num_pages > 1 %}<nav class="pager" aria-label="Pages">{% if pg.has_previous %}<a class="btn g sm" href="?{{ query }}{% if query %}&amp;{% endif %}page={{ pg.previous_page_number }}">← Previous</a>{% endif %}<span class="note">Page {{ pg.number }} of {{ pg.paginator.num_pages }}</span>{% if pg.has_next %}<a class="btn g sm" href="?{{ query }}{% if query %}&amp;{% endif %}page={{ pg.next_page_number }}">Next →</a>{% endif %}</nav>{% endif %}
+{% endblock %}

@@ -51,6 +51,8 @@ class Competition(Logo):
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+")
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
+    featured = models.BooleanField(default=False)          # set by the platform owner: python manage.py feature <slug>
+    views = models.PositiveIntegerField(default=0)          # public page views, for "popular"
 
     def __str__(self):
         return self.name

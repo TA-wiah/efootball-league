@@ -1,0 +1,6 @@
+<a class="ccard" href="/competition/{{ x.slug }}">
+  <span class="ctop">{% if x.logo %}<img class="crest" src="{{ x.logo }}" alt="" style="width:44px;height:44px">{% else %}<span class="crest trophy" style="width:44px;height:44px" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 13v3M8 20h8M9.5 20l.5-4h4l.5 4"/></svg></span>{% endif %}
+    <span><b>{{ x.name }}</b><small>{{ x.kind }}{% if x.season %} · {{ x.season }}{% endif %}</small></span></span>
+  <small>{% if x.where %}{{ x.where }} · {% endif %}by {{ x.org }}</small>
+  <span class="cfoot">{% if x.featured %}<span class="pill gold">Featured</span>{% endif %}{% if x.status == "active" %}<span class="pill finished">In progress</span>{% elif x.status == "completed" %}<span class="pill">Completed</span>{% else %}<span class="pill warn">{% if x.start %}Starts {{ x.start|date:"j M" }}{% else %}Coming soon{% endif %}</span>{% endif %}<small>{{ x.teams }} teams · {{ x.played }} played</small></span>
+</a>
