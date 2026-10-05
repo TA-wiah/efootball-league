@@ -10,6 +10,8 @@ class Admin(AbstractUser):
     must_change = models.BooleanField(default=False)        # temporary password: choose a new one first
     invited_by = models.CharField(max_length=150, blank=True)
     session_epoch = models.PositiveIntegerField(default=0)  # bumped by "log out on all devices"
+    # Can edit the original single league (/). Platform sign-ups start without it.
+    league_access = models.BooleanField(default=False)
 
     class Meta:
         constraints = [

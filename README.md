@@ -74,6 +74,82 @@ automatically (`start.sh`), then serves the site with gunicorn. Without Docker, 
 - **Undo** (button or Ctrl+Z) takes back your last changes.
 - Ballon d'Or points: goal 3, assist 2, champion +10, runner-up +5.
 
+## The platform (/app): organizations, members and invitations
+Anyone can sign up at **/app** and create an **organization** (a league, school, club, academy or company). One account
+can belong to many organizations with a different role in each, and each organization's data is private to its members.
+
+| Role | What they can do |
+|---|---|
+| **Owner** | Everything, including settings, transferring ownership and deleting the organization |
+| **Organizer** | Run competitions (teams, fixtures, results, tables) and manage admins, editors, moderators and viewers |
+| **Admin** | Like an organizer, but can only manage editors, moderators and viewers |
+| **Editor** | Update scores, matches, team information and competition content |
+| **Moderator** | Look after published content, match information, teams and users |
+| **Viewer** | Read-only access |
+
+- **Invitations**: by email or as a shareable link, with a role. They're single-use, expire after 7 days, and show as
+  pending, accepted, expired or revoked. Email invitations can only be accepted by the account with that email.
+- People can only give roles below their own; ownership moves only through "Transfer ownership".
+- Every action is checked **on the server** (`orgs/permissions.py` is the single list of who can do what). Non-members
+  get "not found" for an organization, so private organizations stay invisible.
+- The original league site at `/` keeps working; only its existing editors can edit it.
+
+### Competitions (inside an organization)
+One generic system runs any competition: a Champions League, a school cup or a Sunday league. Each competition sets:
+name, logo, description, country/region, season, type, dates, visibility (public / unlisted / private), status, format
+(league, groups then knockouts, or knockout only), points for a win/draw/loss, tie-breakers in order (goal difference,
+goals scored, fewest conceded, wins, away goals, head-to-head points / goal difference / goals), how often teams meet,
+maximum teams and how many qualify from each group.
+
+- **Teams and players** belong to the organization and can play in several competitions. Logos are stored in the
+  database (PNG/JPG/GIF/WebP up to 256 KB; SVG is refused because it can carry scripts).
+- **Fixtures**: generated automatically (everyone plays everyone, once or home and away, per group), shuffled by the
+  server, with dates spaced from a first kick-off. Knockout rounds are drawn at random between the teams you tick.
+  Single matches can also be added by hand. Fixtures with results can't be regenerated.
+- **Results**: score, penalties, status, kick-off, venue, referee and match events (goals, cards, substitutions)
+  with players from the squad or typed names. Tables, form and top scorers update automatically.
+- **Points adjustments** (e.g. −3 for a sanction) and **announcements** (pinned, hidden, per competition).
+- Who can do what: organizers/admins build competitions and fixtures; editors enter results, update teams and
+  content; moderators hide or delete announcements; viewers read. All checked on the server.
+- **Bring your original league in**: `python manage.py import_league <organization-address>` copies its groups,
+  teams, group fixtures (same order as the old page), results and logged goals into a new competition.
+  Knockout rounds aren't copied; draw them again once the group stage is complete.
+
+### Public pages (no login needed)
+Every competition gets its own website, rendered on the server so WhatsApp, Facebook, X and Telegram show a proper
+preview and search engines can index it:
+
+| Address | What's there |
+|---|---|
+| `/competition/{slug}` | logo, name, description, season, table, upcoming matches, recent results, top scorers, news, facts and rules |
+| `/competition/{slug}/table` | the shareable league table (position, played, won, drawn, lost, goals for/against, goal difference, points, form) |
+| `/competition/{slug}/fixtures`, `/results`, `/teams` | fixtures by round, results by day, all teams |
+| `/match/{slug}` | e.g. `/match/kasoa-stars-vs-winneba-lions-2026-10-11`: teams, score, status, date and kick-off (in each visitor's time zone), venue, referee, goals, cards, substitutions, aggregate over two legs, the group table and the rest of the round |
+| `/team/{slug}` | form, upcoming matches, results, competitions and squad |
+| `/organization/{slug}` | its public competitions, teams, upcoming matches, results and news |
+
+- Every page has **Copy public link**, **Share** (on phones) and WhatsApp / Facebook / X / Telegram buttons, and
+  the dashboard has "Public page" and "Copy public link" buttons wherever something is public.
+- **Visibility**: public pages are listed and indexed; **unlisted** ones work for anyone with the link but are
+  marked "noindex" and never listed; **private** ones return "not found" except to the organization's members, who
+  see a marked preview. A team gets a public page once it plays in a public competition.
+- `/league/{slug}/…` links redirect to `/competition/{slug}/…`. `/sitemap.xml` and `/robots.txt` are generated.
+- Set `TIME_ZONE` (e.g. `Africa/Accra`) to group results by your local day. Visitors always see times in their own zone.
+
+### Landing page, discovery and search
+- **`/`** is the platform's landing page: what it does, buttons to *Create a competition*, *Register your league*,
+  *Manage your tournament* and *Register your team*, sections for league organizers, teams, organizers and fans,
+  how it works, featured / popular / starting-soon competitions, upcoming matches and browsing by country.
+- **`/competitions`** lists public competitions with search, filters (type, country, region, status) and sorting
+  (featured, most popular, starting soon, newest, A–Z), 24 per page.
+- **`/search?q=…`** finds public competitions, teams, matches (try "Kasoa vs Winneba") and organizers.
+- Unlisted and private competitions never appear in any of these.
+- **Featured**: the platform owner picks them with `python manage.py feature <competition-address>` (`--off` to undo).
+  **Popular** counts public page views.
+- **The original single league** now lives at **`/classic`** (its invite and reset links point there). Set
+  `HOME_PAGE=league` to keep it at `/` instead of the landing page. To move it into the platform for good, use
+  `python manage.py import_league <organization-address>`.
+
 ## Fair random draws
 - **Group draw** (Players tab): the **server** shuffles the players into groups with the operating system's
   cryptographic random generator, so the organizer can't pick or predict groups. A player's place in the group also
@@ -109,11 +185,15 @@ Nobody can read a password: only a one-way hash is stored. Set `ADMIN_USER` and 
 
 ## Checks
 - `python manage.py test` runs the automated tests (login, lockouts, CSRF, two editors, validation, draws, invites,
-  email). Run it after every change, before you deploy.
+  email, and every organization role and invitation state). Run it after every change, before you deploy.
 - `GET /api/health` answers `{"ok": true}` when the server and database are working.
 
 ## Files
-- `league/`: the Django app: `views.py` (the API), `logic.py` (rules, draws, validation), `models.py` (database tables),
+- `competitions/public.py` + `templates/public/`: the public pages
+- `competitions/`: competitions, teams, players, matches: `models.py`, `engine.py` (fixtures, standings, tie-breakers), `api.py`, `tests.py`, `management/commands/import_league.py`
+- `orgs/`: the platform: `models.py` (organizations, memberships, invitations), `permissions.py` (roles), `api.py`, `tests.py`
+- `public/app.html`: the platform pages (sign-up, dashboards, members, invitations)
+- `league/`: the original league app: `views.py` (the API), `logic.py` (rules, draws, validation), `models.py` (database tables),
   `emailer.py` (Brevo/Resend/SMTP), `management/commands/` (`ensure_admin`, `backup`), `tests.py`
 - `league_site/settings.py`: all settings, read from environment variables / `.env`
 - `public/index.html`: the whole page (HTML, CSS and the JavaScript that runs in the browser)

@@ -1,0 +1,49 @@
+{% extends "public/base.html" %}
+{% block content %}
+<section class="card">
+  <div class="hero">
+    {% if logo %}<img class="crest" src="{{ logo }}" alt="{{ c.name }} logo" style="width:72px;height:72px">{% else %}<span class="crest trophy" style="width:72px;height:72px" aria-hidden="true"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 13v3M8 20h8M9.5 20l.5-4h4l.5 4"/></svg></span>{% endif %}
+    <div>
+      <h1>{{ c.name }}</h1>
+      <div class="note">{{ kind }}{% if c.season %} · {{ c.season }}{% endif %}{% if c.region or c.country %} · {{ c.region }}{% if c.region and c.country %}, {% endif %}{{ c.country }}{% endif %} · by <a href="/organization/{{ c.org.slug }}">{{ c.org.name }}</a></div>
+      <div class="note">{{ team_count }} teams · {{ played }} of {{ total }} matches played{% if c.status == "completed" %} · <span class="pill finished">Completed</span>{% endif %}</div>
+    </div>
+  </div>
+  <nav class="tabs" aria-label="Competition sections">{% for key, label in tabs %}<a href="/competition/{{ c.slug }}{% if key %}/{{ key }}{% endif %}" class="{% if key == tab %}on{% endif %}"{% if key == tab %} aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}</nav>
+</section>
+
+{% if tab == "" %}
+  <div class="two">
+    <div>
+      {% if has_table %}<section class="card"><div class="gh">Table</div>{% include "public/_table.html" %}<p><a class="btn g sm" href="/competition/{{ c.slug }}/table">Full table</a></p></section>{% endif %}
+      <section class="card"><div class="gh">Upcoming matches</div>{% for m in upcoming %}{% include "public/_match.html" with show_round=1 %}{% empty %}<p class="note">No upcoming matches.</p>{% endfor %}</section>
+      <section class="card"><div class="gh">Recent results</div>{% for m in recent %}{% include "public/_match.html" with show_round=1 %}{% empty %}<p class="note">No results yet.</p>{% endfor %}</section>
+    </div>
+    <div>
+      <section class="card"><div class="gh">Share</div>{% include "public/_share.html" with share_url=url share_text=c.name %}</section>
+      {% if c.description %}<section class="card"><div class="gh">About</div><p style="margin:0;white-space:pre-wrap">{{ c.description }}</p></section>{% endif %}
+      {% if news %}<section class="card"><div class="gh">News</div>{% for n in news %}<div class="news"><b>{{ n.title }}</b> {% if n.pinned %}<span class="pill">Pinned</span>{% endif %}<div class="note"><time datetime="{{ n.created|date:'c' }}" data-f="date">{{ n.created|date:"j M Y" }}</time></div><p>{{ n.body }}</p></div>{% endfor %}</section>{% endif %}
+      {% if scorers %}<section class="card"><div class="gh">Top scorers</div><div class="tbl"><table><thead><tr><th>#</th><th style="text-align:left">Player</th><th>Goals</th><th>Assists</th></tr></thead><tbody>{% for s in scorers %}<tr><td>{{ forloop.counter }}</td><td style="text-align:left"><b>{{ s.name }}</b>{% if s.team %}<div class="note">{{ s.team.name }}</div>{% endif %}</td><td style="color:var(--gold);font-weight:900">{{ s.goals }}</td><td>{{ s.assists }}</td></tr>{% endfor %}</tbody></table></div></section>{% endif %}
+      <section class="card"><div class="gh">Competition facts</div><table class="facts"><tbody>
+        <tr><td>Format</td><td>{{ format }}</td></tr>
+        {% if c.start_date %}<tr><td>Dates</td><td>{{ c.start_date|date:"j M Y" }}{% if c.end_date %} – {{ c.end_date|date:"j M Y" }}{% endif %}</td></tr>{% endif %}
+        {% if has_table %}<tr><td>Points</td><td>{{ points }}</td></tr><tr><td>Tie-breakers</td><td>{{ tiebreakers|join:" → " }}</td></tr>{% endif %}
+      </tbody></table>{% if c.rules %}<div class="md">Rules</div><p style="margin:0;white-space:pre-wrap">{{ c.rules }}</p>{% endif %}</section>
+    </div>
+  </div>
+{% elif tab == "table" %}
+  <section class="card"><div class="gh">{{ c.name }} table</div>{% include "public/_table.html" %}
+    <p class="note">Points: {{ points }}. Teams level on points are separated by: {{ tiebreakers|join:" → " }}.{% if c.format == "groups_knockout" %} The top {{ c.qualifiers_per_group }} of each group (gold) go through.{% endif %}</p>
+    {% include "public/_share.html" with share_url=url share_text=title %}
+  </section>
+{% elif tab == "fixtures" or tab == "results" %}
+  <section class="card"><div class="gh">{% if tab == "fixtures" %}Fixtures{% else %}Results{% endif %}</div>
+    {% for label, ms in sections %}<div class="md">{{ label }}</div>{% for m in ms %}{% include "public/_match.html" with show_round=show_round %}{% endfor %}{% empty %}<p class="note">{% if tab == "fixtures" %}No upcoming matches.{% else %}No results yet.{% endif %}</p>{% endfor %}
+  </section>
+  <section class="card">{% include "public/_share.html" with share_url=url share_text=title %}</section>
+{% elif tab == "teams" %}
+  <section class="card"><div class="gh">Teams · {{ team_count }}</div><div class="grid">
+    {% for t in teams %}{% if t.link %}<a class="tile" href="/team/{{ t.slug }}">{% else %}<div class="tile">{% endif %}{% include "public/_crest.html" with t=t size=36 %}<span>{{ t.name }}{% if t.group or t.city %}<small>{% if t.group %}Group {{ t.group }}{% endif %}{% if t.group and t.city %} · {% endif %}{{ t.city }}</small>{% endif %}</span>{% if t.link %}</a>{% else %}</div>{% endif %}{% empty %}<p class="note">No teams yet.</p>{% endfor %}
+  </div></section>
+{% endif %}
+{% endblock %}

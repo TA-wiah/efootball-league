@@ -1,0 +1,42 @@
+{% extends "public/base.html" %}
+{% block content %}
+<section class="card">
+  <div class="note" style="text-align:center"><a href="/competition/{{ c.slug }}">{{ c.name }}</a> · {{ m.round }}{% if m.group %} · Group {{ m.group }}{% endif %}{% if m.leg > 1 %} · 2nd leg{% endif %}</div>
+  <div class="board">
+    {% if m.home %}<{% if m.home.link %}a href="/team/{{ m.home.slug }}"{% else %}div{% endif %} class="t">{% include "public/_crest.html" with t=m.home size=64 %}<span>{{ m.home.name }}</span></{% if m.home.link %}a{% else %}div{% endif %}>{% else %}<div class="t">{% include "public/_crest.html" with t=None size=64 %}<span class="note">To be decided</span></div>{% endif %}
+    <div>
+      <div class="big">{% if m.played %}{{ m.hs }} : {{ m.as }}{% elif m.kickoff %}<time datetime="{{ m.kickoff|date:'c' }}" data-f="time" style="font-size:30px">{{ m.kickoff|date:"H:i" }}</time>{% else %}vs{% endif %}</div>
+      {% if m.hp is not None %}<div class="note">Penalties {{ m.hp }}–{{ m.ap }}</div>{% endif %}
+      {% if aggregate.total %}<div class="note">Aggregate {{ aggregate.home }}–{{ aggregate.away }}</div>{% endif %}
+      <span class="pill {{ m.status }}">{{ m.status_label }}</span>
+    </div>
+    {% if m.away %}<{% if m.away.link %}a href="/team/{{ m.away.slug }}"{% else %}div{% endif %} class="t">{% include "public/_crest.html" with t=m.away size=64 %}<span>{{ m.away.name }}</span></{% if m.away.link %}a{% else %}div{% endif %}>{% else %}<div class="t">{% include "public/_crest.html" with t=None size=64 %}<span class="note">To be decided</span></div>{% endif %}
+  </div>
+  <div style="display:flex;justify-content:center">{% include "public/_share.html" with share_url=url share_text=title %}</div>
+</section>
+
+<div class="two">
+  <div>
+    <section class="card"><div class="gh">Match events</div>
+      {% for e in events %}<div class="ev {{ e.side }}"><span class="min">{% if e.minute is not None %}{{ e.minute }}'{% endif %}</span>
+        {% if e.icon == "goal" %}<svg class="ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m12 7 4 3-1.5 4.5h-5L8 10z"/></svg>{% elif e.icon == "sub" %}<svg class="ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 4v14M3 14l4 4 4-4M17 20V6M13 10l4-4 4 4"/></svg>{% else %}<span class="ico {{ e.icon }}" aria-hidden="true"></span>{% endif %}
+        <span><b>{{ e.player|default:"Unknown player" }}</b> <span class="note">{{ e.label }}{% if e.assist %}, assist {{ e.assist }}{% endif %}{% if e.note %} · {{ e.note }}{% endif %}</span></span></div>
+      {% empty %}<p class="note">{% if m.played %}No goals or cards were recorded.{% else %}Goals and cards appear here once the match is played.{% endif %}</p>{% endfor %}
+    </section>
+    {% if aggregate.other %}<section class="card"><div class="gh">Other leg</div>{% include "public/_match.html" with m=aggregate.other show_round=1 %}</section>{% endif %}
+    {% if same_round %}<section class="card"><div class="gh">Also in {{ m.round }}</div>{% for x in same_round %}{% include "public/_match.html" with m=x %}{% endfor %}</section>{% endif %}
+  </div>
+  <div>
+    <section class="card"><div class="gh">Match information</div><table class="facts"><tbody>
+      <tr><td>Competition</td><td><a href="/competition/{{ c.slug }}">{{ c.name }}</a>{% if c.season %} ({{ c.season }}){% endif %}</td></tr>
+      <tr><td>Stage</td><td>{{ m.round }}{% if m.group %}, Group {{ m.group }}{% endif %}</td></tr>
+      <tr><td>Date</td><td>{% if m.kickoff %}<time datetime="{{ m.kickoff|date:'c' }}" data-f="date">{{ m.kickoff|date:"l j F Y" }}</time>{% else %}To be set{% endif %}</td></tr>
+      <tr><td>Kick-off</td><td>{% if m.kickoff %}<time datetime="{{ m.kickoff|date:'c' }}" data-f="time">{{ m.kickoff|date:"H:i" }}</time>{% else %}To be set{% endif %}</td></tr>
+      {% if m.venue %}<tr><td>Venue</td><td>{{ m.venue }}</td></tr>{% endif %}
+      {% if referee %}<tr><td>Referee</td><td>{{ referee }}</td></tr>{% endif %}
+      <tr><td>Status</td><td>{{ m.status_label }}</td></tr>
+    </tbody></table>{% if notes %}<p class="note" style="white-space:pre-wrap">{{ notes }}</p>{% endif %}</section>
+    {% if table %}<section class="card"><div class="gh">{% if m.group %}Group {{ m.group }}{% else %}Table{% endif %}</div>{% include "public/_table.html" with groups=table %}</section>{% endif %}
+  </div>
+</div>
+{% endblock %}
