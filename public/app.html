@@ -70,6 +70,54 @@ table.st td,table.st th{text-align:center;padding:8px 4px}.st .tl{text-align:lef
 .inline input,.inline select{margin:0;padding:7px;font-size:13px}td.inline{min-width:70px}
 .ch{display:flex;align-items:center;gap:10px}.big-crest{width:56px;height:56px}
 .search{max-width:320px}
+/* ---------- super admin panel ---------- */
+.w.wide{max-width:none;padding:0}
+.ashell{display:grid;grid-template-columns:268px minmax(0,1fr);min-height:calc(100vh - 58px)}
+.asb{position:sticky;top:58px;height:calc(100vh - 58px);overflow-y:auto;background:#0a1440;border-right:1px solid var(--line);padding:14px 10px 30px;scrollbar-width:thin}
+.asb-h{display:flex;align-items:center;gap:8px;font-weight:900;font-size:13px;letter-spacing:1px;text-transform:uppercase;color:var(--gold);padding:6px 10px 14px}
+.ag{margin-bottom:2px}.agh{width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:0;color:var(--tx);font:inherit;font-weight:800;font-size:13px;padding:9px 10px;border-radius:9px;cursor:pointer;text-align:left}
+.agh:hover{background:var(--card2)}.agh .chev{transition:transform .2s;color:var(--soft)}.ag.open .agh .chev{transform:rotate(90deg)}
+.agi{display:none;padding:2px 0 6px 10px}.ag.open .agi{display:block}
+.agi a{display:block;padding:7px 10px;border-radius:8px;color:var(--soft);text-decoration:none;font-size:13px;font-weight:600;border-left:2px solid transparent}
+.agi a:hover{color:var(--tx);background:rgba(255,255,255,.04)}.agi a.on{color:var(--gold);background:rgba(255,205,70,.08);border-left-color:var(--gold)}
+.asb-f{border-top:1px solid var(--line);margin-top:12px;padding-top:12px}.asb-f a{display:block;padding:7px 10px;color:var(--soft);text-decoration:none;font-size:13px;font-weight:600}.asb-f a:hover{color:var(--tx)}
+.amain{min-width:0;padding:18px 26px 60px}
+.abar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.crumbs{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--soft);flex-wrap:wrap}.crumbs a{color:var(--soft);text-decoration:none}.crumbs a:hover{color:var(--tx)}.crumbs span{opacity:.5}
+.ags{margin-left:auto;display:flex;gap:6px;min-width:260px}.ags input{margin:0;padding:9px 12px;font-size:14px}
+.amenu{display:none}
+.ahead{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:6px 0 18px}.ahead h1{margin:0;font-size:26px}.ahead .actions{margin:0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:18px}
+.kpi{display:block;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;text-decoration:none;color:var(--tx);transition:border-color .15s,transform .15s}
+a.kpi:hover{border-color:var(--gold);transform:translateY(-2px)}.kpi span{display:block;color:var(--soft);font-size:12px;font-weight:700;letter-spacing:.3px}.kpi b{display:block;font-size:28px;font-weight:900;margin-top:4px;font-variant-numeric:tabular-nums}
+.kpi.warn b{color:var(--gold)}.kpi.bad b{color:var(--bad)}
+.agrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px}.toolbar label{margin:0;min-width:150px}.toolbar input,.toolbar select{margin-top:4px;padding:9px 10px;font-size:14px}
+.toolbar .grow{flex:1;min-width:220px}
+.dt{width:100%;border-collapse:collapse;font-size:14px}.dt th{text-align:left;color:var(--soft);font-size:11px;letter-spacing:.6px;text-transform:uppercase;padding:10px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.dt td{padding:10px 8px;border-top:1px solid var(--line);vertical-align:middle}.dt tr:hover td{background:rgba(255,255,255,.025)}.dt td.num,.dt th.num{text-align:right;font-variant-numeric:tabular-nums}
+.dt a{color:var(--tx);font-weight:700;text-decoration:none}.dt a:hover{color:var(--gold)}.dt small{display:block;color:var(--soft);font-weight:500}
+.dt input[type=checkbox]{width:16px;height:16px;margin:0;accent-color:var(--gold)}
+.pager{display:flex;align-items:center;gap:10px;justify-content:flex-end;margin-top:12px;font-size:13px;color:var(--soft)}
+.bulk{display:flex;gap:8px;align-items:center;margin-left:auto}.bulk select{margin:0;padding:8px;font-size:13px;width:auto}
+.sb{display:inline-block;font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;white-space:nowrap;letter-spacing:.2px}
+.sb.green{background:rgba(95,227,154,.15);color:#a8f0c8}.sb.red{background:rgba(255,107,129,.16);color:#ffb3bf}.sb.amber{background:rgba(255,205,70,.15);color:#ffe08a}.sb.blue{background:rgba(74,163,255,.16);color:#a9d2ff}.sb.grey{background:rgba(150,175,235,.14);color:var(--soft)}
+.chart{margin:0;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.chart figcaption{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}.chart figcaption b{font-size:14px}.chart figcaption span{color:var(--soft);font-size:13px}.chart figcaption strong{font-size:22px;color:var(--tx)}
+.chart svg{width:100%;height:auto;display:block}.chart .bar{fill:#b97f0f}.chart .hit:hover+.bar,.chart g:hover .bar{fill:#d99a17}.chart .ax{fill:var(--soft);font-size:10px}.chart .gl{stroke:rgba(150,175,235,.14);stroke-width:1}
+.chart details{margin-top:6px;font-size:13px}.chart details table{font-size:12px}.chart details td,.chart details th{padding:3px 6px;text-align:left}
+#ctip{position:fixed;z-index:50;pointer-events:none;background:#0b1543;border:1px solid var(--line2,#3a4c94);color:var(--tx);font-size:12px;padding:6px 9px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.5);display:none;font-variant-numeric:tabular-nums}
+.ranges{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.kv{display:grid;grid-template-columns:minmax(120px,38%) 1fr;gap:8px 14px;font-size:14px}.kv dt{color:var(--soft)}.kv dd{margin:0;word-break:break-word}
+.modal{position:fixed;inset:0;z-index:40;background:rgba(3,6,20,.72);display:grid;place-items:center;padding:16px}
+.mbox{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;max-width:440px;width:100%;box-shadow:0 30px 60px -20px rgba(0,0,0,.8)}.mbox h2{margin:0 0 8px}.mbox p{color:var(--tx2,#c9d6ff);margin:0 0 6px}
+.btn.bad{background:#b03a52;color:#fff}
+.oldnew{font-size:12px;color:var(--soft);word-break:break-word}.oldnew del{color:#ffb3bf;text-decoration:none}.oldnew ins{color:#a8f0c8;text-decoration:none}
+.adm-link{color:var(--gold)!important}
+.ctab{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+@media(max-width:900px){.ashell{grid-template-columns:1fr}.asb{position:fixed;left:0;top:0;bottom:0;height:100vh;width:min(86vw,300px);z-index:45;transform:translateX(-105%);transition:transform .2s;box-shadow:20px 0 40px rgba(0,0,0,.5)}
+  .asb.show{transform:none}.amenu{display:inline-flex}.amain{padding:14px 16px 60px}.ags{min-width:0;width:100%;margin-left:0}.ahead h1{font-size:22px}
+  .ascrim{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:44}}
 @media (prefers-reduced-motion:no-preference){#main>*{animation:rise .35s cubic-bezier(.2,.8,.2,1) both}.toast{animation:rise .3s both}}
 @keyframes rise{from{opacity:0;transform:translateY(12px)}}
 </style></head><body>
@@ -88,12 +136,12 @@ var IC={users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 
   shield:'<path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/>',copy:'<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
   share:'<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/>'};
 function ic(n){return'<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">'+IC[n]+'</svg>'}
-var ME=null,ORGS=[],INV=0,CSRF="",ROLES=null;
+var ME=null,ORGS=[],INV=0,CSRF="",ROLES=null,SITE={},ANN=[];
 function api(url,method,data){var o={method:method||"GET",headers:{},credentials:"same-origin",cache:"no-store"};if(CSRF)o.headers["X-CSRF"]=CSRF;
   if(data!==undefined){o.headers["Content-Type"]="application/json";o.body=JSON.stringify(data)}
   return fetch(url,o).then(function(r){return r.json().catch(function(){return{}}).then(function(d){return{ok:r.ok,status:r.status,data:d}})},
     function(){return{ok:false,status:0,data:{error:"Can't reach the server. Check your connection."}}})}
-function loadMe(){return api("/api/auth/me").then(function(r){if(r.ok){ME=r.data.user;ORGS=r.data.orgs||[];INV=r.data.invitations||0;CSRF=r.data.csrf}})}
+function loadMe(){return api("/api/auth/me").then(function(r){if(r.ok){ME=r.data.user;ORGS=r.data.orgs||[];INV=r.data.invitations||0;CSRF=r.data.csrf;SITE=r.data.site||{};ANN=r.data.announcements||[]}})}
 function loadRoles(){return ROLES?Promise.resolve(ROLES):api("/api/roles").then(function(r){ROLES=r.data;return ROLES})}
 function roleLabel(k){var r=ROLES&&ROLES.roles.filter(function(x){return x.key===k})[0];return r?r.label:k}
 function pill(role,label){return'<span class="pill '+esc(role)+'">'+esc(label||roleLabel(role))+'</span>'}
@@ -101,8 +149,8 @@ function date(ms){return ms?new Date(ms).toLocaleDateString(undefined,{day:"nume
 function ago(ms){if(!ms)return"never";var s=(Date.now()-ms)/1000;return s<90?"just now":s<5400?Math.round(s/60)+" min ago":s<129600?Math.round(s/3600)+" h ago":Math.round(s/86400)+" days ago"}
 function toast(msg,bad){var t=$("toast");t.textContent=msg;t.className="toast"+(bad?" bad":"");t.hidden=false;clearTimeout(t._h);t._h=setTimeout(function(){t.hidden=true},5000)}
 function errBox(r){return'<div class="err" role="alert">'+esc((r&&r.data&&r.data.error)||"Something went wrong.")+'</div>'}
-function main(html){$("main").innerHTML=html;window.scrollTo(0,0)}
-function safeNext(){var n=new URLSearchParams(location.search).get("next")||"";return/^\/(?!\/)/.test(n)?n:"/app"}
+function main(html,wide){var m=$("main");m.className="w"+(wide?" wide":"");m.innerHTML=html;window.scrollTo(0,0)}
+function safeNext(){var n=new URLSearchParams(location.search).get("next")||"";return/^\/(?!\/)/.test(n)?n:(ME&&ME.superAdmin?"/admin":"/app")}
 function copy(text,btn){var done=function(){if(btn){var o=btn.innerHTML;btn.textContent="Copied";setTimeout(function(){btn.innerHTML=o},1600)}toast("Link copied")};
   if(navigator.clipboard)navigator.clipboard.writeText(text).then(done,function(){prompt("Copy this link:",text)});else prompt("Copy this link:",text)}
 // Two-tap confirmation for anything destructive
@@ -115,15 +163,19 @@ function go(path,replace){history[replace?"replaceState":"pushState"](null,"",pa
 document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("a[data-nav]");if(a&&!e.ctrlKey&&!e.metaKey&&!e.shiftKey&&e.button===0){e.preventDefault();go(a.getAttribute("href"))}});
 window.addEventListener("popstate",route);
 function topnav(){$("topnav").innerHTML=(ME?
-  '<a href="/app" data-nav>My organizations'+(INV?' <span class="pill pending">'+INV+'</span>':'')+'</a>'+(ME.leagueAccess?'<a href="/classic">League site</a>':'')+'<span class="who">'+esc(ME.username)+'</span><button class="btn g sm" id="logout">Log out</button>'
+  (ME.superAdmin?'<a href="/admin" data-nav class="adm-link">'+ic("shield")+' Admin panel</a>':'')+'<a href="'+(ME.superAdmin?"/app?view=orgs":"/app")+'" data-nav>My organizations'+(INV?' <span class="pill pending">'+INV+'</span>':'')+'</a>'+(ME.leagueAccess?'<a href="/classic">League site</a>':'')+'<a href="/app/support" data-nav>Help</a><span class="who">'+esc(ME.username)+'</span><button class="btn g sm" id="logout">Log out</button>'
   :(function(){var n=/^\/invite\//.test(location.pathname)?"?next="+encodeURIComponent(location.pathname):"";
-     return'<a href="/competitions">Competitions</a><a href="/app/login'+n+'" data-nav>Log in</a><a class="btn sm" href="/app/signup'+n+'" data-nav>Sign up</a>'})());
+     return'<a href="/competitions">Competitions</a><a class="btn sm" href="/app/login'+n+'" data-nav>Log in</a>'})());
   var lo=$("logout");if(lo)lo.onclick=function(){api("/api/auth/logout","POST",{}).then(loadMe).then(function(){toast("Logged out");go("/app/login")})}}
 function route(){topnav();var p=location.pathname.replace(/\/+$/,"")||"/",m;
   if((m=p.match(/^\/invite\/([^/]+)$/)))return inviteView(decodeURIComponent(m[1]));
   if(p==="/app/login"||p==="/app/signup")return ME?go(safeNext(),true):authView(p.slice(5));
-  if(!ME)return go("/app/login?next="+encodeURIComponent(location.pathname),true);
+  if(!ME)return go("/app/login?next="+encodeURIComponent(location.pathname+location.search),true);
+  if(p==="/admin"||p.indexOf("/admin/")===0){if(!ME.superAdmin)return main('<div class="card empty">'+ic("shield")+'<h2>Super admins only</h2><p class="note">The platform administration area is only for platform super admins.</p><a class="btn" href="/app" data-nav>Go to my organizations</a></div>');
+    var parts=p.split("/").slice(2);return adminView(parts[0]||"",parts.slice(1).join("/"))}
+  if(p==="/app"&&ME.superAdmin&&new URLSearchParams(location.search).get("view")!=="orgs")return go("/admin",true);
   if(p==="/app")return dashboard();
+  if(p==="/app/support")return supportView();
   if(p==="/app/new")return createOrgView();
   if((m=p.match(/^\/app\/org\/([a-z0-9-]+)(?:\/([a-z]+)(?:\/(.+))?)?$/)))return orgView(m[1],m[2]||"overview",m[3]);
   main('<div class="card empty"><h2>Page not found</h2><p class="note">That page doesn\'t exist.</p><a class="btn" href="/app" data-nav>Go to my organizations</a></div>')}
@@ -131,7 +183,7 @@ function route(){topnav();var p=location.pathname.replace(/\/+$/,"")||"/",m;
 // ---------- log in / sign up ----------
 function authView(mode){var q=new URLSearchParams(location.search),next=q.toString()?"?"+q.toString():"";
   document.title=(mode==="signup"?"Sign up":"Log in")+" · Competition Manager";
-  main('<div class="auth"><div class="tabs2"><a href="/app/login'+esc(next)+'" data-nav class="'+(mode==="login"?"on":"")+'">Log in</a><a href="/app/signup'+esc(next)+'" data-nav class="'+(mode==="signup"?"on":"")+'">Sign up</a></div>'+
+  main('<div class="auth"><div class="tabs2"><a href="/app/login'+esc(next)+'" data-nav class="'+(mode==="login"?"on":"")+'">Log in</a>'+(SITE.signups===false?'':'<a href="/app/signup'+esc(next)+'" data-nav class="'+(mode==="signup"?"on":"")+'">Sign up</a>')+'</div>'+
   '<form class="card" id="af" novalidate><h1>'+(mode==="signup"?"Create your account":"Welcome back")+'</h1><p class="sub">'+(mode==="signup"?"Free. Run leagues and tournaments, invite your staff and publish results.":"Log in to manage your organizations and competitions.")+'</p>'+
   (mode==="signup"?'<label for="u">Username<input id="u" autocomplete="username" autocapitalize="none" spellcheck="false" required></label><label for="e">Email<input id="e" type="email" autocomplete="email" value="'+esc(q.get("email")||"")+'" required></label>'
    :'<label for="u">Username or email<input id="u" autocomplete="username" autocapitalize="none" spellcheck="false" required></label>')+
@@ -147,7 +199,8 @@ function authView(mode){var q=new URLSearchParams(location.search),next=q.toStri
 
 // ---------- my organizations ----------
 function dashboard(){document.title="My organizations · Competition Manager";
-  main('<h1>My organizations</h1><p class="sub">An organization is your league, school, club, academy or company. Each one has its own competitions, teams and staff.</p><div id="invs"></div><div id="orgs"><div class="card note">Loading…</div></div>');
+  main((SITE.notice?'<div class="okm" style="margin:0 0 14px">'+esc(SITE.notice)+'</div>':'')+ANN.map(function(a){return'<div class="'+(a.level==="warning"?"err":"okm")+'" style="margin:0 0 12px"><b>'+esc(a.title)+'</b>'+(a.body?'<div style="margin-top:4px;white-space:pre-wrap">'+esc(a.body)+'</div>':'')+'</div>'}).join("")+
+    '<h1>My organizations</h1><p class="sub">An organization is your league, school, club, academy or company. Each one has its own competitions, teams and staff.</p><div id="invs"></div><div id="orgs"><div class="card note">Loading…</div></div>');
   Promise.all([loadMe(),loadRoles(),api("/api/me/invitations")]).then(function(res){topnav();var inv=res[2].data.invitations||[];
     $("invs").innerHTML=inv.length?'<div class="card"><div class="gh">INVITATIONS FOR YOU</div>'+inv.map(function(i){return'<div class="actions" style="align-items:center;margin:6px 0;justify-content:space-between"><div><b>'+esc(i.org.name)+'</b> '+pill(i.role,i.roleLabel)+'<div class="note">Invited by '+esc(i.invitedBy||"someone")+' · expires '+date(i.expires)+'</div></div><button class="btn sm" data-acc="'+i.id+'">Accept</button></div>'}).join("")+'</div>':"";
     $("orgs").innerHTML='<div class="grid">'+ORGS.map(function(o){return'<a class="oc" href="/app/org/'+esc(o.slug)+'" data-nav><b>'+esc(o.name)+'</b>'+pill(o.role,o.roleLabel)+'<div style="margin-top:8px"><small>'+ic("users")+' '+o.members+' member'+(o.members===1?"":"s")+(o.country||o.region?' · '+esc([o.region,o.country].filter(Boolean).join(", ")):"")+'</small></div></a>'}).join("")+
@@ -509,6 +562,369 @@ function inviteView(token){document.title="Invitation · Competition Manager";ma
     main(head+'<p class="note">You\'re logged in as <b style="color:var(--tx)">'+esc(ME.username)+'</b>.</p><div class="actions"><button class="btn" id="acc">Accept invitation</button><a class="btn g" href="/app" data-nav>Not now</a></div><div id="msg"></div></div>');
     $("acc").onclick=function(){var b=$("acc");busy(b,true,"Joining…");api("/api/invitations/"+encodeURIComponent(token)+"/accept","POST",{}).then(function(r){
       if(!r.ok){busy(b,false);$("msg").innerHTML=errBox(r);return}toast("Welcome to "+r.data.org.name+"!");loadMe().then(function(){go("/app/org/"+r.data.org.slug)})})}})}
+
+// =====================================================================
+// SUPER ADMIN PANEL (/admin). Every number and row comes from /api/admin/*,
+// which the server only answers for super admins.
+// =====================================================================
+var AMENU=[
+  ["Dashboard",[["/admin","Overview"],["/admin/analytics","Platform statistics"],["/admin/activity","Recent activity"],["/admin/system","System health"]]],
+  ["Users",[["/admin/users","All users"],["/admin/users?status=active","Active users"],["/admin/users?status=suspended","Suspended users"],["/admin/users?status=pending","Pending users"],["/admin/users?status=superadmin","User roles (super admins)"],["/admin/activity?resource=user:","User activity"]]],
+  ["Organizations",[["/admin/organizations","All organizations"],["/admin/organizations?status=active","Active organizations"],["/admin/organizations?status=pending","Pending approval"],["/admin/organizations?status=suspended","Suspended organizations"],["/admin/staff","Organization members"]]],
+  ["Competitions",[["/admin/competitions","All competitions"],["/admin/competitions?status=active","Active"],["/admin/competitions?status=upcoming","Upcoming"],["/admin/competitions?status=completed","Completed"],["/admin/competitions?status=draft","Draft"],["/admin/competitions?status=suspended","Suspended"],["/admin/competitions?status=featured","Featured"]]],
+  ["Teams",[["/admin/teams","All teams"],["/admin/teams?status=registered","Registered teams"],["/admin/teams?status=active","Active teams"],["/admin/teams?status=suspended","Suspended teams"]]],
+  ["Players",[["/admin/players","All players"],["/admin/players?status=active","Registered players"],["/admin/players?sort=activity","Player activity"]]],
+  ["Matches",[["/admin/matches","All matches"],["/admin/matches?status=upcoming","Upcoming"],["/admin/matches?status=live","Live"],["/admin/matches?status=finished","Completed"],["/admin/matches?status=postponed","Postponed"],["/admin/matches?status=cancelled","Cancelled"]]],
+  ["Groups",[["/admin/groups","All groups & standings"]]],
+  ["Fixtures",[["/admin/fixtures","Fixture schedule"]]],
+  ["Results",[["/admin/results","Match results"],["/admin/results?view=pending","Pending results"],["/admin/results?view=changes","Result verification"]]],
+  ["League tables",[["/admin/tables","All standings"]]],
+  ["Staff",[["/admin/staff?role=owner","Owners"],["/admin/staff?role=organizer","Organizers"],["/admin/staff?role=admin","Sub-admins"],["/admin/staff?role=editor","Editors"],["/admin/staff?role=moderator","Moderators"],["/admin/invitations","Invitations"]]],
+  ["Reports & analytics",[["/admin/analytics","Analytics"],["/admin/activity","Activity report"]]],
+  ["Announcements",[["/admin/announcements","Platform announcements"],["/admin/announcements?scope=org","Competition announcements"]]],
+  ["System",[["/admin/settings","Platform settings"],["/admin/roles","Roles & permissions"],["/admin/security","Security"],["/admin/audit","Audit logs"],["/admin/integrations","API & integrations"],["/admin/config","Configuration"]]],
+  ["Support",[["/admin/support","Support tickets"],["/admin/support?kind=complaint","User complaints"],["/admin/support?kind=organizer_request","Organizer requests"]]]];
+var ASEC=null;
+function amenuState(){try{return JSON.parse(localStorage.getItem("amenu")||"{}")}catch(e){return{}}}
+function amenuSave(o){try{localStorage.setItem("amenu",JSON.stringify(o))}catch(e){}}
+function aActive(){var cur=location.pathname+location.search,all=[];AMENU.forEach(function(g){g[1].forEach(function(i){all.push(i[0])})});
+  if(all.indexOf(cur)>=0)return cur;var path=location.pathname.split("/").slice(0,3).join("/");return all.indexOf(path)>=0?path:null}
+function A(title,crumbs,actions){var act=aActive(),st=amenuState();
+  var side=AMENU.map(function(g,gi){var has=g[1].some(function(i){return i[0]===act}),open=has||st[gi];
+    return'<div class="ag'+(open?" open":"")+'"><button type="button" class="agh" data-ag="'+gi+'" aria-expanded="'+(open?"true":"false")+'">'+esc(g[0])+'<span class="chev">›</span></button><div class="agi">'+
+      g[1].map(function(i){return'<a href="'+i[0]+'" data-nav class="'+(i[0]===act?"on":"")+'"'+(i[0]===act?' aria-current="page"':'')+'>'+esc(i[1])+'</a>'}).join("")+'</div></div>'}).join("");
+  main('<div class="ashell"><aside class="asb" id="asb" aria-label="Platform administration"><div class="asb-h">'+ic("shield")+' Platform admin</div>'+side+
+    '<div class="asb-f"><a href="/app?view=orgs" data-nav>My organizations</a><a href="/">Public site</a></div></aside>'+
+    '<div class="amain"><div class="abar"><button type="button" class="btn g sm amenu" id="amenu" aria-controls="asb">☰ Menu</button><nav class="crumbs" aria-label="Breadcrumb"><a href="/admin" data-nav>Admin</a>'+
+    (crumbs||[]).map(function(c){return'<span>/</span>'+(c[1]?'<a href="'+esc(c[1])+'" data-nav>'+esc(c[0])+'</a>':'<b style="color:var(--tx)">'+esc(c[0])+'</b>')}).join("")+'</nav>'+
+    '<form class="ags" id="ags" role="search"><input name="q" placeholder="Search everything…" aria-label="Search the whole platform" value="'+esc(location.pathname==="/admin/search"?new URLSearchParams(location.search).get("q")||"":"")+'"><button class="btn sm">Search</button></form></div>'+
+    '<div class="ahead"><h1>'+esc(title)+'</h1><div class="actions" id="aacts">'+(actions||"")+'</div></div><div id="asec">'+LOADING+'</div></div></div>',true);
+  document.title=title+" · Admin · Competition Manager";
+  document.querySelectorAll("[data-ag]").forEach(function(b){b.onclick=function(){var g=b.parentNode,o=amenuState();g.classList.toggle("open");o[b.dataset.ag]=g.classList.contains("open");b.setAttribute("aria-expanded",o[b.dataset.ag]);amenuSave(o)}});
+  $("amenu").onclick=function(){var s=$("asb");s.classList.add("show");var c=document.createElement("div");c.className="ascrim";c.onclick=function(){s.classList.remove("show");c.remove()};document.body.appendChild(c)};
+  document.querySelectorAll("#asb a").forEach(function(a){a.addEventListener("click",function(){var c=document.querySelector(".ascrim");if(c)c.remove()})});
+  $("ags").onsubmit=function(e){e.preventDefault();var q=this.q.value.trim();if(q)go("/admin/search?q="+encodeURIComponent(q))};
+  ASEC=$("asec");return ASEC}
+function P(k){return new URLSearchParams(location.search).get(k)||""}
+function setP(changes){var p=new URLSearchParams(location.search);Object.keys(changes).forEach(function(k){if(changes[k])p.set(k,changes[k]);else p.delete(k)});if(!("page" in changes))p.delete("page");
+  go(location.pathname+(p.toString()?"?"+p:""),true)}
+var SB={active:"green",accepted:"green",finished:"green",ok:"green",closed:"grey",completed:"blue",suspended:"red",revoked:"red",failed:"red",denied:"red",cancelled:"red",
+  pending:"amber",expired:"grey",draft:"grey",scheduled:"blue",live:"red",postponed:"amber",open:"amber",in_progress:"blue",public:"green",unlisted:"amber","private":"grey"};
+var SBL={finished:"Completed",in_progress:"In progress",ok:"OK"};
+function sb(s,label){return'<span class="sb '+(SB[s]||"grey")+'">'+esc(label||SBL[s]||(s?s.charAt(0).toUpperCase()+s.slice(1):"—"))+'</span>'}
+function dt(ms){return ms?new Date(ms).toLocaleString(undefined,{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}):"—"}
+function n(x){return x==null?"—":Number(x).toLocaleString()}
+function confirmBox(title,text,o){o=o||{};return new Promise(function(res){var d=document.createElement("div");d.className="modal";
+  d.innerHTML='<div class="mbox" role="dialog" aria-modal="true" aria-labelledby="mbt"><h2 id="mbt">'+esc(title)+'</h2><p>'+esc(text)+'</p>'+(o.type?'<label for="mtype">Type <b style="color:var(--tx)">'+esc(o.type)+'</b> to confirm<input id="mtype" autocomplete="off"></label>':'')+
+    '<div class="actions"><button type="button" class="btn '+(o.danger?"bad":"")+'" id="mok">'+esc(o.ok||"Confirm")+'</button><button type="button" class="btn g" id="mno">Cancel</button></div></div>';
+  document.body.appendChild(d);var done=function(v){document.removeEventListener("keydown",esc_);d.remove();res(v)},esc_=function(e){if(e.key==="Escape")done(false)};
+  document.addEventListener("keydown",esc_);d.onclick=function(e){if(e.target===d)done(false)};$("mno").onclick=function(){done(false)};
+  $("mok").onclick=function(){if(o.type&&$("mtype").value!==o.type){toast("Type it exactly to confirm",true);return}done(o.type?$("mtype").value:true)};(o.type?$("mtype"):$("mok")).focus()})}
+function act(url,method,data,msg){return api(url,method||"POST",data||{}).then(function(r){if(!r.ok){toast(r.data.error||"That didn't work",true);return false}if(msg)toast(msg);return r})}
+
+// ---------- generic list page: filters, search, table, bulk actions, pagination ----------
+function alist(c){var sec=A(c.title,c.crumbs,c.actions),q=new URLSearchParams(location.search);(c.fixed||[]).forEach(function(kv){if(!q.get(kv[0]))q.set(kv[0],kv[1])});
+  api(c.api+"?"+q.toString()).then(function(r){if(!r.ok){sec.innerHTML=errBox(r);return}var d=r.data,items=d.items||[];
+    var filters=(c.filters||[]).map(function(f){return f.type?'<label>'+esc(f.label)+'<input type="'+f.type+'" data-f="'+f.key+'" value="'+esc(P(f.key))+'"'+(f.ph?' placeholder="'+esc(f.ph)+'"':'')+'></label>'
+      :'<label>'+esc(f.label)+'<select data-f="'+f.key+'">'+Object.keys(f.opts).map(function(k){return'<option value="'+esc(k)+'"'+(P(f.key)===k||(!P(f.key)&&k==="")?" selected":"")+'>'+esc(f.opts[k])+'</option>'}).join("")+'</select></label>'}).join("");
+    var bulk=c.bulk?'<div class="bulk"><select id="bact" aria-label="Bulk action"><option value="">Bulk action…</option>'+Object.keys(c.bulk.actions).map(function(k){return'<option value="'+k+'">'+esc(c.bulk.actions[k])+'</option>'}).join("")+'</select><button type="button" class="btn g sm" id="bgo">Apply to selected</button></div>':'';
+    sec.innerHTML='<div class="card"><form class="toolbar" id="atf">'+(c.search===false?'':'<label class="grow">Search<input name="q" value="'+esc(P("q"))+'" placeholder="'+esc(c.ph||"Search…")+'"></label>')+filters+'<button class="btn sm">Apply</button>'+bulk+'</form>'+
+      (items.length?'<div class="tbl"><table class="dt"><thead><tr>'+(c.bulk?'<th><input type="checkbox" id="ball" aria-label="Select all"></th>':'')+c.cols.map(function(col){return'<th'+(col[2]?' class="num"':'')+'>'+esc(col[0])+'</th>'}).join("")+(c.row?'<th></th>':'')+'</tr></thead><tbody>'+
+        items.map(function(x){return'<tr>'+(c.bulk?'<td><input type="checkbox" class="bsel" value="'+x.id+'" aria-label="Select"></td>':'')+c.cols.map(function(col){return'<td'+(col[2]?' class="num"':'')+'>'+col[1](x)+'</td>'}).join("")+(c.row?'<td style="white-space:nowrap;text-align:right">'+c.row(x)+'</td>':'')+'</tr>'}).join("")+'</tbody></table></div>'
+        :'<div class="empty"><p class="note">'+esc(c.empty||"Nothing here yet.")+'</p></div>')+
+      '<div class="pager"><span>'+n(d.total)+' total</span>'+(d.pages>1?'<button type="button" class="btn g sm" id="pprev"'+(d.page<=1?" disabled":"")+'>← Previous</button><span>Page '+d.page+' of '+d.pages+'</span><button type="button" class="btn g sm" id="pnext"'+(d.page>=d.pages?" disabled":"")+'>Next →</button>':'')+'</div></div>';
+    $("atf").onsubmit=function(e){e.preventDefault();var ch={};if(this.q)ch.q=this.q.value.trim();document.querySelectorAll("[data-f]").forEach(function(i){ch[i.dataset.f]=i.value});setP(ch)};
+    document.querySelectorAll("select[data-f]").forEach(function(s){s.onchange=function(){$("atf").onsubmit({preventDefault:function(){}})}});
+    if($("pprev"))$("pprev").onclick=function(){setP({page:String(d.page-1)})};if($("pnext"))$("pnext").onclick=function(){setP({page:String(d.page+1)})};
+    if($("ball"))$("ball").onchange=function(){var on=this.checked;document.querySelectorAll(".bsel").forEach(function(b){b.checked=on})};
+    if($("bgo"))$("bgo").onclick=function(){var a=$("bact").value,ids=[].slice.call(document.querySelectorAll(".bsel:checked")).map(function(b){return+b.value});
+      if(!a||!ids.length){toast("Tick some rows and choose an action",true);return}
+      confirmBox(c.bulk.actions[a],"Apply to "+ids.length+" selected item"+(ids.length>1?"s":"")+"?",{danger:/suspend|logout/.test(a),ok:c.bulk.actions[a]}).then(function(y){if(!y)return;
+        act(c.bulk.api,"POST",{ids:ids,action:a}).then(function(r){if(!r)return;toast(r.data.done+" updated"+(r.data.skipped.length?", "+r.data.skipped.length+" skipped: "+r.data.skipped.join("; "):""),r.data.skipped.length>0);route()})})};
+    if(c.bind)c.bind(items)})}
+
+// ---------- charts: one series each, own scale, hover tooltip + table view ----------
+function chart(s,labels,unit){var W=560,H=180,L=34,B=22,T=10,max=Math.max(1,Math.max.apply(null,s.values)),nb=s.values.length,bw=(W-L-4)/nb,gap=Math.min(2,bw*.25),w=Math.max(1,bw-gap),r=Math.min(4,w/2);
+  var fmt=function(l){var d=new Date(l+"T00:00:00");return unit==="month"?d.toLocaleDateString(undefined,{month:"short",year:"2-digit"}):d.toLocaleDateString(undefined,{day:"numeric",month:"short"})};
+  var y=function(v){return H-B-(v/max)*(H-B-T)},bars=s.values.map(function(v,i){var x=L+i*bw,top=y(v),base=H-B,h=base-top,rr=Math.min(r,h);
+    var path=h<=0?"":'M'+x+','+base+'V'+(top+rr)+'Q'+x+','+top+' '+(x+rr)+','+top+'H'+(x+w-rr)+'Q'+(x+w)+','+top+' '+(x+w)+','+(top+rr)+'V'+base+'Z';
+    return'<g><rect class="hit" x="'+x+'" y="'+T+'" width="'+bw+'" height="'+(H-B-T)+'" fill="transparent" data-tip="'+esc((unit==="day"?"":unit==="week"?"Week of ":"")+fmt(labels[i])+": "+v.toLocaleString())+'"></rect>'+(path?'<path class="bar" d="'+path+'"></path>':'')+'</g>'}).join("");
+  var ticks=[0,Math.round(max/2),max].filter(function(v,i,a){return a.indexOf(v)===i}).map(function(v){return'<line class="gl" x1="'+L+'" x2="'+W+'" y1="'+y(v)+'" y2="'+y(v)+'"></line><text class="ax" x="'+(L-6)+'" y="'+(y(v)+3)+'" text-anchor="end">'+v+'</text>'}).join("");
+  var xl=[0,Math.floor((nb-1)/2),nb-1].filter(function(v,i,a){return a.indexOf(v)===i&&v>=0}).map(function(i){return'<text class="ax" x="'+(L+i*bw+w/2)+'" y="'+(H-6)+'" text-anchor="middle">'+esc(fmt(labels[i]))+'</text>'}).join("");
+  return'<figure class="chart"><figcaption><span><b>'+esc(s.label)+'</b><br>per '+unit+'</span><strong>'+s.total.toLocaleString()+'</strong></figcaption><svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(s.label+": "+s.total+" in this period")+'">'+ticks+bars+xl+'</svg>'+
+    '<details><summary class="note">Show as table</summary><div class="tbl" style="max-height:200px;overflow:auto"><table><tr><th>'+esc(unit==="day"?"Day":unit==="week"?"Week of":"Month")+'</th><th>'+esc(s.label)+'</th></tr>'+s.values.map(function(v,i){return'<tr><td>'+esc(fmt(labels[i]))+'</td><td>'+v+'</td></tr>'}).join("")+'</table></div></details></figure>'}
+(function(){var tip=document.createElement("div");tip.id="ctip";document.body.appendChild(tip);
+  document.addEventListener("pointermove",function(e){var t=e.target.closest&&e.target.closest("[data-tip]");if(!t){tip.style.display="none";return}tip.textContent=t.dataset.tip;tip.style.display="block";
+    tip.style.left=Math.min(e.clientX+12,innerWidth-tip.offsetWidth-8)+"px";tip.style.top=(e.clientY-34)+"px"})})();
+
+// ---------- router ----------
+function adminView(sec,rest){var V={"":aOverview,analytics:aAnalytics,activity:aActivity,system:aSystem,search:aSearch,users:aUsers,organizations:aOrgs,competitions:aComps,teams:aTeams,players:aPlayers,
+  matches:aMatches,fixtures:aFixtures,results:aResults,groups:aGroups,tables:aTables,staff:aStaff,invitations:aInvites,audit:aAudit,announcements:aAnnouncements,settings:aSettings,
+  roles:aRoles,security:aSecurity,integrations:aIntegrations,config:aConfig,support:aSupport}[sec];
+  if(!V){A("Not found");ASEC.innerHTML='<div class="card empty"><p class="note">That admin page doesn\'t exist.</p></div>';return}V(rest)}
+var ULINK=function(u){return u?'<a href="/admin/users/'+u.id+'" data-nav>'+esc(u.username)+'</a>':"—"};
+
+// ---------- overview ----------
+function aOverview(){var sec=A("Platform overview",[["Overview"]]);
+  Promise.all([api("/api/admin/overview"),api("/api/admin/analytics?range=30d")]).then(function(res){var r=res[0];if(!r.ok){sec.innerHTML=errBox(r);return}var s=r.data.stats,h=r.data.health,an=res[1].data;
+    var K=[["Total users",s.totalUsers,"/admin/users"],["Active users (30 days)",s.activeUsers,"/admin/users?status=active"],["New users (30 days)",s.newUsers,"/admin/users"],
+      ["Total organizations",s.totalOrganizations,"/admin/organizations"],["Active organizations",s.activeOrganizations,"/admin/organizations?status=active"],
+      ["Total competitions",s.totalCompetitions,"/admin/competitions"],["Active competitions",s.activeCompetitions,"/admin/competitions?status=active"],["Upcoming competitions",s.upcomingCompetitions,"/admin/competitions?status=upcoming"],
+      ["Completed competitions",s.completedCompetitions,"/admin/competitions?status=completed"],["Total teams",s.totalTeams,"/admin/teams"],["Total players",s.totalPlayers,"/admin/players"],
+      ["Total matches",s.totalMatches,"/admin/matches"],["Upcoming matches",s.upcomingMatches,"/admin/matches?status=upcoming"],["Completed matches",s.completedMatches,"/admin/matches?status=finished"],
+      ["Live matches",s.liveMatches,"/admin/matches?status=live","bad"],["Total groups",s.totalGroups,"/admin/groups"],["Pending invitations",s.pendingInvitations,"/admin/invitations?status=pending","warn"],
+      ["Pending approvals",s.pendingApprovals,"/admin/organizations?status=pending","warn"],["Open support tickets",s.supportTickets,"/admin/support","warn"],["Pending results",s.pendingResults,"/admin/results?view=pending","warn"]];
+    var pick=function(k){return an.series.filter(function(x){return x.key===k})[0]};
+    sec.innerHTML='<div class="kpis">'+K.map(function(k){return'<a class="kpi '+(k[3]&&k[1]>0?k[3]:"")+'" href="'+k[2]+'" data-nav><span>'+esc(k[0])+'</span><b>'+n(k[1])+'</b></a>'}).join("")+'</div>'+
+      '<div class="agrid">'+(an.series?chart(pick("users"),an.labels,an.unit)+chart(pick("competitions"),an.labels,an.unit)+chart(pick("matchesCompleted"),an.labels,an.unit):"")+'</div>'+
+      '<div class="agrid" style="margin-top:14px"><div class="card"><div class="gh">SYSTEM HEALTH</div>'+healthHtml(h)+'<a class="btn g sm" href="/admin/system" data-nav>Details</a></div>'+
+      '<div class="card"><div class="gh">WAITING FOR APPROVAL</div>'+(r.data.pendingOrganizations.length?'<table class="dt">'+r.data.pendingOrganizations.map(function(o){return'<tr><td><a href="/admin/organizations/'+o.id+'" data-nav>'+esc(o.name)+'</a><small>'+esc(o.owner?o.owner.username:"")+' · '+date(o.created)+'</small></td><td style="text-align:right"><button class="btn sm" data-approve="'+o.id+'">Approve</button></td></tr>'}).join("")+'</table>':'<p class="note">Nothing waiting.</p>')+'</div></div>'+
+      '<div class="card" style="margin-top:14px"><div class="gh">RECENT PLATFORM ACTIVITY</div>'+auditTable(r.data.activity)+'<a class="btn g sm" href="/admin/activity" data-nav>All activity</a></div>';
+    document.querySelectorAll("[data-approve]").forEach(function(b){b.onclick=function(){act("/api/admin/organizations/"+b.dataset.approve+"/approve","POST",{},"Organization approved").then(function(x){if(x)route()})}})})}
+function healthHtml(h){var row=function(ok,label,detail){return'<tr><td>'+sb(ok===null?"pending":ok?"ok":"failed",ok===null?"Check":ok?"OK":"Problem")+'</td><td><b>'+esc(label)+'</b><small>'+esc(detail)+'</small></td></tr>'};
+  return'<table class="dt"><tbody>'+row(h.database.ok,"Database",h.database.engine+" · "+h.database.ms+" ms"+(h.database.persistent?" · persistent":" · local file (use DATABASE_URL on hosts that wipe disks)"))+
+    row(h.migrationsPending===0,"Migrations",h.migrationsPending===0?"Up to date":(h.migrationsPending==null?"Unknown":h.migrationsPending+" waiting"))+
+    row(h.email.ready,"Email",h.email.ready?(h.email.provider+" (from "+h.email.source+")"):"Not set up: invitations and resets can't be emailed")+
+    row(h.secretKeyFromEnv,"Secret key",h.secretKeyFromEnv?"Set on the server":"Not set: logins reset if the disk is wiped")+
+    row(!!h.appUrl,"Public address",h.appUrl||"APP_URL not set")+
+    row(h.failedLogins24h<50,"Failed logins (24 h)",String(h.failedLogins24h))+row(h.blockedAdminAttempts24h===0,"Blocked admin attempts (24 h)",String(h.blockedAdminAttempts24h))+'</tbody></table>'}
+function auditTable(rows){return rows.length?'<div class="tbl"><table class="dt"><thead><tr><th>When</th><th>User</th><th>Action</th><th>Resource</th><th>Status</th></tr></thead><tbody>'+rows.map(function(a){
+  return'<tr><td style="white-space:nowrap">'+dt(a.ts)+'</td><td>'+esc(a.actor||"—")+'</td><td>'+esc(a.action)+((a.old||a.new)?'<div class="oldnew">'+(a.old?'<del>'+esc(a.old)+'</del> → ':'')+'<ins>'+esc(a.new)+'</ins></div>':'')+'</td><td><small>'+esc(a.resource||"—")+'</small></td><td>'+sb(a.status)+'</td></tr>'}).join("")+'</tbody></table></div>':'<p class="note">No activity yet.</p>'}
+
+// ---------- analytics ----------
+function aAnalytics(){var sec=A("Platform statistics",[["Analytics"]]),r0=P("range")||"30d";
+  var R={today:"Today","7d":"Last 7 days","30d":"Last 30 days","3m":"Last 3 months","6m":"Last 6 months",year:"This year",custom:"Custom range"};
+  var qs="range="+encodeURIComponent(r0)+(r0==="custom"?"&from="+encodeURIComponent(P("from"))+"&to="+encodeURIComponent(P("to")):"");
+  api("/api/admin/analytics?"+qs).then(function(r){
+    sec.innerHTML='<div class="ranges" role="group" aria-label="Time range">'+Object.keys(R).map(function(k){return'<button type="button" class="chip'+(k===r0?" on":"")+'" data-r="'+k+'">'+R[k]+'</button>'}).join("")+
+      '<span id="cr" style="display:'+(r0==="custom"?"flex":"none")+';gap:6px;align-items:center"><input type="date" id="cf" value="'+esc(P("from"))+'" style="margin:0;width:auto" aria-label="From"><input type="date" id="ct" value="'+esc(P("to"))+'" style="margin:0;width:auto" aria-label="To"><button type="button" class="btn sm" id="cgo">Apply</button></span></div>'+
+      (r.ok?'<p class="note">'+esc(r.data.from)+' → '+esc(r.data.to)+' · '+n(r.data.activeCompetitions)+' competitions active right now</p><div class="agrid">'+r.data.series.map(function(s){return chart(s,r.data.labels,r.data.unit)}).join("")+'</div>':errBox(r));
+    document.querySelectorAll("[data-r]").forEach(function(b){b.onclick=function(){if(b.dataset.r==="custom"){$("cr").style.display="flex";return}setP({range:b.dataset.r,from:"",to:""})}});
+    if($("cgo"))$("cgo").onclick=function(){setP({range:"custom",from:$("cf").value,to:$("ct").value})}})}
+
+// ---------- activity & audit ----------
+function aActivity(){aAuditLike(P("resource")==="user:"?"User activity":"Recent platform activity",[["Activity"]])}
+function aAudit(){aAuditLike("Audit logs",[["System"],["Audit logs"]])}
+function aAuditLike(title,crumbs){alist({title:title,crumbs:crumbs,api:"/api/admin/audit",ph:"User, action, resource or IP",
+  filters:[{key:"status",label:"Status",opts:{"":"Any","ok":"OK","failed":"Failed","denied":"Denied"}},{key:"from",label:"From",type:"date"},{key:"to",label:"To",type:"date"}],
+  cols:[["When",function(a){return'<span style="white-space:nowrap">'+dt(a.ts)+'</span>'}],["User",function(a){return esc(a.actor||"—")}],
+    ["Action",function(a){return esc(a.action)+((a.old||a.new)?'<div class="oldnew">'+(a.old?'Before: <del>'+esc(a.old)+'</del><br>':'')+(a.new?'After: <ins>'+esc(a.new)+'</ins>':'')+'</div>':'')}],
+    ["Resource",function(a){return'<small>'+esc(a.resource||"—")+'</small>'}],["IP / device",function(a){return'<small>'+esc(a.ip||"—")+(a.device?'<br>'+esc(a.device.slice(0,60)):'')+'</small>'}],["Status",function(a){return sb(a.status)}]],
+  empty:"No matching activity."})}
+
+// ---------- global search ----------
+function aSearch(){var q=P("q"),sec=A('Search: '+q,[["Search"]]);
+  api("/api/admin/search?q="+encodeURIComponent(q)).then(function(r){if(!r.ok){sec.innerHTML=errBox(r);return}var R=r.data.results||{},blocks=[
+    ["Users",R.users,function(u){return'<a href="/admin/users/'+u.id+'" data-nav>'+esc(u.username)+'</a><small>'+esc(u.email||"")+'</small>'},function(u){return sb(u.status)}],
+    ["Organizations",R.organizations,function(o){return'<a href="/admin/organizations/'+o.id+'" data-nav>'+esc(o.name)+'</a><small>'+esc(o.where||"")+'</small>'},function(o){return sb(o.status)}],
+    ["Competitions",R.competitions,function(c){return'<a href="/admin/competitions/'+c.id+'" data-nav>'+esc(c.name)+'</a><small>'+esc(c.org.name)+'</small>'},function(c){return c.suspended?sb("suspended"):sb(c.status)}],
+    ["Teams",R.teams,function(t){return esc(t.name)+'<small>'+esc(t.org)+'</small>'},function(t){return t.suspended?sb("suspended"):""}],
+    ["Players",R.players,function(p){return esc(p.name)+'<small>'+esc(p.team)+'</small>'},function(){return""}],
+    ["Matches",R.matches,function(m){return'<a href="/match/'+esc(m.slug)+'" target="_blank" rel="noopener">'+esc((m.home?m.home.name:"TBD")+" vs "+(m.away?m.away.name:"TBD"))+'</a><small>'+esc(m.competition.name)+' · '+date(m.kickoff)+'</small>'},function(m){return sb(m.status)}],
+    ["Groups",R.groups,function(g){return'<a href="/admin/competitions/'+g.competitionId+'?tab=standings" data-nav>Group '+esc(g.group)+'</a><small>'+esc(g.competition)+' · '+g.teams+' teams</small>'},function(){return""}]];
+    var total=blocks.reduce(function(a,b){return a+(b[1]||[]).length},0);
+    sec.innerHTML=total?'<div class="agrid">'+blocks.filter(function(b){return b[1]&&b[1].length}).map(function(b){return'<div class="card"><div class="gh">'+esc(b[0].toUpperCase())+' · '+b[1].length+'</div><table class="dt"><tbody>'+b[1].map(function(x){return'<tr><td>'+b[2](x)+'</td><td style="text-align:right">'+b[3](x)+'</td></tr>'}).join("")+'</tbody></table></div>'}).join("")+'</div>'
+      :'<div class="card empty"><p class="note">Nothing matches “'+esc(q)+'”.</p></div>'})}
+
+// ---------- users ----------
+function aUsers(rest){if(rest)return aUser(+rest);var st=P("status");
+  alist({title:{active:"Active users",suspended:"Suspended users",pending:"Pending users",superadmin:"Super admins"}[st]||"All users",crumbs:[["Users"]],api:"/api/admin/users",ph:"Username or email",
+    filters:[{key:"status",label:"Status",opts:{"":"All","active":"Active","suspended":"Suspended","pending":"Pending (invited)","superadmin":"Super admins","recent":"Seen in 30 days"}}],
+    cols:[["User",function(u){return ULINK(u)+(u.superAdmin?' <span class="sb amber">Super admin</span>':'')+'<small>'+esc(u.email||"no email")+'</small>'}],["Status",function(u){return sb(u.status)}],
+      ["Organizations",function(u){return n(u.orgs)},1],["Registered",function(u){return date(u.joined)}],["Last activity",function(u){return ago(u.lastSeen)}]],
+    row:function(u){return'<a class="btn g sm" href="/admin/users/'+u.id+'" data-nav>View</a>'},
+    bulk:{api:"/api/admin/users/bulk",actions:{suspend:"Suspend",reactivate:"Reactivate",logout:"Log out everywhere"}},empty:"No users match."})}
+function aUser(id){var sec=A("User",[["Users","/admin/users"],["Details"]]);
+  api("/api/admin/users/"+id).then(function(r){if(!r.ok){sec.innerHTML=errBox(r);return}var d=r.data,u=d.user;document.querySelector(".ahead h1").textContent=u.username;
+    $("aacts").innerHTML=(u.status==="suspended"?'<button class="btn sm" data-ua="reactivate">Reactivate</button>':'<button class="btn bad sm" data-ua="suspend">Suspend</button>')+
+      (u.superAdmin?'<button class="btn g sm" data-ua="revoke_superadmin">Remove super admin</button>':'<button class="btn g sm" data-ua="grant_superadmin">Make super admin</button>')+
+      '<button class="btn g sm" data-ua="logout">Log out everywhere</button><button class="btn bad sm" id="udel">Delete</button>';
+    sec.innerHTML='<div class="agrid"><div class="card"><div class="gh">PROFILE</div><dl class="kv"><dt>Username</dt><dd>'+esc(u.username)+'</dd><dt>Email</dt><dd>'+esc(u.email||"—")+'</dd><dt>Status</dt><dd>'+sb(u.status)+'</dd>'+
+      '<dt>Role</dt><dd>'+(u.superAdmin?"Platform super admin":"Platform user")+(u.leagueAccess?" · original league editor":"")+'</dd><dt>Registered</dt><dd>'+dt(u.joined)+'</dd><dt>Last login</dt><dd>'+dt(u.lastLogin)+'</dd><dt>Last activity</dt><dd>'+ago(u.lastSeen)+'</dd><dt>Teams in their organizations</dt><dd>'+n(d.teams)+'</dd></dl></div>'+
+      '<div class="card"><div class="gh">ORGANIZATIONS · '+d.memberships.length+'</div>'+(d.memberships.length?'<table class="dt"><tbody>'+d.memberships.map(function(m){return'<tr><td><a href="/admin/organizations/'+m.org.id+'" data-nav>'+esc(m.org.name)+'</a><small>joined '+date(m.joined)+'</small></td><td>'+pill(m.role,m.roleLabel)+'</td><td>'+sb(m.org.status)+'</td></tr>'}).join("")+'</tbody></table>':'<p class="note">Not a member of any organization.</p>')+'</div></div>'+
+      '<div class="card"><div class="gh">COMPETITIONS THEY MANAGE · '+d.competitions.length+'</div>'+(d.competitions.length?compTable(d.competitions):'<p class="note">None.</p>')+'</div>'+
+      (d.tickets.length?'<div class="card"><div class="gh">SUPPORT TICKETS</div><table class="dt"><tbody>'+d.tickets.map(function(t){return'<tr><td>'+esc(t.subject)+'</td><td>'+sb(t.status)+'</td><td>'+date(t.created)+'</td></tr>'}).join("")+'</tbody></table></div>':'')+
+      '<div class="card"><div class="gh">ACTIVITY</div>'+auditTable(d.activity)+'</div>';
+    document.querySelectorAll("[data-ua]").forEach(function(b){b.onclick=function(){var a=b.dataset.ua,labels={suspend:"Suspend this user?",reactivate:"Reactivate this user?",grant_superadmin:"Make this user a super admin?",revoke_superadmin:"Remove super admin rights?",logout:"Log this user out on every device?"};
+      confirmBox(labels[a],a==="suspend"?"They're logged out immediately and can't log in until reactivated.":a==="grant_superadmin"?"Super admins can see and change everything on the platform.":"",{danger:a==="suspend"||a==="grant_superadmin"}).then(function(y){if(y)act("/api/admin/users/"+id+"/"+a,"POST",{},"Done").then(function(x){if(x)route()})})}});
+    $("udel").onclick=function(){confirmBox("Delete "+u.username+"?","This permanently deletes the account. Organizations they own must be transferred first.",{danger:true,type:u.username,ok:"Delete user"}).then(function(v){if(v)act("/api/admin/users/"+id,"DELETE",{confirm:v},"User deleted").then(function(x){if(x)go("/admin/users")})})}})}
+
+// ---------- organizations ----------
+function aOrgs(rest){if(rest)return aOrg(+rest);var st=P("status");
+  alist({title:{active:"Active organizations",pending:"Organizations waiting for approval",suspended:"Suspended organizations"}[st]||"All organizations",crumbs:[["Organizations"]],api:"/api/admin/organizations",ph:"Name, place or address",
+    filters:[{key:"status",label:"Status",opts:{"":"All","active":"Active","pending":"Pending approval","suspended":"Suspended"}}],
+    cols:[["Organization",function(o){return'<a href="/admin/organizations/'+o.id+'" data-nav>'+esc(o.name)+'</a><small>'+esc(o.where||o.slug)+'</small>'}],["Owner",function(o){return ULINK(o.owner)}],
+      ["Members",function(o){return n(o.members)},1],["Competitions",function(o){return n(o.competitions)},1],["Teams",function(o){return n(o.teams)},1],["Matches",function(o){return n(o.matches)},1],
+      ["Status",function(o){return sb(o.status)}],["Created",function(o){return date(o.created)}]],
+    row:function(o){return(o.status==="pending"?'<button class="btn sm" data-oa="'+o.id+':approve">Approve</button> ':'')+'<a class="btn g sm" href="/admin/organizations/'+o.id+'" data-nav>View</a>'},
+    bulk:{api:"/api/admin/organizations/bulk",actions:{approve:"Approve",suspend:"Suspend",reactivate:"Reactivate"}},
+    bind:function(){document.querySelectorAll("[data-oa]").forEach(function(b){b.onclick=function(){var p=b.dataset.oa.split(":");act("/api/admin/organizations/"+p[0]+"/"+p[1],"POST",{},"Organization approved").then(function(x){if(x)route()})}})},empty:"No organizations match."})}
+function compTable(cs){return'<div class="tbl"><table class="dt"><thead><tr><th>Competition</th><th>Organization</th><th class="num">Teams</th><th class="num">Played</th><th>Status</th><th>Visibility</th></tr></thead><tbody>'+cs.map(function(c){
+  return'<tr><td><a href="/admin/competitions/'+c.id+'" data-nav>'+esc(c.name)+'</a><small>'+esc(c.season||"")+'</small></td><td>'+esc(c.org.name)+'</td><td class="num">'+n(c.teams)+'</td><td class="num">'+n(c.played)+'/'+n(c.matches)+'</td><td>'+(c.suspended?sb("suspended"):sb(c.status))+'</td><td>'+sb(c.visibility)+'</td></tr>'}).join("")+'</tbody></table></div>'}
+function aOrg(id){var sec=A("Organization",[["Organizations","/admin/organizations"],["Details"]]);
+  api("/api/admin/organizations/"+id).then(function(r){if(!r.ok){sec.innerHTML=errBox(r);return}var d=r.data,o=d.org;document.querySelector(".ahead h1").textContent=o.name;
+    $("aacts").innerHTML=(o.status==="pending"?'<button class="btn sm" data-oa="approve">Approve</button>':'')+(o.status==="suspended"?'<button class="btn sm" data-oa="reactivate">Reactivate</button>':'<button class="btn bad sm" data-oa="suspend">Suspend</button>')+
+      '<a class="btn g sm" href="/organization/'+esc(o.slug)+'" target="_blank" rel="noopener">Public page ↗</a><button class="btn bad sm" id="odel">Delete</button>';
+    sec.innerHTML='<div class="kpis">'+[["Members",o.members],["Competitions",o.competitions],["Teams",o.teams],["Matches",o.matches],["Pending invitations",d.invitations]].map(function(k){return'<div class="kpi"><span>'+k[0]+'</span><b>'+n(k[1])+'</b></div>'}).join("")+'</div>'+
+      '<div class="agrid"><div class="card"><div class="gh">DETAILS</div><dl class="kv"><dt>Status</dt><dd>'+sb(o.status)+'</dd><dt>Owner</dt><dd>'+ULINK(o.owner)+'</dd><dt>Address</dt><dd>'+esc(o.slug)+'</dd><dt>Where</dt><dd>'+esc(o.where||"—")+'</dd><dt>Created</dt><dd>'+dt(o.created)+'</dd></dl>'+(o.description?'<p class="note" style="white-space:pre-wrap">'+esc(o.description)+'</p>':'')+'</div>'+
+      '<div class="card"><div class="gh">MEMBERS · '+d.members.length+'</div><table class="dt"><tbody>'+d.members.map(function(m){return'<tr><td>'+ULINK(m.user)+'<small>joined '+date(m.joined)+' · active '+ago(m.lastActive)+'</small></td><td>'+pill(m.role,m.roleLabel)+'</td></tr>'}).join("")+'</tbody></table></div></div>'+
+      '<div class="card"><div class="gh">COMPETITIONS</div>'+(d.competitions.length?compTable(d.competitions):'<p class="note">None yet.</p>')+'</div>'+
+      '<div class="agrid"><div class="card"><div class="gh">TEAMS · '+d.teams.length+'</div>'+(d.teams.length?'<table class="dt"><tbody>'+d.teams.map(function(t){return'<tr><td>'+esc(t.name)+'<small>'+t.players+' players</small></td><td>'+(t.suspended?sb("suspended"):"")+'</td></tr>'}).join("")+'</tbody></table>':'<p class="note">None.</p>')+'</div>'+
+      '<div class="card"><div class="gh">ACTIVITY</div><div class="feed">'+(d.activity.length?d.activity.map(function(e){return'<div>'+dt(e.ts)+' · <b>'+esc(e.actor||"—")+'</b> '+esc(e.action)+'</div>'}).join(""):'<div>Nothing yet.</div>')+'</div></div></div>';
+    document.querySelectorAll("[data-oa]").forEach(function(b){b.onclick=function(){var a=b.dataset.oa;confirmBox({approve:"Approve this organization?",suspend:"Suspend this organization?",reactivate:"Reactivate this organization?"}[a],
+      a==="suspend"?"Its members lose access and nothing it publishes stays visible until it's reactivated.":"",{danger:a==="suspend"}).then(function(y){if(y)act("/api/admin/organizations/"+id+"/"+a,"POST",{},"Done").then(function(x){if(x)route()})})}});
+    $("odel").onclick=function(){confirmBox("Delete "+o.name+"?","Deletes the organization with all its competitions, teams, matches and members. This can't be undone.",{danger:true,type:o.name,ok:"Delete organization"}).then(function(v){if(v)act("/api/admin/organizations/"+id,"DELETE",{confirm:v},"Organization deleted").then(function(x){if(x)go("/admin/organizations")})})}})}
+
+// ---------- competitions ----------
+function aComps(rest){if(rest)return aComp(+rest);var st=P("status");
+  alist({title:({active:"Active",upcoming:"Upcoming",completed:"Completed",draft:"Draft",suspended:"Suspended",featured:"Featured"}[st]||"All")+" competitions",crumbs:[["Competitions"]],api:"/api/admin/competitions",ph:"Competition, organization or season",
+    filters:[{key:"status",label:"Status",opts:{"":"All","active":"Active","upcoming":"Upcoming","completed":"Completed","draft":"Draft","suspended":"Suspended","featured":"Featured"}}],
+    cols:[["Competition",function(c){return'<a href="/admin/competitions/'+c.id+'" data-nav>'+esc(c.name)+'</a>'+(c.featured?' <span class="sb amber">Featured</span>':'')+'<small>'+esc(FMT_L[c.format].split(":")[0])+'</small>'}],
+      ["Organization",function(c){return'<a href="/admin/organizations/'+c.org.id+'" data-nav>'+esc(c.org.name)+'</a>'}],["Organizer",function(c){return ULINK(c.organizer)}],["Season",function(c){return esc(c.season||"—")}],
+      ["Teams",function(c){return n(c.teams)},1],["Matches",function(c){return n(c.played)+" / "+n(c.matches)},1],["Status",function(c){return(c.suspended?sb("suspended")+" ":"")+sb(c.status)}],["Visibility",function(c){return sb(c.visibility)}],["Created",function(c){return date(c.created)}]],
+    row:function(c){return'<a class="btn g sm" href="/admin/competitions/'+c.id+'" data-nav>Inspect</a>'},
+    bulk:{api:"/api/admin/competitions/bulk",actions:{suspend:"Suspend",unsuspend:"Lift suspension",feature:"Feature",unfeature:"Stop featuring"}},empty:"No competitions match."})}
+function aComp(id){var sec=A("Competition",[["Competitions","/admin/competitions"],["Inspect"]]),tab=P("tab")||"overview";
+  api("/api/admin/competitions/"+id).then(function(r){if(!r.ok){sec.innerHTML=errBox(r);return}var d=r.data,c=d.competition;document.querySelector(".ahead h1").textContent=c.name;
+    $("aacts").innerHTML=(c.suspended?'<button class="btn sm" data-ca="unsuspend">Lift suspension</button>':'<button class="btn bad sm" data-ca="suspend">Suspend</button>')+
+      (c.featured?'<button class="btn g sm" data-ca="unfeature">Stop featuring</button>':'<button class="btn g sm" data-ca="feature">Feature</button>')+'<a class="btn g sm" href="/competition/'+esc(c.slug)+'" target="_blank" rel="noopener">Public page ↗</a>';
+    var T=[["overview","Overview"],["teams","Teams ("+d.teams.length+")"],["groups","Groups ("+d.groups.filter(function(g){return g.name}).length+")"],["matches","Fixtures & results ("+d.matches.length+")"],["standings","Standings"],["scorers","Top scorers"],["staff","Organizers"],["activity","Activity"]];
+    var body={overview:'<div class="agrid"><div class="card"><div class="gh">DETAILS</div><dl class="kv"><dt>Organization</dt><dd><a href="/admin/organizations/'+c.org.id+'" data-nav>'+esc(c.org.name)+'</a></dd><dt>Created by</dt><dd>'+ULINK(c.organizer)+'</dd><dt>Format</dt><dd>'+esc(FMT_L[c.format])+'</dd><dt>Season</dt><dd>'+esc(c.season||"—")+'</dd>'+
+        '<dt>Status</dt><dd>'+(c.suspended?sb("suspended")+" ":"")+sb(c.status)+'</dd><dt>Visibility</dt><dd>'+sb(c.visibility)+'</dd><dt>Dates</dt><dd>'+esc((c.startDate||"?")+" → "+(c.endDate||"?"))+'</dd><dt>Points</dt><dd>'+c.pointsWin+" / "+c.pointsDraw+" / "+c.pointsLoss+'</dd><dt>Created</dt><dd>'+dt(c.created)+'</dd></dl></div>'+
+        '<div class="kpis" style="align-content:start">'+[["Teams",d.teams.length],["Matches",c.matches],["Played",c.finished],["Groups",d.groups.filter(function(g){return g.name}).length]].map(function(k){return'<div class="kpi"><span>'+k[0]+'</span><b>'+n(k[1])+'</b></div>'}).join("")+'</div></div>',
+      teams:'<div class="card"><table class="dt"><thead><tr><th>Team</th><th>Group</th><th class="num">Players</th><th class="num">Points adj.</th><th></th></tr></thead><tbody>'+d.teams.map(function(t){return'<tr><td>'+esc(t.name)+'</td><td>'+esc(t.group||"—")+'</td><td class="num">'+t.players+'</td><td class="num">'+(t.pointsAdjustment||0)+'</td><td>'+(t.suspended?sb("suspended"):"")+'</td></tr>'}).join("")+'</tbody></table></div>',
+      groups:d.groups.filter(function(g){return g.name}).length?'<div class="agrid">'+d.groups.filter(function(g){return g.name}).map(function(g){return'<div class="card"><div class="gh">GROUP '+esc(g.name)+'</div><ul style="margin:0;padding-left:18px">'+g.teams.map(function(t){return'<li>'+esc(t)+'</li>'}).join("")+'</ul></div>'}).join("")+'</div>':'<div class="card"><p class="note">This competition has no groups.</p></div>',
+      matches:'<div class="card"><div class="tbl"><table class="dt"><thead><tr><th>Round</th><th>Match</th><th>Score</th><th>Kick-off</th><th>Status</th></tr></thead><tbody>'+d.matches.map(function(m){return'<tr><td>'+esc(m.round)+(m.group?'<small>Group '+esc(m.group)+'</small>':'')+'</td><td><a href="/match/'+esc(m.slug)+'" target="_blank" rel="noopener">'+esc((m.home?m.home.name:"TBD")+" vs "+(m.away?m.away.name:"TBD"))+'</a></td><td>'+(m.homeScore==null?"—":m.homeScore+" – "+m.awayScore)+'</td><td>'+dt(m.kickoff)+'</td><td>'+sb(m.status)+'</td></tr>'}).join("")+'</tbody></table></div></div>',
+      standings:'<div class="card">'+(d.standings?tableHtml(d.standings):'<p class="note">Knockout-only competitions have no table.</p>')+'</div>',
+      scorers:'<div class="card">'+(d.scorers.length?'<table class="dt"><thead><tr><th>#</th><th>Player</th><th>Team</th><th class="num">Goals</th><th class="num">Assists</th></tr></thead><tbody>'+d.scorers.map(function(s,i){return'<tr><td>'+(i+1)+'</td><td>'+esc(s.name)+'</td><td>'+esc(s.team||"—")+'</td><td class="num">'+s.goals+'</td><td class="num">'+s.assists+'</td></tr>'}).join("")+'</tbody></table>':'<p class="note">No goals logged yet.</p>')+'</div>',
+      staff:'<div class="card"><table class="dt"><tbody>'+d.staff.map(function(s){return'<tr><td>'+ULINK(s.user)+'</td><td>'+pill(s.role,s.roleLabel)+'</td></tr>'}).join("")+'</tbody></table></div>',
+      activity:'<div class="card">'+auditTable(d.activity)+'</div>'}[tab]||"";
+    sec.innerHTML='<div class="ctab">'+T.map(function(t){return'<a class="chip'+(t[0]===tab?" on":"")+'" href="/admin/competitions/'+id+(t[0]==="overview"?"":"?tab="+t[0])+'" data-nav>'+esc(t[1])+'</a>'}).join("")+'</div>'+body;
+    document.querySelectorAll("[data-ca]").forEach(function(b){b.onclick=function(){var a=b.dataset.ca;confirmBox({suspend:"Suspend this competition?",unsuspend:"Lift the suspension?",feature:"Feature on the landing page?",unfeature:"Stop featuring?"}[a],
+      a==="suspend"?"It disappears from public pages and its organizers can't change it until the suspension is lifted.":"",{danger:a==="suspend"}).then(function(y){if(y)act("/api/admin/competitions/"+id+"/"+a,"POST",{},"Done").then(function(x){if(x)route()})})}})})}
+
+// ---------- teams & players ----------
+function aTeams(){var st=P("status");alist({title:({registered:"Registered",active:"Active",suspended:"Suspended"}[st]||"All")+" teams",crumbs:[["Teams"]],api:"/api/admin/teams",ph:"Team, city or organization",
+  filters:[{key:"status",label:"Status",opts:{"":"All","registered":"In a competition","active":"In an active competition","suspended":"Suspended"}}],
+  cols:[["Team",function(t){return'<b>'+esc(t.name)+'</b><small>'+esc(t.city||"")+'</small>'}],["Organization",function(t){return'<a href="/admin/organizations/'+t.org.id+'" data-nav>'+esc(t.org.name)+'</a>'}],
+    ["Players",function(t){return n(t.players)},1],["Competitions",function(t){return n(t.competitions)},1],["Status",function(t){return t.suspended?sb("suspended"):sb("active")}],["Registered",function(t){return date(t.created)}]],
+  row:function(t){return t.suspended?'<button class="btn sm" data-ta="'+t.id+':unsuspend">Lift suspension</button>':'<button class="btn g sm" data-ta="'+t.id+':suspend">Suspend</button>'},
+  bulk:{api:"/api/admin/teams/bulk",actions:{suspend:"Suspend",unsuspend:"Lift suspension"}},
+  bind:function(){document.querySelectorAll("[data-ta]").forEach(function(b){b.onclick=function(){var p=b.dataset.ta.split(":");act("/api/admin/teams/"+p[0]+"/"+p[1],"POST",{},"Done").then(function(x){if(x)route()})}})},empty:"No teams match."})}
+function aPlayers(){alist({title:P("sort")==="activity"?"Player activity":P("status")==="active"?"Registered players":"All players",crumbs:[["Players"]],api:"/api/admin/players",ph:"Player or team",
+  filters:[{key:"status",label:"Status",opts:{"":"All","active":"Active","inactive":"Inactive"}},{key:"sort",label:"Sort",opts:{"":"By team","activity":"Most goals & cards"}}],
+  cols:[["Player",function(p){return'<b>'+(p.number!=null?p.number+". ":"")+esc(p.name)+'</b><small>'+esc(POS_L[p.position||""])+'</small>'}],["Team",function(p){return esc(p.team.name)}],["Organization",function(p){return esc(p.org)}],
+    ["Goals",function(p){return n(p.goals)},1],["Cards",function(p){return n(p.cards)},1],["Status",function(p){return sb(p.active?"active":"draft",p.active?"Active":"Inactive")}]],empty:"No players match."})}
+
+// ---------- matches, fixtures, results ----------
+var MCOLS=[["Kick-off",function(m){return'<span style="white-space:nowrap">'+dt(m.kickoff)+'</span>'}],["Competition",function(m){return'<a href="/admin/competitions/'+m.competition.id+'?tab=matches" data-nav>'+esc(m.competition.name)+'</a><small>'+esc(m.org)+'</small>'}],
+  ["Match",function(m){return'<a href="/match/'+esc(m.slug)+'" target="_blank" rel="noopener">'+esc((m.home?m.home.name:"TBD")+" vs "+(m.away?m.away.name:"TBD"))+'</a><small>'+esc(m.round)+(m.group?" · Group "+esc(m.group):"")+'</small>'}],
+  ["Score",function(m){return m.homeScore==null?"—":'<b>'+m.homeScore+" – "+m.awayScore+'</b>'}],["Venue",function(m){return esc(m.venue||"—")}],["Status",function(m){return sb(m.status)}]];
+var MFILT=[{key:"org",label:"Organization",type:"text",ph:"address"},{key:"team",label:"Team",type:"text",ph:"name"},{key:"venue",label:"Location",type:"text"},{key:"from",label:"From",type:"date"},{key:"to",label:"To",type:"date"}];
+function aMatches(){var st=P("status");alist({title:({upcoming:"Upcoming",live:"Live",finished:"Completed",postponed:"Postponed",cancelled:"Cancelled",scheduled:"Scheduled"}[st]||"All")+" matches",crumbs:[["Matches"]],api:"/api/admin/matches",ph:"Team or competition",
+  filters:[{key:"status",label:"Status",opts:{"":"All","upcoming":"Upcoming","scheduled":"Scheduled","live":"Live","finished":"Completed","postponed":"Postponed","cancelled":"Cancelled","pending":"Result missing"}}].concat(MFILT),cols:MCOLS,empty:"No matches match."})}
+function aFixtures(){alist({title:"Fixture schedule",crumbs:[["Fixtures"]],api:"/api/admin/matches",fixed:[["status","upcoming"]],ph:"Team or competition",filters:MFILT,cols:MCOLS,empty:"No upcoming fixtures."})}
+function aResults(){var v=P("view");
+  if(v==="changes")return alist({title:"Result verification",crumbs:[["Results","/admin/results"],["Changes"]],api:"/api/admin/result-changes",search:false,
+    cols:[["When",function(a){return dt(a.ts)}],["Entered by",function(a){return esc(a.actor)}],["Match",function(a){return esc(a.action.replace(/^result /,""))}],
+      ["Before",function(a){return'<span class="oldnew"><del>'+esc(a.old||"—")+'</del></span>'}],["After",function(a){return'<span class="oldnew"><ins>'+esc(a.new||"—")+'</ins></span>'}]],empty:"No result changes yet."});
+  alist({title:v==="pending"?"Pending results":"Match results",crumbs:[["Results"]],api:"/api/admin/matches",fixed:[["status",v==="pending"?"pending":"finished"]],ph:"Team or competition",filters:MFILT,cols:MCOLS,
+    empty:v==="pending"?"No matches are waiting for a result.":"No results yet."})}
+
+// ---------- groups & tables ----------
+function aGroups(){alist({title:"Groups",crumbs:[["Groups"]],api:"/api/admin/groups",ph:"Competition or organization",
+  cols:[["Group",function(g){return'<b>Group '+esc(g.group)+'</b>'}],["Competition",function(g){return'<a href="/admin/competitions/'+g.competitionId+'?tab=standings" data-nav>'+esc(g.competition)+'</a><small>'+esc(g.org)+'</small>'}],
+    ["Teams",function(g){return n(g.teams)},1],["Matches",function(g){return n(g.finished)+" / "+n(g.matches)},1],["Status",function(g){return sb(g.status)}]],
+  row:function(g){return'<a class="btn g sm" href="/admin/competitions/'+g.competitionId+'?tab=standings" data-nav>Standings</a>'},empty:"No group stages yet."})}
+function aTables(rest){if(rest){var sec=A("Standings",[["League tables","/admin/tables"],["Standings"]]);api("/api/admin/competitions/"+(+rest)+"/standings").then(function(r){
+    if(!r.ok){sec.innerHTML=errBox(r);return}document.querySelector(".ahead h1").textContent=r.data.competition.name;sec.innerHTML='<div class="card">'+tableHtml(r.data)+'</div>'});return}
+  alist({title:"All standings",crumbs:[["League tables"]],api:"/api/admin/competitions",ph:"Competition",cols:[["Competition",function(c){return'<a href="/admin/tables/'+c.id+'" data-nav>'+esc(c.name)+'</a><small>'+esc(c.org.name)+'</small>'}],
+    ["Format",function(c){return esc(FMT_L[c.format].split(":")[0])}],["Teams",function(c){return n(c.teams)},1],["Played",function(c){return n(c.played)+" / "+n(c.matches)},1],["Status",function(c){return sb(c.status)}]],
+    row:function(c){return c.format==="knockout"?'<span class="note">Knockout</span>':'<a class="btn g sm" href="/admin/tables/'+c.id+'" data-nav>Open table</a>'},empty:"No competitions yet."})}
+
+// ---------- staff & invitations ----------
+function aStaff(){var role=P("role");alist({title:({owner:"Owners",organizer:"Organizers",admin:"Sub-admins",editor:"Editors",moderator:"Moderators",viewer:"Viewers"}[role]||"Organization members"),crumbs:[["Staff"]],api:"/api/admin/staff",ph:"Person or organization",
+  filters:[{key:"role",label:"Role",opts:{"":"All roles","owner":"Owners","organizer":"Organizers","admin":"Admins","editor":"Editors","moderator":"Moderators","viewer":"Viewers"}}],
+  cols:[["Member",function(m){return ULINK(m.user)}],["Organization",function(m){return'<a href="/admin/organizations/'+m.org.id+'" data-nav>'+esc(m.org.name)+'</a>'}],["Role",function(m){return pill(m.role,m.roleLabel)}],
+    ["Joined",function(m){return date(m.joined)}],["Last activity",function(m){return ago(m.lastActive)}]],empty:"Nobody with that role."})}
+function aInvites(){alist({title:"Invitations",crumbs:[["Staff"],["Invitations"]],api:"/api/admin/invitations",search:false,
+  filters:[{key:"status",label:"Status",opts:{"":"All","pending":"Pending","accepted":"Accepted","expired":"Expired","revoked":"Revoked"}}],
+  cols:[["Organization",function(i){return'<a href="/admin/organizations/'+i.org.id+'" data-nav>'+esc(i.org.name)+'</a>'}],["Invited",function(i){return esc(i.email||"Invitation link")}],["Role",function(i){return pill(i.role,i.roleLabel)}],
+    ["Status",function(i){return sb(i.status)}],["Invited by",function(i){return esc(i.invitedBy||"—")}],["Sent",function(i){return date(i.created)}],["Expires",function(i){return date(i.expires)}]],
+  row:function(i){return i.status==="pending"?'<button class="btn g sm" data-rv="'+i.id+'">Revoke</button>':''},
+  bind:function(){document.querySelectorAll("[data-rv]").forEach(function(b){b.onclick=function(){confirmBox("Revoke this invitation?","The link stops working.",{danger:true,ok:"Revoke"}).then(function(y){if(y)act("/api/admin/invitations/"+b.dataset.rv+"/revoke","POST",{},"Invitation revoked").then(function(x){if(x)route()})})}})},empty:"No invitations."})}
+
+// ---------- announcements ----------
+function aAnnouncements(){var org=P("scope")==="org",sec=A(org?"Competition announcements":"Platform announcements",[["Announcements"]]);
+  api("/api/admin/announcements").then(function(r){if(!r.ok){sec.innerHTML=errBox(r);return}
+    if(org){var rows=r.data.organizations;sec.innerHTML='<div class="card">'+(rows.length?'<table class="dt"><thead><tr><th>Announcement</th><th>Organization</th><th>Author</th><th>Posted</th><th>Status</th><th></th></tr></thead><tbody>'+rows.map(function(a){
+        return'<tr><td><b>'+esc(a.title)+'</b><small>'+esc((a.body||"").slice(0,120))+'</small></td><td>'+esc(a.org)+(a.competition?'<small>'+esc(a.competition)+'</small>':'')+'</td><td>'+esc(a.author||"—")+'</td><td>'+date(a.created)+'</td><td>'+sb(a.published?"active":"draft",a.published?"Published":"Hidden")+'</td>'+
+        '<td style="white-space:nowrap"><button class="btn g sm" data-op="'+a.id+'" data-v="'+(a.published?0:1)+'">'+(a.published?"Hide":"Publish")+'</button> <button class="btn bad sm" data-od="'+a.id+'">Delete</button></td></tr>'}).join("")+'</tbody></table>':'<p class="note">No organization announcements yet.</p>')+'</div>';
+      document.querySelectorAll("[data-op]").forEach(function(b){b.onclick=function(){act("/api/admin/org-announcements/"+b.dataset.op,"PATCH",{published:b.dataset.v==="1"},"Saved").then(function(x){if(x)route()})}});
+      document.querySelectorAll("[data-od]").forEach(function(b){b.onclick=function(){confirmBox("Delete this announcement?","",{danger:true,ok:"Delete"}).then(function(y){if(y)act("/api/admin/org-announcements/"+b.dataset.od,"DELETE",{},"Deleted").then(function(x){if(x)route()})})}});return}
+    var rows2=r.data.platform;sec.innerHTML='<form class="card" id="paf" novalidate><div class="gh">NEW PLATFORM ANNOUNCEMENT</div><p class="note" style="margin-top:0">Shown at the top of every logged-in user\'s dashboard (notifications).</p><label for="pat">Title<input id="pat" maxlength="140"></label><label for="pab">Message<textarea id="pab" maxlength="3000"></textarea></label>'+
+      '<label for="pal" style="max-width:240px">Style<select id="pal"><option value="info">Information</option><option value="warning">Warning</option></select></label><div class="actions"><button class="btn">Publish</button></div></form>'+
+      '<div class="card"><div class="gh">PLATFORM ANNOUNCEMENTS</div>'+(rows2.length?'<table class="dt"><tbody>'+rows2.map(function(a){return'<tr><td><b>'+esc(a.title)+'</b><small>'+esc(a.body||"")+'</small></td><td>'+sb(a.level==="warning"?"pending":"scheduled",a.level==="warning"?"Warning":"Info")+'</td><td>'+sb(a.active?"active":"draft",a.active?"Showing":"Hidden")+'</td><td>'+date(a.created)+'</td>'+
+      '<td style="white-space:nowrap;text-align:right"><button class="btn g sm" data-pa="'+a.id+'" data-v="'+(a.active?0:1)+'">'+(a.active?"Hide":"Show")+'</button> <button class="btn bad sm" data-pd="'+a.id+'">Delete</button></td></tr>'}).join("")+'</tbody></table>':'<p class="note">None yet.</p>')+'</div>';
+    $("paf").onsubmit=function(e){e.preventDefault();act("/api/admin/announcements","POST",{title:$("pat").value,body:$("pab").value,level:$("pal").value},"Announcement published").then(function(x){if(x)route()})};
+    document.querySelectorAll("[data-pa]").forEach(function(b){b.onclick=function(){act("/api/admin/announcements/"+b.dataset.pa,"PATCH",{active:b.dataset.v==="1"},"Saved").then(function(x){if(x)route()})}});
+    document.querySelectorAll("[data-pd]").forEach(function(b){b.onclick=function(){confirmBox("Delete this announcement?","",{danger:true,ok:"Delete"}).then(function(y){if(y)act("/api/admin/announcements/"+b.dataset.pd,"DELETE",{},"Deleted").then(function(x){if(x)route()})})}})})}
+
+// ---------- settings ----------
+function aSettings(){var sec=A("Platform settings",[["System"],["Settings"]]);
+  api("/api/admin/settings").then(function(r){if(!r.ok){sec.innerHTML=errBox(r);return}var s=r.data.site,e=r.data.email,st=r.data.emailStatus,chk=function(id,on,label,help){return'<label style="display:flex;gap:10px;align-items:flex-start;margin-top:12px;color:var(--tx);font-size:14px;font-weight:600"><input type="checkbox" id="'+id+'"'+(on?" checked":"")+' style="width:18px;height:18px;margin:2px 0 0;accent-color:var(--gold)"><span>'+esc(label)+'<small style="display:block;color:var(--soft);font-weight:500">'+esc(help)+'</small></span></label>'};
+    sec.innerHTML='<div class="agrid"><form class="card" id="sitef" novalidate><div class="gh">GENERAL</div><label for="sn">Platform name<input id="sn" maxlength="80" value="'+esc(s.name)+'"></label><label for="se">Support email<input id="se" type="email" value="'+esc(s.support_email)+'" placeholder="help@example.com"></label>'+
+      chk("ss",s.allow_signups,"Allow new sign-ups","When off, people can only join through an invitation.")+chk("sa",s.require_org_approval,"New organizations need approval","Their pages stay unpublished until a super admin approves them.")+
+      '<label for="sm" style="max-width:220px">Organizations per person<input id="sm" type="number" min="1" max="1000" value="'+esc(s.max_orgs_per_user)+'"></label><label for="sno">Notice on every dashboard (optional)<textarea id="sno" maxlength="500" placeholder="e.g. Maintenance on Sunday 22:00–23:00">'+esc(s.notice)+'</textarea></label><div class="actions"><button class="btn">Save general settings</button></div></form>'+
+      '<form class="card" id="mailf" novalidate><div class="gh">EMAIL (SMTP / API)</div><p class="note" style="margin-top:0">Status: '+(st.ready?sb("ok","Working setup")+" · "+esc(st.provider)+" from the "+esc(st.source):sb("failed","Not set up"))+'. Settings saved here take priority over the server\'s environment variables.</p>'+
+      '<label for="ep">Provider<select id="ep">'+opts({"":"Use the server's environment settings",smtp:"SMTP (Gmail, Outlook, your host…)",brevo:"Brevo API (works where SMTP ports are blocked)",resend:"Resend API",console:"Console (testing: prints to the server log)"},e.provider)+'</select></label>'+
+      '<label for="efrom">Sender<input id="efrom" maxlength="200" value="'+esc(e.from)+'" placeholder="League <you@gmail.com>"></label>'+
+      '<div id="smtpbox"><div class="row"><label for="eh">SMTP host<input id="eh" value="'+esc(e.host)+'" placeholder="smtp.gmail.com"></label><label for="eport">Port<input id="eport" type="number" min="1" max="65535" value="'+esc(e.port)+'"></label></div>'+
+      '<div class="row"><label for="eu">Username<input id="eu" value="'+esc(e.user)+'" autocomplete="off"></label><label for="epw">Password '+(e.password_set?'<span class="sb green">saved</span>':'')+'<input id="epw" type="password" autocomplete="new-password" placeholder="'+(e.password_set?"Leave blank to keep the saved one":"App password")+'"></label></div>'+
+      '<label for="esec" style="max-width:280px">Encryption<select id="esec">'+opts({"":"Automatic (465 = TLS, otherwise STARTTLS)","1":"TLS from the start","0":"STARTTLS"},e.secure)+'</select></label></div>'+
+      '<div id="apibox"><label for="ek">API key '+(e.api_key_set?'<span class="sb green">saved</span>':'')+'<input id="ek" type="password" autocomplete="off" placeholder="'+(e.api_key_set?"Leave blank to keep the saved key":"xkeysib-…")+'"></label></div>'+
+      '<div class="actions"><button class="btn">Save email settings</button>'+(e.password_set||e.api_key_set?'<button type="button" class="btn g" id="eclr">Remove saved secrets</button>':'')+'</div>'+
+      '<div class="row" style="margin-top:14px;align-items:end"><label for="eto">Send a test email to<input id="eto" type="email" value="'+esc(ME.email||"")+'"></label><div><button type="button" class="btn g" id="etest">Send test</button></div></div></form></div>';
+    var showBoxes=function(){var p=$("ep").value;$("smtpbox").style.display=p==="smtp"?"block":"none";$("apibox").style.display=p==="brevo"||p==="resend"?"block":"none"};showBoxes();$("ep").onchange=showBoxes;
+    var save=function(section,changes){return act("/api/admin/settings","PATCH",{section:section,changes:changes},"Settings saved").then(function(x){if(x)route()})};
+    $("sitef").onsubmit=function(ev){ev.preventDefault();save("site",{name:$("sn").value,support_email:$("se").value,allow_signups:$("ss").checked,require_org_approval:$("sa").checked,max_orgs_per_user:parseInt($("sm").value,10)||1,notice:$("sno").value})};
+    $("mailf").onsubmit=function(ev){ev.preventDefault();save("email",{provider:$("ep").value,from:$("efrom").value,host:$("eh").value,port:parseInt($("eport").value,10)||587,user:$("eu").value,password:$("epw").value,secure:$("esec").value,api_key:$("ek").value})};
+    if($("eclr"))$("eclr").onclick=function(){confirmBox("Remove saved secrets?","The saved SMTP password and API key are deleted.",{danger:true,ok:"Remove"}).then(function(y){if(y)save("email",{password_clear:true,api_key_clear:true})})};
+    $("etest").onclick=function(){var b=$("etest");busy(b,true,"Sending…");api("/api/admin/settings/test-email","POST",{to:$("eto").value}).then(function(r){busy(b,false);toast(r.ok?"Test email sent. Check the inbox (and spam).":r.data.error,!r.ok)})}})}
+
+// ---------- system pages ----------
+function aSystemData(cb,title,crumbs){var sec=A(title,crumbs);api("/api/admin/system").then(function(r){if(!r.ok){sec.innerHTML=errBox(r);return}cb(sec,r.data)})}
+function aSystem(){aSystemData(function(sec,d){sec.innerHTML='<div class="agrid"><div class="card"><div class="gh">HEALTH CHECKS</div>'+healthHtml(d.health)+'</div><div class="card"><div class="gh">CONFIGURATION</div>'+kv(d.config)+'</div></div>'},"System health",[["System health"]])}
+function aConfig(){aSystemData(function(sec,d){sec.innerHTML='<div class="card"><div class="gh">CONFIGURATION</div><p class="note" style="margin-top:0">Set on the server (environment variables / .env). Change them in your host\'s settings and restart.</p>'+kv(d.config)+'</div>'},"Configuration",[["System"],["Configuration"]])}
+function aIntegrations(){aSystemData(function(sec,d){sec.innerHTML='<div class="card"><div class="gh">API & INTEGRATIONS</div>'+kv({"Email provider":d.integrations.email,"Database":d.integrations.database,"Public pages":d.integrations.publicApi,"Health check":d.integrations.healthCheck,"Sitemap":"/sitemap.xml"})+'</div>'},"API & integrations",[["System"],["Integrations"]])}
+function aRoles(){aSystemData(function(sec,d){var M=d.matrix;sec.innerHTML='<div class="card"><div class="gh">PLATFORM SUPER ADMINS · '+d.superAdmins.length+'</div><table class="dt"><tbody>'+d.superAdmins.map(function(u){return'<tr><td>'+ULINK(u)+'<small>'+esc(u.email||"")+'</small></td><td>'+sb(u.status)+'</td><td>'+ago(u.lastSeen)+'</td></tr>'}).join("")+'</tbody></table><p class="note">Give or remove super admin rights from a user\'s page, or on the server with <code>python manage.py superadmin &lt;username&gt;</code>.</p></div>'+
+  '<div class="card"><div class="gh">ORGANIZATION ROLES</div><div class="tbl"><table class="mx"><tr><th>Permission</th>'+M.roles.map(function(r){return'<th>'+esc(r.label)+'</th>'}).join("")+'</tr>'+M.permissions.map(function(p){return'<tr><td>'+esc(p.label)+'</td>'+M.roles.map(function(r){var y=p.roles.indexOf(r.key)>=0;return'<td class="'+(y?"y":"n")+'">'+(y?"✓":"–")+'</td>'}).join("")+'</tr>'}).join("")+'</table></div></div>'},"Roles & permissions",[["System"],["Roles & permissions"]])}
+function aSecurity(){aSystemData(function(sec,d){var s=d.security;sec.innerHTML='<div class="kpis"><div class="kpi"><span>Active sessions</span><b>'+n(s.activeSessions)+'</b></div><div class="kpi '+(s.failedLogins24h?"warn":"")+'"><span>Failed logins (24 h)</span><b>'+n(s.failedLogins24h)+'</b></div><div class="kpi"><span>Suspended users</span><b>'+n(s.suspendedUsers)+'</b></div></div>'+
+  '<div class="agrid"><div class="card"><div class="gh">PROTECTIONS</div>'+kv({"Passwords":s.passwordRules,"Lockouts":s.lockouts,"Sessions":"HttpOnly, SameSite=Strict cookies, 7 days; CSRF token on every change","Admin area":"Every /api/admin request is checked for super admin on the server; refused attempts are logged"})+'</div>'+
+  '<div class="card"><div class="gh">EMERGENCY</div><p class="note" style="margin-top:0">Logs every user out on all devices (you stay logged in). Use it if you think accounts were compromised.</p><button class="btn bad" id="lox">Log out every user</button><p style="margin-top:14px"><a href="/admin/audit?status=failed" data-nav>See failed logins →</a></p></div></div>';
+  $("lox").onclick=function(){confirmBox("Log out every user?","Everyone except you has to log in again.",{danger:true,ok:"Log everyone out"}).then(function(y){if(y)act("/api/admin/security/logout-everyone","POST",{},"Everyone has been logged out")})}},"Security",[["System"],["Security"]])}
+function kv(o){return'<dl class="kv">'+Object.keys(o).map(function(k){return'<dt>'+esc(k)+'</dt><dd>'+esc(String(o[k]))+'</dd>'}).join("")+'</dl>'}
+
+// ---------- support ----------
+function aSupport(){var kind=P("kind");alist({title:{complaint:"User complaints",organizer_request:"Organizer requests"}[kind]||"Support tickets",crumbs:[["Support"]],api:"/api/admin/tickets",search:false,
+  filters:[{key:"status",label:"Status",opts:{"":"All","open":"Open","in_progress":"In progress","closed":"Closed"}},{key:"kind",label:"Type",opts:{"":"All types","support":"Support","complaint":"Complaints","organizer_request":"Organizer requests"}}],
+  cols:[["Request",function(t){return'<b>'+esc(t.subject)+'</b><small style="white-space:pre-wrap">'+esc(t.body)+'</small>'+(t.reply?'<div class="oldnew"><ins>Reply: '+esc(t.reply)+'</ins></div>':'')}],["From",function(t){return ULINK(t.user)+'<small>'+esc(t.email||"")+'</small>'}],
+    ["Type",function(t){return esc(t.kindLabel)}],["Status",function(t){return sb(t.status)}],["Opened",function(t){return date(t.created)}]],
+  row:function(t){return'<button class="btn g sm" data-tk="'+t.id+'">Reply</button>'},
+  bind:function(items){document.querySelectorAll("[data-tk]").forEach(function(b){b.onclick=function(){var t=items.filter(function(x){return x.id===+b.dataset.tk})[0],d=document.createElement("div");d.className="modal";
+    d.innerHTML='<form class="mbox" id="tkf"><h2>'+esc(t.subject)+'</h2><p class="note" style="white-space:pre-wrap">'+esc(t.body)+'</p><label for="tkr">Reply (emailed to them if email is set up)<textarea id="tkr" maxlength="5000">'+esc(t.reply||"")+'</textarea></label>'+
+      '<label for="tks">Status<select id="tks">'+opts({open:"Open",in_progress:"In progress",closed:"Closed"},t.status)+'</select></label><div class="actions"><button class="btn">Save</button><button type="button" class="btn g" id="tkc">Cancel</button></div></form>';
+    document.body.appendChild(d);$("tkc").onclick=function(){d.remove()};$("tkr").focus();
+    $("tkf").onsubmit=function(e){e.preventDefault();act("/api/admin/tickets/"+t.id,"PATCH",{reply:$("tkr").value,status:$("tks").value},"Ticket updated").then(function(x){if(x){d.remove();route()}})}}})},empty:"No tickets."})}
+
+// ---------- help & support (every user) ----------
+function supportView(){document.title="Help & support · Competition Manager";
+  main('<h1>Help & support</h1><p class="sub">Questions, problems or requests for the platform team.</p><div class="layout" style="grid-template-columns:1fr"><form class="card" id="spf" novalidate style="max-width:680px"><div class="gh">CONTACT THE PLATFORM TEAM</div>'+
+    '<label for="spk">Type<select id="spk"><option value="support">Question or problem</option><option value="complaint">Complaint</option><option value="organizer_request">Organizer request (e.g. feature my competition)</option></select></label>'+
+    '<label for="sps">Subject<input id="sps" maxlength="140"></label><label for="spb">Message<textarea id="spb" maxlength="5000" rows="5"></textarea></label><div class="actions"><button class="btn">Send</button></div><div id="spm"></div></form><div id="spl"></div></div>');
+  var load=function(){api("/api/support").then(function(r){var t=(r.data&&r.data.tickets)||[];$("spl").innerHTML='<div class="card" style="max-width:680px"><div class="gh">YOUR REQUESTS</div>'+(r.data&&r.data.supportEmail?'<p class="note">You can also email '+esc(r.data.supportEmail)+'.</p>':'')+
+    (t.length?t.map(function(x){return'<div style="border-top:1px solid var(--line);padding:10px 0"><b>'+esc(x.subject)+'</b> '+sb(x.status)+'<div class="note">'+esc(x.kindLabel)+' · '+date(x.created)+'</div>'+(x.reply?'<div class="okm">'+esc(x.reply)+'</div>':'')+'</div>'}).join(""):'<p class="note">No requests yet.</p>')+'</div>'})};
+  $("spf").onsubmit=function(e){e.preventDefault();api("/api/support","POST",{kind:$("spk").value,subject:$("sps").value,body:$("spb").value}).then(function(r){if(!r.ok){$("spm").innerHTML=errBox(r);return}toast("Sent. We'll get back to you.");$("sps").value=$("spb").value="";$("spm").innerHTML="";load()})};load()}
 
 loadMe().then(route);
 </script></body></html>

@@ -55,7 +55,7 @@ def landing(request):
            "starting": [card(c) for c in comps.filter(upcoming_q()).order_by(F("start_date").asc(nulls_last=True), "-created")[:6]],
            "upcoming": [match_view(m, linkable) for m in upcoming], "countries": list(countries),
            "stats": stats if stats["competitions"] >= 3 else None,
-           "title": "Run your league or tournament online",
+           "title": "Leagues and tournaments, live",
            "description": "Create a competition, register teams, generate fixtures, enter results and publish live league tables "
                           "and match pages. Free for organizers, open to fans."}
     return page(request, "landing.html", ctx)
@@ -105,14 +105,14 @@ def competitions(request):
            "countries": list(countries), "regions": list(regions), "total": pager.count, "query": urlencode(params),
            "filtered": bool(params.keys() - {"sort"}),
            "title": " · ".join(x for x in (q and f"“{q}”", region, country, KIND_L.get(kind) if kind else "") if x) + " competitions" if params.keys() - {"sort"} else "Browse competitions",
-           "description": "Find leagues, tournaments, cups and school competitions: live tables, fixtures and results."}
+           "description": "Find leagues, tournaments, cups and school competitions: live tables, fixtures and results.", "nav": "competitions"}
     return page(request, "competitions.html", ctx, index=not (params.keys() - {"sort", "country", "region", "type"}))
 
 
 # ---------- search ----------
 def search(request):
     q = (request.GET.get("q") or "").strip()[:80]
-    ctx = {"q": q, "title": f"Search: {q}" if q else "Search", "description": "Search competitions, teams, matches and organizations."}
+    ctx = {"q": q, "title": f"Search: {q}" if q else "Search", "description": "Search competitions, teams, matches and organizations.", "nav": "search"}
     if len(q) >= 2:
         linkable = public_team_ids()
         ctx["comps"] = [card(c) for c in public_competitions().filter(Q(name__icontains=q) | Q(org__name__icontains=q) | Q(season__icontains=q)

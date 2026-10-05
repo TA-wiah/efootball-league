@@ -150,6 +150,33 @@ preview and search engines can index it:
   `HOME_PAGE=league` to keep it at `/` instead of the landing page. To move it into the platform for good, use
   `python manage.py import_league <organization-address>`.
 
+## Super admin (platform owner) – `/admin`
+The person running the site is the **super admin**: the account in `ADMIN_USER`, and the original league's owner
+(promoted automatically when you upgrade). Give or remove the role on a user's admin page or with
+`python manage.py superadmin <username>` (`--off` to remove). Logging in as a super admin opens `/admin`.
+
+- **Sidebar** with Dashboard, Users, Organizations, Competitions, Teams, Players, Matches, Groups, Fixtures, Results,
+  League tables, Staff, Reports & analytics, Announcements, System and Support, each with filtered views.
+- **Overview**: 20 live statistics from the database, charts, system health, items waiting for approval and recent activity.
+- **Analytics**: users, organizations, competitions, teams, matches created/completed and platform activity for today,
+  7 days, 30 days, 3 or 6 months, this year or a custom range, each with a table view.
+- **Global search** across users, organizations, competitions, teams, players, matches and groups.
+- **Manage**: suspend/reactivate/delete users, make super admins, log people out; approve/suspend/delete organizations;
+  suspend or feature competitions; suspend teams; inspect any competition's teams, groups, fixtures, results,
+  standings, scorers, organizers and activity; revoke invitations; bulk actions with confirmation dialogs.
+  Suspended users can't log in; suspended organizations, competitions and teams disappear from public pages
+  (and suspended competitions become read-only for their organizers).
+- **Audit logs**: who did what, to which resource, the value before and after, IP, device and outcome
+  (including refused attempts to open the admin area).
+- **Announcements** shown on every user's dashboard, and moderation of organizations' announcements.
+- **Settings** (stored in the database): platform name, support email, open/closed sign-ups, approval for new
+  organizations, organizations per person, a dashboard notice, and **email (SMTP, Brevo, Resend or console)** with a
+  test button. Email settings saved here take priority over the environment; passwords and API keys are never shown again.
+- **System**: health checks, configuration, roles & permissions, security (sessions, failed logins, "log out every user").
+- **Support**: users send requests from **Help** in their dashboard; super admins reply from the Support section.
+- Security: every `/api/admin/*` request is checked for super admin **on the server**. Organizers who type `/admin`
+  see "Super admins only" and the data requests are refused (403) and logged.
+
 ## Fair random draws
 - **Group draw** (Players tab): the **server** shuffles the players into groups with the operating system's
   cryptographic random generator, so the organizer can't pick or predict groups. A player's place in the group also
@@ -191,6 +218,7 @@ Nobody can read a password: only a one-way hash is stored. Set `ADMIN_USER` and 
 ## Files
 - `competitions/public.py` + `templates/public/`: the public pages
 - `competitions/`: competitions, teams, players, matches: `models.py`, `engine.py` (fixtures, standings, tie-breakers), `api.py`, `tests.py`, `management/commands/import_league.py`
+- `superadmin/`: the super admin API, platform settings, support tickets and announcements
 - `orgs/`: the platform: `models.py` (organizations, memberships, invitations), `permissions.py` (roles), `api.py`, `tests.py`
 - `public/app.html`: the platform pages (sign-up, dashboards, members, invitations)
 - `league/`: the original league app: `views.py` (the API), `logic.py` (rules, draws, validation), `models.py` (database tables),
