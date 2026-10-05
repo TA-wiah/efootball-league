@@ -59,6 +59,15 @@ class DiscoverTest(Helpers, TestCase):
         self.assertIn("Kasoa Sunday League", self.text("/competitions?status=active"), "generating fixtures starts a competition")
         self.assertEqual(Client().get("/competitions?type=<script>&sort=bad&page=999").status_code, 200, "bad parameters are ignored")
 
+    def test_location_falls_back_to_the_organizer(self):
+        self.make("No Place Cup", "public", ["Omega", "Sigma"])          # no country given; the organization is in Ghana
+        html = Client().get("/competitions?country=Ghana").content.decode()
+        self.assertIn("No Place Cup", html)
+        self.assertIn("Ghana (3)", Client().get("/competitions").content.decode())
+        self.assertNotIn("No Place Cup", Client().get("/competitions?country=Nigeria").content.decode())
+        self.assertIn("No Place Cup", Client().get("/competitions?country=Ghana&region=Central").content.decode())
+        self.assertIn("No Place Cup", Client().get("/search?q=ghana").content.decode())
+
     def test_featured_and_popular(self):
         call_command("feature", "lagos-schools-shield", stdout=open(__import__("os").devnull, "w"))
         html = self.text("/competitions")

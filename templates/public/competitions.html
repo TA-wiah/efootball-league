@@ -8,9 +8,10 @@
   <label>Country<select name="country"><option value="">Any</option>{% for c in countries %}<option value="{{ c.country }}"{% if c.country|lower == country|lower %} selected{% endif %}>{{ c.country }} ({{ c.n }})</option>{% endfor %}</select></label>
   <label>Status<select name="status"><option value="">Any</option>{% for k, label in statuses %}<option value="{{ k }}"{% if k == status %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
   <label>Sort<select name="sort">{% for k, label in sorts %}<option value="{{ k }}"{% if k == sort %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
-  <button class="btn">Apply</button>
+  <button class="btn">Search</button>
   {% if region %}<input type="hidden" name="region" value="{{ region }}">{% endif %}
 </form>
+{% if filtered %}<p class="note" style="margin:-4px 0 14px"><a href="/competitions">Clear all filters</a></p>{% endif %}
 {% if regions %}<div class="chips" style="margin-bottom:14px"><a href="?country={{ country|urlencode }}" class="{% if not region %}on{% endif %}">All of {{ country }}</a>{% for r in regions %}<a href="?country={{ country|urlencode }}&amp;region={{ r.region|urlencode }}" class="{% if r.region|lower == region|lower %}on{% endif %}">{{ r.region }} <small>{{ r.n }}</small></a>{% endfor %}</div>{% endif %}
 {% if cards %}<div class="cards">{% for x in cards %}{% include "public/_card.html" %}{% endfor %}</div>
 {% else %}<section class="card" style="text-align:center"><h2>No competitions found</h2><p class="note">Try a different search or fewer filters.</p><a class="btn g" href="/competitions">Clear filters</a></section>{% endif %}

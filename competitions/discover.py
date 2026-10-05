@@ -2,7 +2,8 @@
 teams, matches and organizations in them) ever appear here; unlisted and private ones are never listed."""
 from django.conf import settings
 from django.core.paginator import Paginator
-from django.db.models import Count, F, Q
+from django.db.models import Count, F, Q, Value
+from django.db.models.functions import Coalesce, NullIf
 from django.utils import timezone
 
 from orgs.models import Organization
@@ -15,15 +16,42 @@ SORTS = {"featured": "Featured", "popular": "Most popular", "upcoming": "Startin
 STATUSES = {"active": "In progress", "upcoming": "Starting soon", "completed": "Completed"}
 
 
+def with_place(qs):
+    """Where a competition is played: its own country/region, or else its organizer's."""
+    return qs.annotate(place_country=Coalesce(NullIf("country", Value("")), "org__country"),
+                       place_region=Coalesce(NullIf("region", Value("")), "org__region"))
+
+
+def listed_places():
+    return with_place(Competition.objects.filter(listed()))
+
+
+def place_counts(field, qs, order=None):
+    """[{"country"/"region": name, "n": how many}] for the filter lists and country chips."""
+    key = field.replace("place_", "")
+    rows = qs.exclude(**{field: ""}).exclude(**{f"{field}__isnull": True}).values(field).annotate(n=Count("id")).order_by(*(order or (field,)))
+    return [{key: r[field], "n": r["n"]} for r in rows]
+
+
+def filter_title(q, region, country, kind, status):
+    """e.g. "In progress cups in Central, Ghana" or "“kasoa” competitions"."""
+    what = {"league": "leagues", "cup": "cups", "tournament": "tournaments", "championship": "championships",
+            "friendly": "friendly series"}.get(kind, "competitions")
+    words = " ".join(x for x in ((STATUSES.get(status) or "").replace("Starting soon", "Upcoming"), f"“{q}”" if q else "", what) if x)
+    where = ", ".join(x for x in (region, country) if x)
+    words = words[0].upper() + words[1:]
+    return f"{words} in {where}" if where else words
+
+
 def public_competitions():
-    return (Competition.objects.filter(listed()).select_related("org")
+    return (with_place(Competition.objects.filter(listed()).select_related("org"))
             .annotate(team_count=Count("entries", distinct=True),
                       played_count=Count("matches", filter=Q(matches__status="finished"), distinct=True)))
 
 
 def card(c):
     return {"name": c.name, "slug": c.slug, "logo": logo("competition", c), "kind": KIND_L.get(c.kind, "Competition"), "season": c.season,
-            "where": ", ".join(x for x in (c.region, c.country) if x), "org": c.org.name, "teams": c.team_count, "played": c.played_count,
+            "where": ", ".join(x for x in (getattr(c, "place_region", c.region), getattr(c, "place_country", c.country)) if x), "org": c.org.name, "teams": c.team_count, "played": c.played_count,
             "status": c.status, "start": c.start_date, "featured": c.featured}
 
 
@@ -46,8 +74,7 @@ def landing(request):
     now = timezone.now()
     linkable = public_team_ids()
     upcoming = MATCHES.filter(listed("competition__"), status__in=["scheduled", "live"], kickoff__gte=now).order_by("kickoff")[:6]
-    countries = (Competition.objects.filter(listed()).exclude(country="").values("country")
-                 .annotate(n=Count("id")).order_by("-n", "country")[:12])
+    countries = place_counts("place_country", listed_places(), order=("-n", "place_country"))[:12]
     stats = {"competitions": Competition.objects.filter(listed()).count(), "teams": len(linkable),
              "matches": Match.objects.filter(listed("competition__"), status="finished").count()}
     ctx = {"featured": [card(c) for c in featured],
@@ -79,13 +106,13 @@ def competitions(request):
     qs = public_competitions()
     if q:
         qs = qs.filter(Q(name__icontains=q) | Q(org__name__icontains=q) | Q(description__icontains=q) | Q(season__icontains=q)
-                       | Q(region__icontains=q) | Q(country__icontains=q))
+                       | Q(place_region__icontains=q) | Q(place_country__icontains=q))
     if kind:
         qs = qs.filter(kind=kind)
     if country:
-        qs = qs.filter(country__iexact=country)
+        qs = qs.filter(place_country__iexact=country)
     if region:
-        qs = qs.filter(region__iexact=region)
+        qs = qs.filter(place_region__iexact=region)
     if status == "upcoming":
         qs = qs.filter(upcoming_q())
     elif status:
@@ -94,9 +121,9 @@ def competitions(request):
                        "upcoming": [F("start_date").asc(nulls_last=True), "-created"], "new": ["-created"], "name": ["name"]}[sort])
     pager = Paginator(qs, PER_PAGE)
     pg = pager.get_page(g.get("page"))
-    base = Competition.objects.filter(listed())
-    countries = base.exclude(country="").values("country").annotate(n=Count("id")).order_by("country")
-    regions = base.filter(country__iexact=country).exclude(region="").values("region").annotate(n=Count("id")).order_by("region") if country else []
+    base = listed_places()
+    countries = place_counts("place_country", base)
+    regions = place_counts("place_region", base.filter(place_country__iexact=country)) if country else []
     params = {k: v for k, v in (("q", q), ("type", kind), ("status", status), ("sort", sort if sort != "featured" else ""),
                                  ("country", country), ("region", region)) if v}
     from urllib.parse import urlencode
@@ -104,7 +131,7 @@ def competitions(request):
            "region": region, "kinds": [(k, KIND_L.get(k, v)) for k, v in KINDS], "statuses": list(STATUSES.items()), "sorts": list(SORTS.items()),
            "countries": list(countries), "regions": list(regions), "total": pager.count, "query": urlencode(params),
            "filtered": bool(params.keys() - {"sort"}),
-           "title": " · ".join(x for x in (q and f"“{q}”", region, country, KIND_L.get(kind) if kind else "") if x) + " competitions" if params.keys() - {"sort"} else "Browse competitions",
+           "title": filter_title(q, region, country, kind, status) if params.keys() - {"sort"} else "Browse competitions",
            "description": "Find leagues, tournaments, cups and school competitions: live tables, fixtures and results.", "nav": "competitions"}
     return page(request, "competitions.html", ctx, index=not (params.keys() - {"sort", "country", "region", "type"}))
 
@@ -116,7 +143,7 @@ def search(request):
     if len(q) >= 2:
         linkable = public_team_ids()
         ctx["comps"] = [card(c) for c in public_competitions().filter(Q(name__icontains=q) | Q(org__name__icontains=q) | Q(season__icontains=q)
-                                                                        | Q(region__icontains=q) | Q(country__icontains=q)).order_by("-views")[:12]]
+                                                                        | Q(place_region__icontains=q) | Q(place_country__icontains=q)).order_by("-views")[:12]]
         ctx["teams"] = [{**team_view(t, linkable), "city": t.city} for t in
                         Team.objects.filter(id__in=linkable).filter(Q(name__icontains=q) | Q(short_name__icontains=q) | Q(city__icontains=q)).order_by("name")[:12]]
         words = [w.strip() for w in q.replace(" vs ", "|").replace(" v ", "|").split("|") if w.strip()]
