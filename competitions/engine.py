@@ -71,6 +71,53 @@ def round_robin(ids, legs=1, shuffle=True):
     return out
 
 
+SCHEDULE_DEFAULT = {"perDay": 5, "everyDays": 1, "time": "18:00", "gap": 30}
+SCHEDULE_LIMITS = {"perDay": (2, 20), "everyDays": (1, 5), "gap": (10, 240)}
+
+
+def clean_schedule(data):
+    """{perDay: 2–20 matches a day, everyDays: 1–5 days between match days, time: "HH:MM" first kick-off, gap: minutes between matches}."""
+    if not isinstance(data, dict):
+        raise ValueError("Send the schedule as an object.")
+    out = {}
+    for k, v in data.items():
+        if k in SCHEDULE_LIMITS:
+            lo, hi = SCHEDULE_LIMITS[k]
+            if isinstance(v, bool) or not isinstance(v, int) or not lo <= v <= hi:
+                raise ValueError({"perDay": f"Matches a day must be from {lo} to {hi}.", "everyDays": f"Days between match days must be from {lo} to {hi}.",
+                                  "gap": f"Minutes between matches must be from {lo} to {hi}."}[k])
+            out[k] = v
+        elif k == "time":
+            if not isinstance(v, str) or not __import__("re").fullmatch(r"([01]\d|2[0-3]):[0-5]\d", v):
+                raise ValueError("The first kick-off time must look like 18:00.")
+            out[k] = v
+        else:
+            raise ValueError(f"Unknown schedule setting: {k}")
+    return out
+
+
+def plan_kickoffs(count, first_day, sched, tz):
+    """Kick-off times for `count` matches in order: `perDay` matches on each match day, `gap` minutes apart from `time`,
+    with a match day every `everyDays` days starting on `first_day`."""
+    import zoneinfo
+    from datetime import datetime, time as dtime
+    s = {**SCHEDULE_DEFAULT, **(sched or {})}
+    hh, mm = map(int, s["time"].split(":"))
+    zone = zoneinfo.ZoneInfo(tz)
+    out = []
+    for i in range(count):
+        day = first_day + timedelta(days=(i // s["perDay"]) * s["everyDays"])
+        at = datetime.combine(day, dtime(hh, mm), tzinfo=zone) + timedelta(minutes=(i % s["perDay"]) * s["gap"])
+        out.append(at)
+    return out
+
+
+def match_days_needed(count, sched):
+    s = {**SCHEDULE_DEFAULT, **(sched or {})}
+    days = -(-count // s["perDay"])
+    return days, (days - 1) * s["everyDays"] if days else 0       # (match days, calendar days after the first)
+
+
 def kickoff_for(start, round_no, days_between):
     return start + timedelta(days=days_between * (round_no - 1)) if start else None
 

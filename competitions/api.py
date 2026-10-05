@@ -3,7 +3,7 @@
 Every endpoint starts with `access(user, org_slug, perm)` (membership + permission, checked on the server), and every
 object is looked up *inside that organization*, so an ID from another organization is simply "not found".
 """
-from datetime import date, datetime, timezone as dt_tz
+from datetime import date, datetime, timedelta, timezone as dt_tz
 
 from django.db import transaction
 from django.db.models import ProtectedError, Q, RestrictedError
@@ -92,6 +92,7 @@ def comp_json(c, extra=False):
          "startDate": c.start_date.isoformat() if c.start_date else None, "endDate": c.end_date.isoformat() if c.end_date else None,
          "logo": logo_url("competition", c)}
     if extra:
+        d["schedule"] = {**engine.SCHEDULE_DEFAULT, **(c.schedule or {})}
         d.update({"rules": c.rules, "pointsWin": c.points_win, "pointsDraw": c.points_draw, "pointsLoss": c.points_loss,
                   "tiebreakers": engine.clean_tiebreakers(c.tiebreakers or engine.DEFAULT_TIEBREAKERS), "legs": c.legs,
                   "maxTeams": c.max_teams, "qualifiersPerGroup": c.qualifiers_per_group,
@@ -181,7 +182,7 @@ def summary(request, user, ip, slug):
 
 # ---------- competitions ----------
 COMP_STRUCTURE = {"name", "country", "region", "season", "kind", "format", "visibility", "status", "startDate", "endDate", "pointsWin",
-                  "pointsDraw", "pointsLoss", "tiebreakers", "legs", "maxTeams", "qualifiersPerGroup"}
+                  "pointsDraw", "pointsLoss", "tiebreakers", "legs", "maxTeams", "qualifiersPerGroup", "schedule"}
 COMP_CONTENT = {"description", "rules"}
 
 
@@ -214,6 +215,11 @@ def apply_competition(c, b):
         c.legs = num(b, "legs", 1, 2, allow_null=False)
     if "maxTeams" in b:
         c.max_teams = num(b, "maxTeams", 2, 500)
+    if "schedule" in b:
+        try:
+            c.schedule = {**(c.schedule or {}), **engine.clean_schedule(b["schedule"])}
+        except ValueError as e:
+            raise ApiError(400, str(e)) from None
     if "qualifiersPerGroup" in b:
         c.qualifiers_per_group = num(b, "qualifiersPerGroup", 0, 32, allow_null=False)
 
@@ -341,8 +347,7 @@ def generate(request, user, ip, slug, cslug):
         raise ApiError(400, "Knockout competitions don't have a league stage. Use “Draw a knockout round” instead.")
     b = body(request)
     legs = num(b, "legs", 1, 2) or c.legs
-    start = moment(b, "start")
-    gap = num(b, "daysBetween", 0, 60) or 7
+    sched = use_schedule(c, b)
     existing = c.matches.filter(stage="league")
     if existing.filter(Q(status="finished") | Q(home_score__isnull=False)).exists():
         raise ApiError(409, "Results have already been entered for the league stage, so the fixtures can't be regenerated.")
@@ -353,23 +358,107 @@ def generate(request, user, ip, slug, cslug):
         groups.setdefault(e.group, []).append(e)
     if not any(len(g) >= 2 for g in groups.values()):
         raise ApiError(400, "Add at least two teams (in the same group) first.")
+    pairs = []                                   # (matchday, group, order, home, away): every group's matchday 1 first, and so on
+    for label, members in sorted(groups.items()):
+        by_id = {e.id: e for e in members}
+        for i, (rnd, h, a) in enumerate(engine.round_robin(by_id, legs)):
+            pairs.append((rnd, label, i, by_id[h], by_id[a]))
+    pairs.sort(key=lambda x: (x[0], x[1], x[2]))
+    kickoffs = plan(c, org, len(pairs), first_free_day(c, org, sched, after_existing=False), sched, b)
     made = 0
     with transaction.atomic():
         existing.delete()
-        for label, members in sorted(groups.items()):
-            by_id = {e.id: e for e in members}
-            for rnd, h, a in engine.round_robin(by_id, legs):
-                home, away = by_id[h], by_id[a]
-                ko = engine.kickoff_for(start, rnd, gap)
-                Match.objects.create(competition=c, stage="league", group=label, round=rnd, round_name=f"Matchday {rnd}",
-                                     home=home, away=away, kickoff=ko, venue=home.team.venue,
-                                     slug=engine.match_slug(Match, home, away, ko, c.season))
-                made += 1
+        for (rnd, label, _, home, away), ko in zip(pairs, kickoffs):
+            Match.objects.create(competition=c, stage="league", group=label, round=rnd, round_name=f"Matchday {rnd}",
+                                 home=home, away=away, kickoff=ko, venue=home.team.venue,
+                                 slug=engine.match_slug(Match, home, away, ko, c.season))
+            made += 1
         if c.status == "draft":
             c.status = "active"
             c.save(update_fields=["status"])
     log(org, user, f"generated {made} fixtures for {c.name}")
-    return {"ok": True, "created": made}
+    return {"ok": True, "created": made, "first": kickoffs[0].isoformat() if kickoffs else None,
+            "last": kickoffs[-1].isoformat() if kickoffs else None}
+
+
+def org_tz(org):
+    import zoneinfo
+    from django.conf import settings
+    for tz in (org.timezone, settings.TIME_ZONE, "UTC"):
+        try:
+            if tz:
+                zoneinfo.ZoneInfo(tz)
+                return tz
+        except (zoneinfo.ZoneInfoNotFoundError, ValueError):
+            continue
+    return "UTC"
+
+
+def use_schedule(c, b):
+    """Save schedule changes sent with a generate/draw request, then return the competition's schedule."""
+    if isinstance(b.get("schedule"), dict):
+        try:
+            c.schedule = {**(c.schedule or {}), **engine.clean_schedule(b["schedule"])}
+        except ValueError as e:
+            raise ApiError(400, str(e)) from None
+        c.save(update_fields=["schedule"])
+    return {**engine.SCHEDULE_DEFAULT, **(c.schedule or {})}
+
+
+def plan(c, org, count, first_day, sched, b):
+    """Kick-offs for `count` matches. An explicit "start" (date and time) wins; otherwise the competition's schedule is used.
+    Refuses plans that run past the competition's end date, saying what would fit."""
+    tz = org_tz(org)
+    start = moment(b, "start")
+    if start:
+        from django.utils import timezone as djtz
+        local = djtz.localtime(start, __import__("zoneinfo").ZoneInfo(tz))
+        sched = {**sched, "time": local.strftime("%H:%M")}
+        first_day = local.date()
+    days, span = engine.match_days_needed(count, sched)
+    if c.end_date and count and first_day + timedelta(days=span) > c.end_date:
+        room = (c.end_date - first_day).days // sched["everyDays"] + 1
+        need = -(-count // room) if room > 0 else None
+        hint = (f" Play {need} matches a day" + (" (the most is 20)" if need > 20 else "") + ", fewer days between match days, or move the end date."
+                if need else " Move the end date or the start date.")
+        raise ApiError(400, f"{count} matches at {sched['perDay']} a day, every {sched['everyDays']} day{'s' if sched['everyDays'] > 1 else ''}, "
+                            f"would run until {(first_day + timedelta(days=span)):%d %b %Y}, after the end date ({c.end_date:%d %b %Y}).{hint}")
+    return engine.plan_kickoffs(count, first_day, sched, tz)
+
+
+def first_free_day(c, org, sched, after_existing):
+    """The first day to schedule on: the start date (or today, if that has passed); for later rounds, the next match day after
+    the last scheduled match."""
+    import zoneinfo
+    today = timezone.localtime(timezone.now(), zoneinfo.ZoneInfo(org_tz(org))).date()
+    day = max(c.start_date or today, today)
+    if after_existing:
+        last = c.matches.exclude(kickoff=None).order_by("-kickoff").values_list("kickoff", flat=True).first()
+        if last:
+            day = max(day, timezone.localtime(last, zoneinfo.ZoneInfo(org_tz(org))).date() + timedelta(days=sched["everyDays"]))
+    return day
+
+
+@endpoint("POST", login_required=True)
+def set_dates(request, user, ip, slug, cslug):
+    """Give dates to the existing fixtures that haven't been played, keeping who plays whom (matchday by matchday)."""
+    org, m = access(user, slug, "fixtures.manage")
+    c = competition_of(org, cslug, request)
+    b = body(request)
+    sched = use_schedule(c, b)
+    todo = list(c.matches.filter(status__in=["scheduled", "postponed"], home_score__isnull=True)
+                .order_by("stage", "round", "leg", "group", "id")) if b.get("all") else         list(c.matches.filter(status__in=["scheduled", "postponed"], home_score__isnull=True, kickoff__isnull=True)
+             .order_by("stage", "round", "leg", "group", "id"))
+    if not todo:
+        raise ApiError(400, "Every fixture that hasn't been played already has a date.")
+    after = c.matches.exclude(id__in=[x.id for x in todo]).exclude(kickoff=None).exists()
+    kickoffs = plan(c, org, len(todo), first_free_day(c, org, sched, after_existing=after), sched, b)
+    with transaction.atomic():
+        for mt, ko in zip(todo, kickoffs):
+            mt.kickoff = ko
+            mt.save(update_fields=["kickoff"])
+    log(org, user, f"set dates for {len(todo)} fixtures in {c.name}")
+    return {"ok": True, "updated": len(todo), "first": kickoffs[0].isoformat(), "last": kickoffs[-1].isoformat()}
 
 
 @endpoint("POST", login_required=True)
@@ -384,18 +473,19 @@ def draw(request, user, ip, slug, cslug):
         raise ApiError(400, "Pick an even number of different teams (at least 2).")
     name = text(b, "roundName", 40) or "Knockout round"
     legs = num(b, "legs", 1, 2) or 1
-    start = moment(b, "start")
+    sched = use_schedule(c, b)
     rnd = (c.matches.filter(stage="knockout").order_by("-round").values_list("round", flat=True).first() or 0) + 1
     by_id = {e.id: e for e in picked}
+    ties = engine.draw_pairs(by_id)
+    games = [(leg, h, a) for leg in range(1, legs + 1) for h, a in ties]        # all first legs, then all second legs
+    kickoffs = plan(c, org, len(games), first_free_day(c, org, sched, after_existing=True), sched, b)
     created = []
     with transaction.atomic():
-        for h, a in engine.draw_pairs(by_id):
-            for leg in range(1, legs + 1):
-                home, away = (by_id[h], by_id[a]) if leg == 1 else (by_id[a], by_id[h])   # second leg: home and away swap
-                ko = engine.kickoff_for(start, leg, 7)
-                created.append(Match.objects.create(competition=c, stage="knockout", round=rnd, round_name=name, leg=leg,
-                                                    home=home, away=away, kickoff=ko, venue=home.team.venue,
-                                                    slug=engine.match_slug(Match, home, away, ko, c.season)))
+        for (leg, h, a), ko in zip(games, kickoffs):
+            home, away = (by_id[h], by_id[a]) if leg == 1 else (by_id[a], by_id[h])   # second leg: home and away swap
+            created.append(Match.objects.create(competition=c, stage="knockout", round=rnd, round_name=name, leg=leg,
+                                                home=home, away=away, kickoff=ko, venue=home.team.venue,
+                                                slug=engine.match_slug(Match, home, away, ko, c.season)))
     log(org, user, f"drew {name} for {c.name}")
     return {"ok": True, "matches": [match_json(x) for x in created]}
 

@@ -203,6 +203,55 @@ class CompetitionApiTest(Helpers, TestCase):
         self.assertEqual(mod.call("patch", f"{self.base}/announcements/{a}", {"title": "changed"}).status_code, 403)
         self.assertEqual(mod.call("delete", f"{self.base}/announcements/{a}").status_code, 200)
 
+    def test_fixture_schedule_uses_saved_settings_and_dates(self):
+        from datetime import date, timedelta
+        cs, ids = self.setup_league()                                     # 4 teams: 6 matches once, 12 home and away
+        start = date.today() + timedelta(days=10)
+        url = f"{self.base}/competitions/{cs}"
+        bad = [{"perDay": 1}, {"perDay": 21}, {"everyDays": 0}, {"everyDays": 6}, {"time": "25:00"}, {"nope": 1}]
+        for s in bad:
+            self.assertEqual(self.owner.call("patch", url, {"schedule": s}).status_code, 400, s)
+        r = self.owner.call("patch", url, {"startDate": start.isoformat(), "endDate": (start + timedelta(days=30)).isoformat(),
+                                            "schedule": {"perDay": 4, "everyDays": 2, "time": "19:00", "gap": 30}})
+        self.assertEqual(r.json()["competition"]["schedule"], {"perDay": 4, "everyDays": 2, "time": "19:00", "gap": 30})
+        r = self.owner.call("post", url + "/generate", {"legs": 2})                # nothing asked: start date and saved schedule
+        self.assertEqual(r.status_code, 200, r.json())
+        ms = sorted(self.owner.get(url + "/matches").json()["matches"], key=lambda m: m["kickoff"])
+        days = sorted({m["kickoff"][:10] for m in ms})
+        self.assertEqual(days, [(start + timedelta(days=2 * i)).isoformat() for i in range(3)], "4 a day, every 2 days, from the start date")
+        self.assertEqual([m["kickoff"][11:16] for m in ms[:4]], ["19:00", "19:30", "20:00", "20:30"])
+        self.assertEqual([m["round"] for m in ms], sorted(m["round"] for m in ms), "matchday by matchday")
+        # too long for the end date: refused with a suggestion, and nothing changes
+        self.owner.call("patch", url, {"endDate": (start + timedelta(days=2)).isoformat()})
+        r = self.owner.call("post", url + "/generate", {"legs": 2, "replace": True, "schedule": {"perDay": 2, "everyDays": 1}})
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("Play 4 matches a day", r.json()["error"])
+        self.assertEqual(len(self.owner.get(url + "/matches").json()["matches"]), 12)
+        # knockout rounds follow on after the last scheduled match
+        self.owner.call("patch", url, {"endDate": None, "format": "groups_knockout"})
+        entries = self.owner.get(url).json()["entries"]
+        r = self.owner.call("post", url + "/draw", {"entryIds": [e["id"] for e in entries], "roundName": "Semi-finals"})
+        self.assertEqual(r.status_code, 200, r.json())
+        last_league = ms[-1]["kickoff"][:10]
+        self.assertTrue(all(m["kickoff"][:10] > last_league for m in r.json()["matches"]))
+
+    def test_set_dates_keeps_pairings(self):
+        from datetime import date, timedelta
+        cs, ids = self.setup_league()
+        url = f"{self.base}/competitions/{cs}"
+        self.owner.call("post", url + "/generate", {})
+        Match = __import__("competitions.models", fromlist=["Match"]).Match
+        Match.objects.filter(competition__slug=cs).update(kickoff=None)
+        before = [(m.home_id, m.away_id) for m in Match.objects.filter(competition__slug=cs).order_by("round", "id")]
+        start = date.today() + timedelta(days=3)
+        self.owner.call("patch", url, {"startDate": start.isoformat()})
+        r = self.owner.call("post", url + "/dates", {"schedule": {"perDay": 2, "everyDays": 1}})
+        self.assertEqual((r.status_code, r.json()["updated"]), (200, 6))
+        after = list(Match.objects.filter(competition__slug=cs).order_by("round", "id"))
+        self.assertEqual([(m.home_id, m.away_id) for m in after], before, "same pairings")
+        self.assertEqual(len({m.kickoff.date() for m in after}), 3, "2 a day over 3 days")
+        self.assertEqual(self.owner.call("post", url + "/dates", {}).status_code, 400, "nothing left to date")
+
 
 class ImportLeagueTest(Helpers, TestCase):
     def test_original_league_becomes_a_competition(self):

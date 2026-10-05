@@ -87,6 +87,7 @@ urlpatterns = [
     path("api/orgs/<slug:slug>/competitions/<slug:cslug>/entries/<int:entry_id>", c.entry_detail),
     path("api/orgs/<slug:slug>/competitions/<slug:cslug>/generate", c.generate),
     path("api/orgs/<slug:slug>/competitions/<slug:cslug>/draw", c.draw),
+    path("api/orgs/<slug:slug>/competitions/<slug:cslug>/dates", c.set_dates),
     path("api/orgs/<slug:slug>/competitions/<slug:cslug>/matches", c.comp_matches),
     path("api/orgs/<slug:slug>/competitions/<slug:cslug>/standings", c.standings),
     path("api/orgs/<slug:slug>/competitions/<slug:cslug>/scorers", c.comp_scorers),
