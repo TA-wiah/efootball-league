@@ -1,0 +1,9 @@
+node_modules/
+# SQLite working files (created while the server runs)
+data/*.db-shm
+data/*.db-wal
+data/backups/
+# Your settings (never commit this file)
+.env
+# The live database (keep it out of git; it is backed up automatically)
+data/*.db
