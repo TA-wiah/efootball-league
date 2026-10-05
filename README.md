@@ -114,7 +114,27 @@ maximum teams and how many qualify from each group.
 - **Bring your original league in**: `python manage.py import_league <organization-address>` copies its groups,
   teams, group fixtures (same order as the old page), results and logged goals into a new competition.
   Knockout rounds aren't copied; draw them again once the group stage is complete.
-- Public competition pages and shareable links come next.
+
+### Public pages (no login needed)
+Every competition gets its own website, rendered on the server so WhatsApp, Facebook, X and Telegram show a proper
+preview and search engines can index it:
+
+| Address | What's there |
+|---|---|
+| `/competition/{slug}` | logo, name, description, season, table, upcoming matches, recent results, top scorers, news, facts and rules |
+| `/competition/{slug}/table` | the shareable league table (position, played, won, drawn, lost, goals for/against, goal difference, points, form) |
+| `/competition/{slug}/fixtures`, `/results`, `/teams` | fixtures by round, results by day, all teams |
+| `/match/{slug}` | e.g. `/match/kasoa-stars-vs-winneba-lions-2026-10-11`: teams, score, status, date and kick-off (in each visitor's time zone), venue, referee, goals, cards, substitutions, aggregate over two legs, the group table and the rest of the round |
+| `/team/{slug}` | form, upcoming matches, results, competitions and squad |
+| `/organization/{slug}` | its public competitions, teams, upcoming matches, results and news |
+
+- Every page has **Copy public link**, **Share** (on phones) and WhatsApp / Facebook / X / Telegram buttons, and
+  the dashboard has "Public page" and "Copy public link" buttons wherever something is public.
+- **Visibility**: public pages are listed and indexed; **unlisted** ones work for anyone with the link but are
+  marked "noindex" and never listed; **private** ones return "not found" except to the organization's members, who
+  see a marked preview. A team gets a public page once it plays in a public competition.
+- `/league/{slug}/…` links redirect to `/competition/{slug}/…`. `/sitemap.xml` and `/robots.txt` are generated.
+- Set `TIME_ZONE` (e.g. `Africa/Accra`) to group results by your local day. Visitors always see times in their own zone.
 
 ## Fair random draws
 - **Group draw** (Players tab): the **server** shuffles the players into groups with the operating system's
@@ -155,6 +175,7 @@ Nobody can read a password: only a one-way hash is stored. Set `ADMIN_USER` and 
 - `GET /api/health` answers `{"ok": true}` when the server and database are working.
 
 ## Files
+- `competitions/public.py` + `templates/public/`: the public pages
 - `competitions/`: competitions, teams, players, matches: `models.py`, `engine.py` (fixtures, standings, tie-breakers), `api.py`, `tests.py`, `management/commands/import_league.py`
 - `orgs/`: the platform: `models.py` (organizations, memberships, invitations), `permissions.py` (roles), `api.py`, `tests.py`
 - `public/app.html`: the platform pages (sign-up, dashboards, members, invitations)

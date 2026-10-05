@@ -79,10 +79,15 @@ MIDDLEWARE = [
 ]
 ROOT_URLCONF = "league_site.urls"
 WSGI_APPLICATION = "league_site.wsgi.application"
-TEMPLATES = []
+TEMPLATES = [{
+    "BACKEND": "django.template.backends.django.DjangoTemplates",
+    "DIRS": [BASE_DIR / "templates"],
+    "APP_DIRS": False,
+    "OPTIONS": {"context_processors": [], "autoescape": True},
+}]
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 USE_TZ = True
-TIME_ZONE = "UTC"
+TIME_ZONE = E.get("TIME_ZONE") or "UTC"     # used to group public fixtures by day, e.g. Africa/Accra
 APPEND_SLASH = False
 DATA_UPLOAD_MAX_MEMORY_SIZE = 1_100_000
 

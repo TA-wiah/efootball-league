@@ -1,0 +1,6 @@
+<a class="mrow" href="/match/{{ m.slug }}">
+  <span class="mt">{% if show_comp %}<b>{{ m.competition.name }}</b>{% endif %}{% if show_round %}<span>{{ m.round }}{% if m.group %} · Group {{ m.group }}{% endif %}{% if m.leg > 1 %} · 2nd leg{% endif %}</span>{% endif %}<span>{% if m.kickoff %}<time datetime="{{ m.kickoff|date:'c' }}" data-f="full">{{ m.kickoff|date:"D j M, H:i" }}</time>{% else %}Date to be set{% endif %}</span></span>
+  <span class="mh">{% if m.home %}{% include "public/_crest.html" with t=m.home size=24 %}<span>{{ m.home.short }}</span>{% else %}<span class="note">To be decided</span>{% endif %}</span>
+  <span class="ms">{% if m.played %}<span class="sc">{{ m.hs }} – {{ m.as }}</span>{% if m.hp is not None %}<small class="note">{{ m.hp }}–{{ m.ap }} pens</small>{% endif %}{% elif m.kickoff %}<span class="ko"><time datetime="{{ m.kickoff|date:'c' }}" data-f="time">{{ m.kickoff|date:"H:i" }}</time></span>{% else %}<span class="ko">vs</span>{% endif %}{% if m.status != "scheduled" and m.status != "finished" %}<span class="pill {{ m.status }}">{{ m.status_label }}</span>{% endif %}</span>
+  <span class="ma">{% if m.away %}{% include "public/_crest.html" with t=m.away size=24 %}<span>{{ m.away.short }}</span>{% else %}<span class="note">To be decided</span>{% endif %}</span>
+</a>

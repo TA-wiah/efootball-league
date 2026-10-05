@@ -1,0 +1,21 @@
+{% extends "public/base.html" %}
+{% block content %}
+<section class="card">
+  <div class="hero">{% include "public/_crest.html" with t=t size=72 %}<div><h1>{{ team.name }}</h1>
+    <div class="note">{% if team.city %}{{ team.city }}{% endif %}{% if team.city and team.venue %} · {% endif %}{% if team.venue %}Home ground: {{ team.venue }}{% endif %}{% if team.founded %} · Founded {{ team.founded }}{% endif %}{% if team.colors %} · Colours: {{ team.colors }}{% endif %}</div>
+    {% if form %}<div style="margin-top:6px">{% for f in form %}<span class="fm {{ f }}">{{ f }}</span>{% endfor %} <span class="note">last {{ form|length }}</span></div>{% endif %}
+  </div></div>
+  <div style="margin-top:12px">{% include "public/_share.html" with share_url=url share_text=team.name %}</div>
+</section>
+<div class="two">
+  <div>
+    <section class="card"><div class="gh">Upcoming matches</div>{% for m in upcoming %}{% include "public/_match.html" with show_comp=1 %}{% empty %}<p class="note">No upcoming matches.</p>{% endfor %}</section>
+    <section class="card"><div class="gh">Recent results</div>{% for m in recent %}{% include "public/_match.html" with show_comp=1 %}{% empty %}<p class="note">No results yet.</p>{% endfor %}</section>
+  </div>
+  <div>
+    {% if team.description %}<section class="card"><div class="gh">About</div><p style="margin:0;white-space:pre-wrap">{{ team.description }}</p></section>{% endif %}
+    <section class="card"><div class="gh">Competitions</div>{% for c in competitions %}<a class="tile" style="margin-bottom:6px" href="/competition/{{ c.slug }}">{{ c.name }}{% if c.season %}<small>{{ c.season }}</small>{% endif %}</a>{% empty %}<p class="note">None yet.</p>{% endfor %}</section>
+    <section class="card"><div class="gh">Squad</div>{% for label, players in squad %}<div class="md">{{ label }}</div><table><tbody>{% for p in players %}<tr><td style="width:40px;color:var(--gold);font-weight:900">{{ p.number|default_if_none:"" }}</td><td style="text-align:left">{{ p.name }}</td></tr>{% endfor %}</tbody></table>{% empty %}<p class="note">No squad published.</p>{% endfor %}</section>
+  </div>
+</div>
+{% endblock %}

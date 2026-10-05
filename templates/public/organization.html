@@ -1,0 +1,19 @@
+{% extends "public/base.html" %}
+{% block content %}
+<section class="card">
+  <div class="hero"><span class="crest trophy" style="width:64px;height:64px" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20a6 6 0 0 0-4-5.6"/></svg></span>
+    <div><h1>{{ o.name }}</h1><div class="note">{% if o.region %}{{ o.region }}{% endif %}{% if o.region and o.country %}, {% endif %}{{ o.country }}{% if o.region or o.country %} · {% endif %}{{ comps|length }} public competition{{ comps|length|pluralize }}</div></div></div>
+  {% if o.description %}<p style="white-space:pre-wrap;margin-bottom:0">{{ o.description }}</p>{% endif %}
+  <div style="margin-top:12px">{% include "public/_share.html" with share_url=url share_text=o.name %}</div>
+</section>
+<section class="card"><div class="gh">Competitions</div><div class="grid">
+  {% for x in comps %}<a class="tile" href="/competition/{{ x.c.slug }}">{% if x.logo %}<img class="crest" src="{{ x.logo }}" alt="" style="width:40px;height:40px">{% else %}<span class="crest trophy" style="width:40px;height:40px" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M12 13v3M8 20h8"/></svg></span>{% endif %}<span>{{ x.c.name }}<small>{{ x.kind }}{% if x.c.season %} · {{ x.c.season }}{% endif %} · {{ x.teams }} teams</small></span></a>
+  {% empty %}<p class="note">No public competitions yet.</p>{% endfor %}
+</div></section>
+<div class="two">
+  <section class="card"><div class="gh">Upcoming matches</div>{% for m in upcoming %}{% include "public/_match.html" with show_comp=1 %}{% empty %}<p class="note">No upcoming matches.</p>{% endfor %}</section>
+  <section class="card"><div class="gh">Recent results</div>{% for m in recent %}{% include "public/_match.html" with show_comp=1 %}{% empty %}<p class="note">No results yet.</p>{% endfor %}</section>
+</div>
+{% if news %}<section class="card"><div class="gh">News</div>{% for n in news %}<div class="news"><b>{{ n.title }}</b>{% if n.competition %} <span class="pill">{{ n.competition.name }}</span>{% endif %}<div class="note"><time datetime="{{ n.created|date:'c' }}" data-f="date">{{ n.created|date:"j M Y" }}</time></div><p>{{ n.body }}</p></div>{% endfor %}</section>{% endif %}
+{% if teams %}<section class="card"><div class="gh">Teams</div><div class="grid">{% for t in teams %}<a class="tile" href="/team/{{ t.slug }}">{% include "public/_crest.html" with t=t size=32 %}<span>{{ t.name }}</span></a>{% endfor %}</div></section>{% endif %}
+{% endblock %}

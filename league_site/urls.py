@@ -4,6 +4,7 @@ from django.urls import path, re_path
 from league import views as v
 from league.http import not_found, serve_page
 from competitions import api as c
+from competitions import public as pub
 from orgs import api as o
 
 handler404 = "league.http.not_found"
@@ -92,5 +93,15 @@ urlpatterns = [
     path("api/orgs/<slug:slug>/players/<int:player_id>", c.player_detail),
     path("api/orgs/<slug:slug>/announcements", c.announcements),
     path("api/orgs/<slug:slug>/announcements/<int:ann_id>", c.announcement_detail),
+    # ---- public pages (no login) ----
+    path("competition/<slug:slug>", pub.competition),
+    path("competition/<slug:slug>/<slug:tab>", pub.competition),
+    path("league/<slug:slug>", pub.league_alias),
+    path("league/<slug:slug>/<slug:tab>", pub.league_alias),
+    path("match/<slug:slug>", pub.match),
+    path("team/<slug:slug>", pub.team),
+    path("organization/<slug:slug>", pub.organization),
+    path("robots.txt", pub.robots),
+    path("sitemap.xml", pub.sitemap),
     path("media/<str:kind>/<int:obj_id>/logo", lambda r, kind, obj_id: c.logo_file(r, kind, obj_id) if kind in ("competition", "team") else not_found(r)),
 ]

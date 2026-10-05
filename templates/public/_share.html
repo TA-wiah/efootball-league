@@ -1,0 +1,8 @@
+<div class="share" aria-label="Share">
+  <button class="btn sm" type="button" data-copy="{{ share_url }}">Copy public link</button>
+  <button class="btn g sm" type="button" data-share="{{ share_url }}" data-title="{{ share_text }}">Share</button>
+  <a class="btn g sm" href="https://wa.me/?text={{ share_text|urlencode }}%20{{ share_url|urlencode }}" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+  <a class="btn g sm" href="https://www.facebook.com/sharer/sharer.php?u={{ share_url|urlencode }}" target="_blank" rel="noopener noreferrer">Facebook</a>
+  <a class="btn g sm" href="https://twitter.com/intent/tweet?url={{ share_url|urlencode }}&amp;text={{ share_text|urlencode }}" target="_blank" rel="noopener noreferrer">X</a>
+  <a class="btn g sm" href="https://t.me/share/url?url={{ share_url|urlencode }}&amp;text={{ share_text|urlencode }}" target="_blank" rel="noopener noreferrer">Telegram</a>
+</div>

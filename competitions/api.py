@@ -96,7 +96,7 @@ def team_json(t, players=False):
          "playerCount": t.players.count()}
     if players:
         d["players"] = [player_json(p) for p in t.players.order_by("number", "name")]
-        d["competitions"] = [{"name": e.competition.name, "slug": e.competition.slug, "group": e.group}
+        d["competitions"] = [{"name": e.competition.name, "slug": e.competition.slug, "group": e.group, "visibility": e.competition.visibility}
                              for e in t.entries.select_related("competition")]
     return d
 
@@ -115,7 +115,7 @@ def event_json(e):
 
 
 def match_json(m, detail=False):
-    d = {"id": m.id, "slug": m.slug, "competition": {"name": m.competition.name, "slug": m.competition.slug},
+    d = {"id": m.id, "slug": m.slug, "competition": {"name": m.competition.name, "slug": m.competition.slug, "visibility": m.competition.visibility},
          "stage": m.stage, "group": m.group or None, "round": m.round, "roundName": m.round_name or None, "leg": m.leg,
          "home": entry_brief(m.home), "away": entry_brief(m.away), "kickoff": iso(m.kickoff), "venue": m.venue or None,
          "referee": m.referee or None, "status": m.status, "homeScore": m.home_score, "awayScore": m.away_score,
