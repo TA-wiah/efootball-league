@@ -1,7 +1,8 @@
 """Sending texts. The super admin picks the provider in the platform settings; keys stay on the server.
 
     moolre   - Moolre (moolre.com): POST https://api.moolre.com/open/sms/send with the X-API-VASKEY header
-    arkesel  - Arkesel (sms.arkesel.com)
+    arkesel  - Arkesel (sms.arkesel.com): POST /api/v2/sms/send with the api-key header
+    mnotify  - mNotify / BMS (api.mnotify.com): POST /api/sms/quick?key=…
     console  - testing: nothing is sent, the text is written to the server log
 """
 import json
@@ -14,7 +15,7 @@ import urllib.request
 
 log = logging.getLogger("sms")
 GSM = set("@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà^{}\\[~]|€")
-PROVIDERS = {"moolre": "Moolre", "arkesel": "Arkesel", "console": "Test mode (nothing is sent)"}
+PROVIDERS = {"moolre": "Moolre", "arkesel": "Arkesel", "mnotify": "mNotify (SMS Bulk)", "console": "Test mode (nothing is sent)"}
 
 
 class SmsError(Exception):
@@ -31,7 +32,7 @@ def ready(cfg=None):
     p = cfg.get("provider")
     if not cfg.get("enabled") or p not in PROVIDERS:
         return False
-    if p in ("moolre", "arkesel"):
+    if p in ("moolre", "arkesel", "mnotify"):
         return bool(cfg.get("api_key") and cfg.get("sender"))
     return True
 
@@ -101,4 +102,12 @@ def send(numbers, text, cfg=None):
         if str(res.get("status")) != "1":
             raise SmsError(f"SMS provider: {res.get('message') or 'not sent'} ({res.get('code', '')})")
         return str(res.get("code") or "")[:80]
+    if p == "mnotify":
+        # mNotify takes the key in the address and local numbers (0241234567) for Ghana
+        local = ["0" + n[3:] if n.startswith("233") else n for n in numbers]
+        res = _post("https://api.mnotify.com/api/sms/quick?" + urllib.parse.urlencode({"key": cfg["api_key"]}),
+                    {"recipient": local, "sender": cfg["sender"], "message": text, "is_schedule": False, "schedule_date": ""}, {})
+        if str(res.get("status", "")).lower() != "success" or str(res.get("code", "")) != "2000":
+            raise SmsError(f"SMS provider: {res.get('message') or 'not sent'} ({res.get('code', '')})")
+        return str((res.get("summary") or {}).get("_id", ""))[:80]
     raise SmsError("Choose an SMS provider in the platform settings.")

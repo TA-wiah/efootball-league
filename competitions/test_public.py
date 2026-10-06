@@ -140,3 +140,17 @@ class PublicPagesTest(Helpers, TestCase):
         with self.assertRaises(CommandError):
             call_command("import_league", self.slug, into=cs, stdout=__import__("io").StringIO())
         self.assertEqual(c.entries.count(), 8, "running it twice changes nothing")
+
+    def test_fonts_are_served_by_the_site(self):
+        anon = Client()
+        css = anon.get("/fonts/fonts.css")
+        self.assertEqual(css.status_code, 200)
+        self.assertIn("url(/fonts/barlow-condensed-800-latin.woff2)", css.content.decode())
+        font = anon.get("/fonts/barlow-400-latin.woff2")
+        self.assertEqual((font.status_code, font["Content-Type"], font.content[:4]), (200, "font/woff2", b"wOF2"))
+        self.assertIn("immutable", font["Cache-Control"])
+        for bad in ("../settings.py", "app.html", "nope.woff2", "x.exe"):
+            self.assertEqual(anon.get(f"/fonts/{bad}").status_code, 404, bad)
+        page = anon.get(f"/competition/{self.cs}")
+        self.assertIn('href="/fonts/fonts.css"', page.content.decode())
+        self.assertNotIn("googleapis", page.content.decode() + page["Content-Security-Policy"])

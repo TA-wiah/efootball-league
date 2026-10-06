@@ -46,7 +46,7 @@ def page(request, template, ctx, *, index=True, private=False, banner=None):
     ctx.update(nonce=nonce, base=base, url=base + request.path, index=index and not private, private_preview=private if banner is None else banner,
                app_url="/app")
     resp = render(request, f"public/{template}", ctx)
-    resp["Content-Security-Policy"] = (f"default-src 'self'; script-src 'nonce-{nonce}'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; "
+    resp["Content-Security-Policy"] = (f"default-src 'self'; script-src 'nonce-{nonce}'; style-src 'self' 'unsafe-inline'; font-src 'self'; "
                                        "img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; "
                                        "form-action 'self'; frame-ancestors 'none'")
     # Visitors get a short cache; logged-in people (organizers checking their changes) always see the latest version.

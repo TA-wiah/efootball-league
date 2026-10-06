@@ -2,7 +2,7 @@ from django.conf import settings
 from django.urls import path, re_path
 
 from league import views as v
-from league.http import not_found, serve_page
+from league.http import font_file, not_found, serve_page
 from competitions import api as c
 from competitions import discover
 from competitions import public as pub
@@ -182,6 +182,7 @@ urlpatterns = [
     path("org/<slug:slug>", pub.organization),
     path("org/<slug:slug>/p/<slug:page_slug>", pub.org_page),
     path("receipt/<str:token>", pay.receipt),
+    path("fonts/<str:name>", font_file),
     path("organization/<slug:slug>", pub.organization_alias),
     path("robots.txt", pub.robots),
     path("sitemap.xml", pub.sitemap),

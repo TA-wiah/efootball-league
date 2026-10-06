@@ -200,3 +200,17 @@ class SmsTest(Helpers, TestCase):
         with mock.patch.object(providers, "_post", lambda *a, **k: {"status": 0, "code": "ASMS07", "message": "Sender ID is not approved"}):
             with self.assertRaises(providers.SmsError):
                 providers.send(["233241234567"], "Hello", {"enabled": True, "provider": "moolre", "api_key": "k", "sender": "Robotics"})
+
+    def test_mnotify_request_format(self):
+        calls = []
+        mock.patch.stopall()
+        ok = {"status": "success", "code": "2000", "message": "messages sent successfully", "summary": {"_id": "A59C-1", "total_sent": 1}}
+        with mock.patch.object(providers, "_post", lambda url, data, headers, form=False, timeout=20: calls.append((url, data, headers)) or ok):
+            ref = providers.send(["233241234567"], "Hello", {"enabled": True, "provider": "mnotify", "api_key": "mn key&x", "sender": "Robotics"})
+        self.assertEqual(ref, "A59C-1")
+        url, data, headers = calls[0]
+        self.assertEqual(url, "https://api.mnotify.com/api/sms/quick?key=mn+key%26x")
+        self.assertEqual(data, {"recipient": ["0241234567"], "sender": "Robotics", "message": "Hello", "is_schedule": False, "schedule_date": ""})
+        with mock.patch.object(providers, "_post", lambda *a, **k: {"status": "error", "code": "1002", "message": "Invalid key"}):
+            with self.assertRaises(providers.SmsError):
+                providers.send(["233241234567"], "Hello", {"enabled": True, "provider": "mnotify", "api_key": "k", "sender": "Robotics"})
