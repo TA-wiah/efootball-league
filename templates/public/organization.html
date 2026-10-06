@@ -51,7 +51,7 @@
 
 {% if brackets %}<section class="card" id="brackets"><div class="gh">Brackets</div>
   {% for b in brackets %}<h3 style="margin:4px 0 10px">{{ b.c.name }}</h3><div class="bracket">{% for name, games in b.rounds %}<div class="rnd"><h3>{{ name }}</h3>
-    {% for m in games %}<a class="bm" href="/match/{{ m.slug }}"><div><span{% if m.played and m.hs > m.as %} class="w"{% endif %}>{{ m.home.name|default:"To be decided" }}</span><b>{% if m.played %}{{ m.hs }}{% endif %}</b></div><div><span{% if m.played and m.as > m.hs %} class="w"{% endif %}>{{ m.away.name|default:"To be decided" }}</span><b>{% if m.played %}{{ m.as }}{% endif %}</b></div></a>{% endfor %}
+    {% for m in games %}<a class="bm" href="/match/{{ m.slug }}"><div><span{% if m.played and m.hs > m.as %} class="w"{% endif %}>{% if m.home %}{{ m.home.name }}{% else %}{{ m.home_label }}{% endif %}</span><b>{% if m.played %}{{ m.hs }}{% endif %}</b></div><div><span{% if m.played and m.as > m.hs %} class="w"{% endif %}>{% if m.away %}{{ m.away.name }}{% else %}{{ m.away_label }}{% endif %}</span><b>{% if m.played %}{{ m.as }}{% endif %}</b></div></a>{% endfor %}
   </div>{% endfor %}</div>{% endfor %}
 </section>{% endif %}
 

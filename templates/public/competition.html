@@ -45,7 +45,7 @@
 {% elif tab == "knockouts" %}
   <section class="card"><div class="gh">Knockouts</div>
     {% if rounds %}<div class="bracket">{% for name, games in rounds %}<div class="rnd"><h3>{{ name }}</h3>
-      {% for m in games %}<a class="bm" href="/match/{{ m.slug }}"><div><span{% if m.played and m.hs > m.as %} class="w"{% endif %}>{{ m.home.name|default:"To be decided" }}</span><b>{% if m.played %}{{ m.hs }}{% endif %}</b></div><div><span{% if m.played and m.as > m.hs %} class="w"{% endif %}>{{ m.away.name|default:"To be decided" }}</span><b>{% if m.played %}{{ m.as }}{% endif %}</b></div><small>{% if m.leg > 1 %}2nd leg · {% endif %}{% if m.kickoff %}<time datetime="{{ m.kickoff|date:'c' }}" data-f="date">{{ m.kickoff|date:"j M" }}</time>{% else %}Date to be set{% endif %}</small></a>{% endfor %}
+      {% for m in games %}<a class="bm" href="/match/{{ m.slug }}"><div><span{% if m.played and m.hs > m.as %} class="w"{% endif %}>{% if m.home %}{{ m.home.name }}{% else %}{{ m.home_label }}{% endif %}</span><b>{% if m.played %}{{ m.hs }}{% endif %}</b></div><div><span{% if m.played and m.as > m.hs %} class="w"{% endif %}>{% if m.away %}{{ m.away.name }}{% else %}{{ m.away_label }}{% endif %}</span><b>{% if m.played %}{{ m.as }}{% endif %}</b></div><small>{% if m.leg > 1 %}2nd leg · {% endif %}{% if m.kickoff %}<time datetime="{{ m.kickoff|date:'c' }}" data-f="date">{{ m.kickoff|date:"j M" }}</time>{% else %}Date to be set{% endif %}</small></a>{% endfor %}
     </div>{% endfor %}</div>
     {% else %}<p class="note">The knockout rounds haven't been drawn yet.{% if c.format == "groups_knockout" %} The top {{ c.qualifiers_per_group }} of each group go through to them.{% endif %}</p>{% endif %}
   </section>

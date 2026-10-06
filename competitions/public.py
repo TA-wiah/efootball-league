@@ -16,7 +16,7 @@ from django.utils import timezone
 from league.http import base_url, session_user
 from orgs.models import Membership, Organization
 
-from . import engine
+from . import bracket, engine
 from .models import EVENT_KINDS, MATCH_STATUS, POSITIONS, Announcement, Competition, Entry, Match, MatchEvent, Player, Team
 
 STATUS_L = dict(MATCH_STATUS) | {"finished": "Full time"}
@@ -90,6 +90,7 @@ def match_view(m, linkable):
     return {"slug": m.slug, "home": team_view(home, linkable), "away": team_view(away, linkable), "kickoff": m.kickoff,
             "round": m.round_name or f"Round {m.round}", "group": m.group, "leg": m.leg, "stage": m.stage, "status": m.status,
             "status_label": STATUS_L[m.status], "played": m.home_score is not None and m.away_score is not None,
+            "home_label": bracket.label(m.home_from) or "To be decided", "away_label": bracket.label(m.away_from) or "To be decided",
             "hs": m.home_score, "as": m.away_score, "hp": m.home_pens, "ap": m.away_pens, "venue": m.venue,
             "competition": {"name": m.competition.name, "slug": m.competition.slug}}
 
@@ -160,7 +161,7 @@ def competition(request, slug, tab=""):
         ctx["sections"] = [(k, [match_view(m, linkable) for m in v]) for k, v in group_by(results, day_label)]
     if tab == "knockouts":
         ko = [m for m in matches if m.stage == "knockout"]
-        ctx["rounds"] = group_by([match_view(m, linkable) for m in sorted(ko, key=lambda m: (m.round, m.leg, m.id))], lambda m: m["round"])
+        ctx["rounds"] = group_by([match_view(m, linkable) for m in sorted(ko, key=lambda m: (m.round, m.slot, m.leg, m.id))], lambda m: m["round"])
     if tab == "teams":
         ctx["teams"] = [{**team_view(e.team, linkable), "group": e.group, "city": e.team.city} for e in entries]
     if not c.hidden and c.visibility == "public" and tab in ("", "table"):
@@ -292,7 +293,7 @@ def organization(request, slug):
         for c in comps:
             if c.format == "league":
                 continue
-            ko = [match_view(x, linkable) for x in ms.filter(competition=c, stage="knockout").order_by("round", "leg", "id")]
+            ko = [match_view(x, linkable) for x in ms.filter(competition=c, stage="knockout").order_by("round", "slot", "leg", "id")]
             if ko:
                 brackets.append({"c": c, "rounds": group_by(ko, lambda m: m["round"])})
         ctx["brackets"] = brackets[:3]

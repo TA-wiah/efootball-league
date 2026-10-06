@@ -15,7 +15,7 @@ from orgs.api import access, create_invitation, invitation_json, log, team_invit
 from orgs.models import Membership
 from orgs.permissions import ROLE_INFO, STAFF_ROLES, can
 
-from . import engine
+from . import bracket, engine
 from .models import (COMP_STATUS, EVENT_KINDS, FORMATS, KINDS, MATCH_STATUS, POSITIONS, VISIBILITY, Announcement, Competition,
                      Entry, Match, MatchEvent, Player, Team)
 
@@ -127,7 +127,9 @@ def event_json(e):
 def match_json(m, detail=False):
     d = {"id": m.id, "slug": m.slug, "competition": {"name": m.competition.name, "slug": m.competition.slug, "visibility": m.competition.visibility},
          "stage": m.stage, "group": m.group or None, "round": m.round, "roundName": m.round_name or None, "leg": m.leg,
-         "home": entry_brief(m.home), "away": entry_brief(m.away), "kickoff": iso(m.kickoff), "venue": m.venue or None,
+         "home": entry_brief(m.home), "away": entry_brief(m.away), "slot": m.slot,
+         "homeFrom": bracket.label(m.home_from) or None, "awayFrom": bracket.label(m.away_from) or None, "slot": m.slot,
+         "homeFrom": bracket.label(m.home_from) or None, "awayFrom": bracket.label(m.away_from) or None, "kickoff": iso(m.kickoff), "venue": m.venue or None,
          "referee": m.referee or None, "status": m.status, "homeScore": m.home_score, "awayScore": m.away_score,
          "homePens": m.home_pens, "awayPens": m.away_pens}
     if detail:
@@ -329,12 +331,17 @@ def entry_detail(request, user, ip, slug, cslug, entry_id):
     b = body(request)
     if "group" in b:
         need(m, "competitions.manage")
-        e.group = text(b, "group", 10)
+        group = text(b, "group", 10)
+        if group != e.group and Match.objects.filter(stage="league").filter(Q(home=e) | Q(away=e)).exists():
+            raise ApiError(409, f"{e.team.name} already has group matches in Group {e.group or '–'}. Regenerate the fixtures after "
+                                "changing groups, or delete its matches first.")
+        e.group = group
     if "pointsAdjustment" in b:
         need(m, "standings.manage")
         e.points_adjustment = num(b, "pointsAdjustment", -99, 99, allow_null=False)
         log(org, user, f"set a points adjustment of {e.points_adjustment} for {e.team.name} in {c.name}")
     e.save()
+    bracket.resolve(c)
     return {"ok": True}
 
 
@@ -377,7 +384,10 @@ def generate(request, user, ip, slug, cslug):
             c.status = "active"
             c.save(update_fields=["status"])
     log(org, user, f"generated {made} fixtures for {c.name}")
-    return {"ok": True, "created": made, "first": kickoffs[0].isoformat() if kickoffs else None,
+    ko = None
+    if isinstance(b.get("knockout"), dict) and c.format == "groups_knockout":
+        ko = create_plan(c, org, user, {**b["knockout"], "replace": True})
+    return {"ok": True, "created": made, "knockout": ko, "first": kickoffs[0].isoformat() if kickoffs else None,
             "last": kickoffs[-1].isoformat() if kickoffs else None}
 
 
@@ -405,7 +415,7 @@ def use_schedule(c, b):
     return {**engine.SCHEDULE_DEFAULT, **(c.schedule or {})}
 
 
-def plan(c, org, count, first_day, sched, b):
+def plan(c, org, blocks, first_day, sched, b):
     """Kick-offs for `count` matches. An explicit "start" (date and time) wins; otherwise the competition's schedule is used.
     Refuses plans that run past the competition's end date, saying what would fit."""
     tz = org_tz(org)
@@ -415,7 +425,8 @@ def plan(c, org, count, first_day, sched, b):
         local = djtz.localtime(start, __import__("zoneinfo").ZoneInfo(tz))
         sched = {**sched, "time": local.strftime("%H:%M")}
         first_day = local.date()
-    days, span = engine.match_days_needed(count, sched)
+    count = blocks if isinstance(blocks, int) else len(blocks)
+    days, span = engine.match_days_needed(blocks, sched)
     if c.end_date and count and first_day + timedelta(days=span) > c.end_date:
         room = (c.end_date - first_day).days // sched["everyDays"] + 1
         need = -(-count // room) if room > 0 else None
@@ -423,7 +434,7 @@ def plan(c, org, count, first_day, sched, b):
                 if need else " Move the end date or the start date.")
         raise ApiError(400, f"{count} matches at {sched['perDay']} a day, every {sched['everyDays']} day{'s' if sched['everyDays'] > 1 else ''}, "
                             f"would run until {(first_day + timedelta(days=span)):%d %b %Y}, after the end date ({c.end_date:%d %b %Y}).{hint}")
-    return engine.plan_kickoffs(count, first_day, sched, tz)
+    return engine.plan_kickoffs(blocks, first_day, sched, tz)
 
 
 def first_free_day(c, org, sched, after_existing):
@@ -439,6 +450,64 @@ def first_free_day(c, org, sched, after_existing):
     return day
 
 
+def create_plan(c, org, user, b):
+    """Lay out every knockout round now, with placeholders like "Group A winner" that fill in by themselves."""
+    if c.format != "groups_knockout":
+        raise ApiError(400, "A knockout plan is for competitions played as groups, then knockouts.")
+    mode = b.get("mode") if b.get("mode") in bracket.MODES else "cross"
+    legs = num(b, "legs", 1, 2) or 1
+    ko = c.matches.filter(stage="knockout")
+    if ko.filter(Q(status="finished") | Q(home_score__isnull=False)).exists():
+        raise ApiError(409, "Knockout results have already been entered, so the knockout plan can't be changed.")
+    if ko.exists() and b.get("replace") is not True:
+        raise ApiError(409, "This competition already has knockout matches. Confirm to replace them.", needsConfirm=True)
+    entries = list(c.entries.all())
+    if any(not e.group for e in entries):
+        raise ApiError(400, "Put every team in a group first (Teams tab).")
+    groups = sorted({e.group for e in entries})
+    q = c.qualifiers_per_group
+    if q < 1:
+        raise ApiError(400, "Set how many teams go through from each group (Settings).")
+    small = [g for g in groups if sum(e.group == g for e in entries) < q]
+    if small:
+        raise ApiError(400, f"Group {small[0]} has fewer than {q} teams, but {q} go through from each group.")
+    try:
+        rounds = bracket.plan_rounds(bracket.first_round(groups, q, mode), legs)
+    except ValueError as e:
+        raise ApiError(400, str(e)) from None
+    note = ""
+    with transaction.atomic():
+        ko.delete()
+        created = []
+        for r, name, ties, lg in rounds:
+            for s, (hs, as_) in enumerate(ties, 1):
+                for leg in range(1, lg + 1):
+                    hf, af = (hs, as_) if leg == 1 else (as_, hs)
+                    created.append(Match.objects.create(
+                        competition=c, stage="knockout", round=r, round_name=name, leg=leg, slot=s, home_from=hf, away_from=af,
+                        slug=engine.unique_slug(Match, f"{c.name} {name} {s}{' second leg' if leg == 2 else ''}", "match", limit=120)))
+        bracket.resolve(c)
+        if created and not c.matches.filter(stage="league", kickoff__isnull=True).exists():
+            created.sort(key=lambda x: (x.round, x.leg, x.slot))
+            sched = {**engine.SCHEDULE_DEFAULT, **(c.schedule or {})}
+            try:
+                kickoffs = plan(c, org, [(x.round, x.leg) for x in created], first_free_day(c, org, sched, after_existing=True), sched, {})
+                for x, k in zip(created, kickoffs):
+                    x.kickoff = k
+                    x.save(update_fields=["kickoff"])
+            except ApiError as e:
+                note = f"The knockout matches don't have dates yet: {e.message}"
+    log(org, user, f"set the knockout plan for {c.name} ({' → '.join(r[1] for r in rounds)})")
+    return {"ok": True, "created": len(created), "rounds": [r[1] for r in rounds], "note": note}
+
+
+@endpoint("POST", login_required=True)
+def knockout_plan(request, user, ip, slug, cslug):
+    org, m = access(user, slug, "fixtures.manage")
+    c = competition_of(org, cslug, request)
+    return create_plan(c, org, user, body(request))
+
+
 @endpoint("POST", login_required=True)
 def set_dates(request, user, ip, slug, cslug):
     """Give dates to the existing fixtures that haven't been played, keeping who plays whom (matchday by matchday)."""
@@ -446,13 +515,15 @@ def set_dates(request, user, ip, slug, cslug):
     c = competition_of(org, cslug, request)
     b = body(request)
     sched = use_schedule(c, b)
-    todo = list(c.matches.filter(status__in=["scheduled", "postponed"], home_score__isnull=True)
-                .order_by("stage", "round", "leg", "group", "id")) if b.get("all") else         list(c.matches.filter(status__in=["scheduled", "postponed"], home_score__isnull=True, kickoff__isnull=True)
-             .order_by("stage", "round", "leg", "group", "id"))
+    todo = c.matches.filter(status__in=["scheduled", "postponed"], home_score__isnull=True)
+    if not b.get("all"):
+        todo = todo.filter(kickoff__isnull=True)
+    todo = sorted(todo, key=lambda x: (x.stage != "league", x.round, x.leg, x.slot, x.group, x.id))
     if not todo:
         raise ApiError(400, "Every fixture that hasn't been played already has a date.")
     after = c.matches.exclude(id__in=[x.id for x in todo]).exclude(kickoff=None).exists()
-    kickoffs = plan(c, org, len(todo), first_free_day(c, org, sched, after_existing=after), sched, b)
+    kickoffs = plan(c, org, [None if x.stage == "league" else (x.round, x.leg) for x in todo],
+                    first_free_day(c, org, sched, after_existing=after), sched, b)
     with transaction.atomic():
         for mt, ko in zip(todo, kickoffs):
             mt.kickoff = ko
@@ -478,7 +549,7 @@ def draw(request, user, ip, slug, cslug):
     by_id = {e.id: e for e in picked}
     ties = engine.draw_pairs(by_id)
     games = [(leg, h, a) for leg in range(1, legs + 1) for h, a in ties]        # all first legs, then all second legs
-    kickoffs = plan(c, org, len(games), first_free_day(c, org, sched, after_existing=True), sched, b)
+    kickoffs = plan(c, org, [leg for leg, _, _ in games], first_free_day(c, org, sched, after_existing=True), sched, b)
     created = []
     with transaction.atomic():
         for (leg, h, a), ko in zip(games, kickoffs):
@@ -513,8 +584,17 @@ def apply_match(mt, b):
         mt.home = entry_of(c, b["homeId"], "home team")
     if "awayId" in b:
         mt.away = entry_of(c, b["awayId"], "away team")
+    if "homeId" in b:
+        mt.home_from = ""                                # picked by hand: no longer follows the knockout plan
+    if "awayId" in b:
+        mt.away_from = ""
     if mt.home_id and mt.home_id == mt.away_id:
         raise ApiError(400, "A team can't play itself.")
+    if mt.stage == "league" and mt.home_id and mt.away_id:
+        if mt.home.group != mt.away.group:
+            raise ApiError(400, f"In the group stage, teams only play teams from their own group: {mt.home.team.name} is in "
+                                f"Group {mt.home.group or '–'} and {mt.away.team.name} is in Group {mt.away.group or '–'}.")
+        mt.group = mt.home.group
     if "kickoff" in b:
         mt.kickoff = moment(b, "kickoff")
     for f, limit in (("venue", 100), ("referee", 100), ("notes", 2000)):
@@ -540,7 +620,7 @@ def comp_matches(request, user, ip, slug, cslug):
     if request.method == "GET":
         org, m = access(user, slug, "org.view")
         c = competition_of(org, cslug, request)
-        return {"matches": [match_json(x) for x in MATCHES.filter(competition=c).order_by("stage", "round", "leg", "kickoff", "id")]}
+        return {"matches": [match_json(x) for x in MATCHES.filter(competition=c).order_by("stage", "round", "slot", "leg", "kickoff", "id")]}
     org, m = access(user, slug, "fixtures.manage")
     c = competition_of(org, cslug, request)
     mt = Match(competition=c, stage="knockout" if c.format == "knockout" else "league")
@@ -587,6 +667,7 @@ def match_detail(request, user, ip, slug, match_id):
     if request.method == "DELETE":
         need(m, "fixtures.manage")
         mt.delete()
+        bracket.resolve(mt.competition)
         log(org, user, f"deleted a match in {mt.competition.name}")
         return {"ok": True}
     b = body(request)
@@ -599,6 +680,7 @@ def match_detail(request, user, ip, slug, match_id):
     if mt.status == "finished" and before["status"] != "finished":
         mt.finished_at = timezone.now()
     mt.save()
+    bracket.resolve(mt.competition)                       # a finished group or tie fills in the next knockout matches
     after = {"score": [mt.home_score, mt.away_score], "status": mt.status}
     if after != before and mt.home and mt.away:
         log(org, user, f"result {mt.home.team.name} vs {mt.away.team.name} in {mt.competition.name}", old=before, new=after)

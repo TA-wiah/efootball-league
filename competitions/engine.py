@@ -96,26 +96,40 @@ def clean_schedule(data):
     return out
 
 
-def plan_kickoffs(count, first_day, sched, tz):
-    """Kick-off times for `count` matches in order: `perDay` matches on each match day, `gap` minutes apart from `time`,
-    with a match day every `everyDays` days starting on `first_day`."""
-    import zoneinfo
-    from datetime import datetime, time as dtime
+def day_slots(blocks, sched):
+    """(match day number, place in that day) for each match in order. `blocks` holds one key per match: when the key
+    changes (e.g. a new knockout round or leg) the next match day starts; None never forces a new day."""
     s = {**SCHEDULE_DEFAULT, **(sched or {})}
-    hh, mm = map(int, s["time"].split(":"))
-    zone = zoneinfo.ZoneInfo(tz)
-    out = []
-    for i in range(count):
-        day = first_day + timedelta(days=(i // s["perDay"]) * s["everyDays"])
-        at = datetime.combine(day, dtime(hh, mm), tzinfo=zone) + timedelta(minutes=(i % s["perDay"]) * s["gap"])
-        out.append(at)
+    out, day, pos, prev = [], 0, 0, None
+    for i, key in enumerate(blocks):
+        if i and (pos >= s["perDay"] or (key is not None and key != prev)):
+            day, pos = day + 1, 0
+        out.append((day, pos))
+        pos, prev = pos + 1, key
     return out
 
 
-def match_days_needed(count, sched):
+def plan_kickoffs(blocks, first_day, sched, tz):
+    """Kick-off times: `perDay` matches on each match day, `gap` minutes apart from `time`, with a match day every
+    `everyDays` days starting on `first_day`. `blocks` is a number of matches, or one key per match (see day_slots)."""
+    import zoneinfo
+    from datetime import datetime, time as dtime
+    blocks = [None] * blocks if isinstance(blocks, int) else blocks
     s = {**SCHEDULE_DEFAULT, **(sched or {})}
-    days = -(-count // s["perDay"])
-    return days, (days - 1) * s["everyDays"] if days else 0       # (match days, calendar days after the first)
+    hh, mm = map(int, s["time"].split(":"))
+    zone = zoneinfo.ZoneInfo(tz)
+    return [datetime.combine(first_day + timedelta(days=day * s["everyDays"]), dtime(hh, mm), tzinfo=zone) + timedelta(minutes=pos * s["gap"])
+            for day, pos in day_slots(blocks, s)]
+
+
+def match_days_needed(blocks, sched):
+    """(match days, calendar days from the first match day to the last)."""
+    blocks = [None] * blocks if isinstance(blocks, int) else blocks
+    if not blocks:
+        return 0, 0
+    s = {**SCHEDULE_DEFAULT, **(sched or {})}
+    days = day_slots(blocks, s)[-1][0] + 1
+    return days, (days - 1) * s["everyDays"]
 
 
 def kickoff_for(start, round_no, days_between):

@@ -105,6 +105,9 @@ class Match(models.Model):
     round = models.PositiveSmallIntegerField(default=1)            # matchday / round number
     round_name = models.CharField(max_length=40, blank=True)
     leg = models.PositiveSmallIntegerField(default=1)
+    slot = models.PositiveSmallIntegerField(default=0)             # knockout plan: tie number within its round
+    home_from = models.CharField(max_length=60, blank=True)        # knockout plan: where the team comes from (see bracket.py)
+    away_from = models.CharField(max_length=60, blank=True)
     home = models.ForeignKey(Entry, null=True, blank=True, on_delete=models.RESTRICT, related_name="+")
     away = models.ForeignKey(Entry, null=True, blank=True, on_delete=models.RESTRICT, related_name="+")
     kickoff = models.DateTimeField(null=True, blank=True)
