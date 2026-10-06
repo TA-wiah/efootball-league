@@ -26,6 +26,7 @@ class Command(BaseCommand):
                 role = Admin.ADMIN if Admin.objects.filter(role=Admin.OWNER).exists() else Admin.OWNER
                 a = Admin(username=user, role=role)
             a.league_access = True
+            a.is_superuser = a.is_staff = True        # the person running the site is the platform super admin
             if email and EMAIL_RE.fullmatch(email) and not Admin.objects.filter(email__iexact=email).exclude(pk=a.pk).exists():
                 a.email = email
             # Only reset when it's really a new password, so leaving it set doesn't log the admin out on every restart.
@@ -40,7 +41,7 @@ class Command(BaseCommand):
                 a.save()
         elif not Admin.objects.exists():
             temp = secrets.token_hex(6)
-            a = Admin(username="admin", role=Admin.OWNER, must_change=True, league_access=True)
+            a = Admin(username="admin", role=Admin.OWNER, must_change=True, league_access=True, is_superuser=True, is_staff=True)
             a.set_password(temp)
             a.save()
             self.stdout.write(f"!! First run. Log in as  admin / {temp}  – you will be asked to choose a new password.")

@@ -1,6 +1,6 @@
 {% extends "public/base.html" %}
 {% block content %}
-<h1 style="margin:6px 0 12px">Search</h1>
+<h1 class="page-h">Search</h1>
 <form class="sbox" style="margin:0 0 18px;max-width:none" action="/search" method="get" role="search"><input name="q" value="{{ q }}" placeholder="Competition, team, match (e.g. Kasoa vs Winneba) or organizer" aria-label="Search" maxlength="80" autofocus><button class="btn">Search</button></form>
 {% if q and q|length < 2 %}<p class="note">Type at least 2 characters.</p>
 {% elif q %}
@@ -8,8 +8,8 @@
   {% if comps %}<h2 class="h2">Competitions</h2><div class="cards">{% for x in comps %}{% include "public/_card.html" %}{% endfor %}</div>{% endif %}
   {% if teams %}<h2 class="h2">Teams</h2><div class="grid">{% for t in teams %}<a class="tile" href="/team/{{ t.slug }}">{% include "public/_crest.html" with t=t size=34 %}<span>{{ t.name }}{% if t.city %}<small>{{ t.city }}</small>{% endif %}</span></a>{% endfor %}</div>{% endif %}
   {% if matches %}<h2 class="h2">Matches</h2><section class="card">{% for m in matches %}{% include "public/_match.html" with show_comp=1 %}{% endfor %}</section>{% endif %}
-  {% if orgs %}<h2 class="h2">Organizers</h2><div class="grid">{% for o in orgs %}<a class="tile" href="/organization/{{ o.slug }}"><span>{{ o.name }}{% if o.region or o.country %}<small>{{ o.region }}{% if o.region and o.country %}, {% endif %}{{ o.country }}</small>{% endif %}</span></a>{% endfor %}</div>{% endif %}
-  {% if not count %}<section class="card" style="text-align:center"><h2>Nothing found</h2><p class="note">Only public competitions are searchable. Can't find yours? Its organizer may have kept it private, or it's not here yet.</p><a class="btn" href="/app/signup?next=/app/new">Create it</a> <a class="btn g" href="/competitions">Browse competitions</a></section>{% endif %}
+  {% if orgs %}<h2 class="h2">Organizers</h2><div class="grid">{% for o in orgs %}<a class="tile" href="/org/{{ o.slug }}"><span>{{ o.name }}{% if o.region or o.country %}<small>{{ o.region }}{% if o.region and o.country %}, {% endif %}{{ o.country }}</small>{% endif %}</span></a>{% endfor %}</div>{% endif %}
+  {% if not count %}<section class="card" style="text-align:center"><h2>Nothing found</h2><p class="note">Only public competitions are searchable. Can't find yours? Its organizer may have kept it private, or it's not here yet.</p><a class="btn g" href="/competitions">Browse competitions</a></section>{% endif %}
 {% else %}
   <p class="note">Find competitions, teams, matches and organizers. Only public competitions are listed.</p>
 {% endif %}

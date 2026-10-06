@@ -1,13 +1,1 @@
-{% for g in groups %}
-{% if g.name %}<div class="md">Group {{ g.name }}</div>{% endif %}
-<div class="tbl"><table class="st">
-  <thead><tr><th>#</th><th class="tl">Team</th><th><abbr title="Played">P</abbr></th><th><abbr title="Won">W</abbr></th><th><abbr title="Drawn">D</abbr></th><th><abbr title="Lost">L</abbr></th><th><abbr title="Goals for">GF</abbr></th><th><abbr title="Goals against">GA</abbr></th><th><abbr title="Goal difference">GD</abbr></th><th><abbr title="Points">Pts</abbr></th><th class="hide-s">Form</th></tr></thead>
-  <tbody>{% for r in g.rows %}<tr class="{% if r.qualifies %}q{% endif %}{% if r.highlight %} hl{% endif %}">
-    <td>{{ r.position }}</td>
-    <td class="tl"><span class="tm">{% include "public/_crest.html" with t=r.team size=22 %}{% if r.team.link %}<a href="/team/{{ r.team.slug }}">{{ r.team.name }}</a>{% else %}<span>{{ r.team.name }}</span>{% endif %}{% if r.adjustment %} <small class="note">({% if r.adjustment > 0 %}+{% endif %}{{ r.adjustment }} pts)</small>{% endif %}</span></td>
-    <td>{{ r.played }}</td><td>{{ r.won }}</td><td>{{ r.drawn }}</td><td>{{ r.lost }}</td><td>{{ r.goalsFor }}</td><td>{{ r.goalsAgainst }}</td>
-    <td>{% if r.goalDifference > 0 %}+{% endif %}{{ r.goalDifference }}</td><td class="pts">{{ r.points }}</td>
-    <td class="hide-s">{% for f in r.form %}<span class="fm {{ f }}">{{ f }}</span>{% endfor %}</td>
-  </tr>{% empty %}<tr><td colspan="11" class="note">No teams yet.</td></tr>{% endfor %}</tbody>
-</table></div>
-{% endfor %}
+{% for g in groups %}{% include "public/_group.html" %}{% endfor %}

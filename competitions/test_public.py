@@ -65,7 +65,7 @@ class PublicPagesTest(Helpers, TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertIn('content="noindex"', r.content.decode())
         self.assertEqual(r["X-Robots-Tag"], "noindex")
-        self.assertNotIn("Secret Cup", Client().get(f"/organization/{self.slug}").content.decode())
+        self.assertNotIn("Secret Cup", Client().get(f"/org/{self.slug}").content.decode())
         self.assertNotIn(cs, Client().get("/sitemap.xml").content.decode())
         self.assertEqual(Client().get("/team/alpha").status_code, 404, "teams only in unlisted competitions have no public page")
 
@@ -78,7 +78,7 @@ class PublicPagesTest(Helpers, TestCase):
             self.assertEqual(client.get(f"/match/{m.slug}").status_code, 404)
         r = self.owner.c.get(f"/competition/{cs}")
         self.assertEqual(r.status_code, 200)
-        self.assertIn("Private preview", r.content.decode())
+        self.assertIn("public right now", r.content.decode())
         self.assertEqual(r["Cache-Control"], "private, no-store")
 
     def test_team_and_organization_pages(self):
@@ -86,7 +86,7 @@ class PublicPagesTest(Helpers, TestCase):
         r = Client().get("/team/kasoa-stars")
         self.assertEqual(r.status_code, 200)
         self.assertIn("Sunday League", r.content.decode())
-        org = Client().get(f"/organization/{self.slug}").content.decode()
+        org = Client().get(f"/org/{self.slug}").content.decode()
         self.assertIn("Sunday League", org)
         self.assertIn("Kasoa Stars", org)
 
@@ -97,3 +97,60 @@ class PublicPagesTest(Helpers, TestCase):
         sm = Client().get("/sitemap.xml").content.decode()
         self.assertIn(f"/competition/{self.cs}/table", sm)
         self.assertIn("/team/kasoa-stars", sm)
+
+    def test_groups_knockouts_and_share_previews(self):
+        cs = self.owner.call("post", self.base + "/competitions", {"name": "Robo Cup", "visibility": "public", "format": "groups_knockout",
+                                                                  "qualifiersPerGroup": 2}).json()["competition"]["slug"]
+        ids = [self.owner.call("post", self.base + "/teams", {"name": f"Side {i}"}).json()["team"]["id"] for i in range(4)]
+        for i, tid in enumerate(ids):
+            self.owner.call("post", f"{self.base}/competitions/{cs}/entries", {"teamId": tid, "group": "AB"[i // 2]})
+        anon = Client()
+        table = anon.get(f"/competition/{cs}/table").content.decode()
+        self.assertIn('class="grp-h">Group A', table)
+        self.assertIn("Top 2 go through", table)
+        r = anon.get(f"/competition/{cs}/knockouts")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("haven't been drawn yet", r.content.decode())
+        entries = self.owner.get(f"{self.base}/competitions/{cs}").json()["entries"]
+        self.owner.call("post", f"{self.base}/competitions/{cs}/draw", {"entryIds": [e["id"] for e in entries], "roundName": "Semi-finals"})
+        self.assertIn("Semi-finals", anon.get(f"/competition/{cs}/knockouts").content.decode())
+        self.assertEqual(anon.get(f"/competition/{self.cs}/knockouts").status_code, 404, "plain leagues have no knockouts")
+        # share previews: no image until there's a logo, then the organization's logo is used
+        self.assertNotIn("og:image", anon.get(f"/competition/{cs}").content.decode())
+        png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+        self.owner.call("post", f"{self.base}/logo", {"image": png})
+        self.owner.call("patch", self.base, {"description": "We play every Sunday.", "website": {"tagline": ""}})
+        for url in (f"/competition/{cs}", f"/org/{self.slug}"):
+            html = anon.get(url).content.decode()
+            self.assertIn('property="og:image" content="http://testserver/media/org/', html, url)
+        self.assertIn('og:description" content="We play every Sunday."', anon.get(f"/org/{self.slug}").content.decode())
+
+    def test_import_original_league_into_existing_competition(self):
+        import json
+        from django.core.management import call_command
+        from django.core.management.base import CommandError
+        from league.models import League
+        League.objects.update_or_create(pk=1, defaults={"data": json.dumps({"g": {"A": ["P1", "P2", "P3", "P4"], "B": ["Q1", "Q2", "Q3", "Q4"]},
+                                                                         "cfg": {"a": 2}, "r": {"A0_0": [2, 1]}, "ui": {"t": "CHAMPIONS LEAGUE"}})})
+        cs = self.owner.call("post", self.base + "/competitions", {"name": "Robotics Championship", "visibility": "public"}).json()["competition"]["slug"]
+        call_command("import_league", self.slug, into=cs, description="Two groups of four.", stdout=__import__("io").StringIO())
+        c = __import__("competitions.models", fromlist=["Competition"]).Competition.objects.get(slug=cs)
+        self.assertEqual((c.format, c.qualifiers_per_group, c.entries.count(), c.matches.count(), c.description), ("groups_knockout", 2, 8, 24, "Two groups of four."))
+        self.assertEqual(c.matches.filter(status="finished").count(), 1, "results come across")
+        with self.assertRaises(CommandError):
+            call_command("import_league", self.slug, into=cs, stdout=__import__("io").StringIO())
+        self.assertEqual(c.entries.count(), 8, "running it twice changes nothing")
+
+    def test_fonts_are_served_by_the_site(self):
+        anon = Client()
+        css = anon.get("/fonts/fonts.css")
+        self.assertEqual(css.status_code, 200)
+        self.assertIn("url(/fonts/barlow-condensed-800-latin.woff2)", css.content.decode())
+        font = anon.get("/fonts/barlow-400-latin.woff2")
+        self.assertEqual((font.status_code, font["Content-Type"], font.content[:4]), (200, "font/woff2", b"wOF2"))
+        self.assertIn("immutable", font["Cache-Control"])
+        for bad in ("../settings.py", "app.html", "nope.woff2", "x.exe"):
+            self.assertEqual(anon.get(f"/fonts/{bad}").status_code, 404, bad)
+        page = anon.get(f"/competition/{self.cs}")
+        self.assertIn('href="/fonts/fonts.css"', page.content.decode())
+        self.assertNotIn("googleapis", page.content.decode() + page["Content-Security-Policy"])

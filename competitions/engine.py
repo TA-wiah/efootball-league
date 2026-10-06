@@ -71,6 +71,67 @@ def round_robin(ids, legs=1, shuffle=True):
     return out
 
 
+SCHEDULE_DEFAULT = {"perDay": 5, "everyDays": 1, "time": "18:00", "gap": 30}
+SCHEDULE_LIMITS = {"perDay": (2, 20), "everyDays": (1, 5), "gap": (10, 240)}
+
+
+def clean_schedule(data):
+    """{perDay: 2–20 matches a day, everyDays: 1–5 days between match days, time: "HH:MM" first kick-off, gap: minutes between matches}."""
+    if not isinstance(data, dict):
+        raise ValueError("Send the schedule as an object.")
+    out = {}
+    for k, v in data.items():
+        if k in SCHEDULE_LIMITS:
+            lo, hi = SCHEDULE_LIMITS[k]
+            if isinstance(v, bool) or not isinstance(v, int) or not lo <= v <= hi:
+                raise ValueError({"perDay": f"Matches a day must be from {lo} to {hi}.", "everyDays": f"Days between match days must be from {lo} to {hi}.",
+                                  "gap": f"Minutes between matches must be from {lo} to {hi}."}[k])
+            out[k] = v
+        elif k == "time":
+            if not isinstance(v, str) or not __import__("re").fullmatch(r"([01]\d|2[0-3]):[0-5]\d", v):
+                raise ValueError("The first kick-off time must look like 18:00.")
+            out[k] = v
+        else:
+            raise ValueError(f"Unknown schedule setting: {k}")
+    return out
+
+
+def day_slots(blocks, sched):
+    """(match day number, place in that day) for each match in order. `blocks` holds one key per match: when the key
+    changes (e.g. a new knockout round or leg) the next match day starts; None never forces a new day."""
+    s = {**SCHEDULE_DEFAULT, **(sched or {})}
+    out, day, pos, prev = [], 0, 0, None
+    for i, key in enumerate(blocks):
+        if i and (pos >= s["perDay"] or (key is not None and key != prev)):
+            day, pos = day + 1, 0
+        out.append((day, pos))
+        pos, prev = pos + 1, key
+    return out
+
+
+def plan_kickoffs(blocks, first_day, sched, tz):
+    """Kick-off times: `perDay` matches on each match day, `gap` minutes apart from `time`, with a match day every
+    `everyDays` days starting on `first_day`. `blocks` is a number of matches, or one key per match (see day_slots)."""
+    import zoneinfo
+    from datetime import datetime, time as dtime
+    blocks = [None] * blocks if isinstance(blocks, int) else blocks
+    s = {**SCHEDULE_DEFAULT, **(sched or {})}
+    hh, mm = map(int, s["time"].split(":"))
+    zone = zoneinfo.ZoneInfo(tz)
+    return [datetime.combine(first_day + timedelta(days=day * s["everyDays"]), dtime(hh, mm), tzinfo=zone) + timedelta(minutes=pos * s["gap"])
+            for day, pos in day_slots(blocks, s)]
+
+
+def match_days_needed(blocks, sched):
+    """(match days, calendar days from the first match day to the last)."""
+    blocks = [None] * blocks if isinstance(blocks, int) else blocks
+    if not blocks:
+        return 0, 0
+    s = {**SCHEDULE_DEFAULT, **(sched or {})}
+    days = day_slots(blocks, s)[-1][0] + 1
+    return days, (days - 1) * s["everyDays"]
+
+
 def kickoff_for(start, round_no, days_between):
     return start + timedelta(days=days_between * (round_no - 1)) if start else None
 

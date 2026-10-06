@@ -203,6 +203,144 @@ class CompetitionApiTest(Helpers, TestCase):
         self.assertEqual(mod.call("patch", f"{self.base}/announcements/{a}", {"title": "changed"}).status_code, 403)
         self.assertEqual(mod.call("delete", f"{self.base}/announcements/{a}").status_code, 200)
 
+    def test_fixture_schedule_uses_saved_settings_and_dates(self):
+        from datetime import date, timedelta
+        cs, ids = self.setup_league()                                     # 4 teams: 6 matches once, 12 home and away
+        start = date.today() + timedelta(days=10)
+        url = f"{self.base}/competitions/{cs}"
+        bad = [{"perDay": 1}, {"perDay": 21}, {"everyDays": 0}, {"everyDays": 6}, {"time": "25:00"}, {"nope": 1}]
+        for s in bad:
+            self.assertEqual(self.owner.call("patch", url, {"schedule": s}).status_code, 400, s)
+        r = self.owner.call("patch", url, {"startDate": start.isoformat(), "endDate": (start + timedelta(days=30)).isoformat(),
+                                            "schedule": {"perDay": 4, "everyDays": 2, "time": "19:00", "gap": 30}})
+        self.assertEqual(r.json()["competition"]["schedule"], {"perDay": 4, "everyDays": 2, "time": "19:00", "gap": 30})
+        r = self.owner.call("post", url + "/generate", {"legs": 2})                # nothing asked: start date and saved schedule
+        self.assertEqual(r.status_code, 200, r.json())
+        ms = sorted(self.owner.get(url + "/matches").json()["matches"], key=lambda m: m["kickoff"])
+        days = sorted({m["kickoff"][:10] for m in ms})
+        self.assertEqual(days, [(start + timedelta(days=2 * i)).isoformat() for i in range(3)], "4 a day, every 2 days, from the start date")
+        self.assertEqual([m["kickoff"][11:16] for m in ms[:4]], ["19:00", "19:30", "20:00", "20:30"])
+        self.assertEqual([m["round"] for m in ms], sorted(m["round"] for m in ms), "matchday by matchday")
+        # too long for the end date: refused with a suggestion, and nothing changes
+        self.owner.call("patch", url, {"endDate": (start + timedelta(days=2)).isoformat()})
+        r = self.owner.call("post", url + "/generate", {"legs": 2, "replace": True, "schedule": {"perDay": 2, "everyDays": 1}})
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("Play 4 matches a day", r.json()["error"])
+        self.assertEqual(len(self.owner.get(url + "/matches").json()["matches"]), 12)
+        # knockout rounds follow on after the last scheduled match
+        self.owner.call("patch", url, {"endDate": None, "format": "groups_knockout"})
+        entries = self.owner.get(url).json()["entries"]
+        r = self.owner.call("post", url + "/draw", {"entryIds": [e["id"] for e in entries], "roundName": "Semi-finals"})
+        self.assertEqual(r.status_code, 200, r.json())
+        last_league = ms[-1]["kickoff"][:10]
+        self.assertTrue(all(m["kickoff"][:10] > last_league for m in r.json()["matches"]))
+
+    def groups_comp(self, groups=2, per=4, q=2):
+        cs = self.comp(format="groups_knockout", qualifiersPerGroup=q)
+        url = f"{self.base}/competitions/{cs}"
+        names = [f"{chr(65 + g)}{i}" for g in range(groups) for i in range(1, per + 1)]
+        ids = self.teams(names)
+        for tid, n in zip(ids, names):
+            self.owner.call("post", url + "/entries", {"teamId": tid, "group": n[0]})
+        entries = {e["team"]["name"]: e["id"] for e in self.owner.get(url).json()["entries"]}
+        return cs, url, entries
+
+    def test_group_stage_only_within_groups(self):
+        cs, url, e = self.groups_comp()
+        r = self.owner.call("post", url + "/matches", {"stage": "league", "homeId": e["A1"], "awayId": e["B1"]})
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("own group", r.json()["error"])
+        r = self.owner.call("post", url + "/matches", {"stage": "league", "homeId": e["A1"], "awayId": e["A2"], "group": "B"})
+        self.assertEqual((r.status_code, r.json()["match"]["group"]), (200, "A"), "the group follows the teams")
+        self.owner.call("post", url + "/generate", {"replace": True})
+        ms = self.owner.get(url + "/matches").json()["matches"]
+        ids = {v: k for k, v in e.items()}
+        self.assertTrue(all(ids[m["home"]["entryId"]][0] == ids[m["away"]["entryId"]][0] == m["group"] for m in ms if m["stage"] == "league"))
+        self.assertEqual(self.owner.call("patch", f"{url}/entries/{e['A1']}", {"group": "B"}).status_code, 409, "can't move once it has group games")
+
+    def test_knockout_plan_fills_itself_in(self):
+        from competitions.models import Match
+        cs, url, e = self.groups_comp()
+        r = self.owner.call("post", url + "/generate", {"knockout": {"mode": "cross"}})
+        self.assertEqual(r.status_code, 200, r.json())
+        self.assertEqual(r.json()["knockout"]["rounds"], ["Semi-finals", "Final"])
+        ko = [m for m in self.owner.get(url + "/matches").json()["matches"] if m["stage"] == "knockout"]
+        self.assertEqual([(m["homeFrom"], m["awayFrom"]) for m in ko],
+                         [("Group A winner", "Group B runner-up"), ("Group B winner", "Group A runner-up"), ("Winner of Semi-final 1", "Winner of Semi-final 2")])
+        self.assertTrue(all(m["home"] is None for m in ko), "nobody is known yet")
+        # play group A: the top two go into their semi-final slots; group B is still unknown
+        for m in Match.objects.filter(competition__slug=cs, stage="league", group="A"):
+            h = m.home.team.name
+            score = {"A1": 3, "A2": 2, "A3": 1, "A4": 0}
+            a = m.away.team.name
+            self.owner.call("patch", f"{self.base}/matches/{m.id}", {"homeScore": score[h], "awayScore": score[a]})
+        ko = [m for m in self.owner.get(url + "/matches").json()["matches"] if m["stage"] == "knockout"]
+        self.assertEqual((ko[0]["home"]["name"], ko[0]["away"], ko[1]["away"]["name"]), ("A1", None, "A2"))
+        for m in Match.objects.filter(competition__slug=cs, stage="league", group="B"):
+            score = {"B1": 3, "B2": 2, "B3": 1, "B4": 0}
+            self.owner.call("patch", f"{self.base}/matches/{m.id}", {"homeScore": score[m.home.team.name], "awayScore": score[m.away.team.name]})
+        semis = [m for m in self.owner.get(url + "/matches").json()["matches"] if m["stage"] == "knockout"][:2]
+        self.assertEqual([(m["home"]["name"], m["away"]["name"]) for m in semis], [("A1", "B2"), ("B1", "A2")])
+        # a semi-final level after 90 minutes needs penalties before the final fills in
+        self.owner.call("patch", f"{self.base}/matches/{semis[0]['id']}", {"homeScore": 1, "awayScore": 1})
+        final = next(m for m in self.owner.get(url + "/matches").json()["matches"] if m["roundName"] == "Final")
+        self.assertIsNone(final["home"])
+        self.owner.call("patch", f"{self.base}/matches/{semis[0]['id']}", {"homePens": 4, "awayPens": 5})
+        self.owner.call("patch", f"{self.base}/matches/{semis[1]['id']}", {"homeScore": 2, "awayScore": 0})
+        final = next(m for m in self.owner.get(url + "/matches").json()["matches"] if m["roundName"] == "Final")
+        self.assertEqual((final["home"]["name"], final["away"]["name"]), ("B2", "B1"))
+        # results are in, so the plan can't be changed any more
+        self.assertEqual(self.owner.call("post", url + "/knockout-plan", {"replace": True}).status_code, 409)
+
+    def test_knockout_plan_rules(self):
+        cs, url, e = self.groups_comp(groups=4, per=3, q=2)       # 8 through: quarter-finals
+        r = self.owner.call("post", url + "/knockout-plan", {"mode": "random", "legs": 2})
+        self.assertEqual(r.status_code, 200, r.json())
+        self.assertEqual(r.json()["rounds"], ["Quarter-finals", "Semi-finals", "Final"])
+        ko = [m for m in self.owner.get(url + "/matches").json()["matches"] if m["stage"] == "knockout"]
+        firsts = [m for m in ko if m["roundName"] == "Quarter-finals" and m["leg"] == 1]
+        self.assertEqual(len(firsts), 4)
+        for m in firsts:
+            self.assertTrue(m["homeFrom"].endswith("winner") and m["awayFrom"].endswith("runner-up"), m)
+            self.assertNotEqual(m["homeFrom"].split()[1], m["awayFrom"].split()[1], "never someone from their own group")
+        self.assertEqual(len([m for m in ko if m["roundName"] == "Final"]), 1, "the final is one match")
+        self.assertEqual(self.owner.call("post", url + "/knockout-plan", {}).status_code, 409, "asks before replacing")
+        self.owner.call("patch", url, {"qualifiersPerGroup": 3})              # 12 through: not a knockout size
+        r = self.owner.call("post", url + "/knockout-plan", {"replace": True})
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("2, 4, 8, 16 or 32", r.json()["error"])
+        plain = self.comp()
+        self.assertEqual(self.owner.call("post", f"{self.base}/competitions/{plain}/knockout-plan", {}).status_code, 400)
+
+    def test_knockout_dates_follow_the_group_stage(self):
+        from datetime import date, timedelta
+        cs, url, e = self.groups_comp()
+        self.owner.call("patch", url, {"startDate": (date.today() + timedelta(days=5)).isoformat(), "schedule": {"perDay": 20, "everyDays": 2}})
+        self.owner.call("post", url + "/generate", {"knockout": {"mode": "cross"}})
+        ms = self.owner.get(url + "/matches").json()["matches"]
+        last_group = max(m["kickoff"] for m in ms if m["stage"] == "league")[:10]
+        semis = {m["kickoff"][:10] for m in ms if m["roundName"] == "Semi-finals"}
+        final = {m["kickoff"][:10] for m in ms if m["roundName"] == "Final"}
+        self.assertEqual(len(semis), 1)
+        self.assertTrue(last_group < min(semis) < min(final), "each round on its own day, after the groups")
+
+    def test_set_dates_keeps_pairings(self):
+        from datetime import date, timedelta
+        cs, ids = self.setup_league()
+        url = f"{self.base}/competitions/{cs}"
+        self.owner.call("post", url + "/generate", {})
+        Match = __import__("competitions.models", fromlist=["Match"]).Match
+        Match.objects.filter(competition__slug=cs).update(kickoff=None)
+        before = [(m.home_id, m.away_id) for m in Match.objects.filter(competition__slug=cs).order_by("round", "id")]
+        start = date.today() + timedelta(days=3)
+        self.owner.call("patch", url, {"startDate": start.isoformat()})
+        r = self.owner.call("post", url + "/dates", {"schedule": {"perDay": 2, "everyDays": 1}})
+        self.assertEqual((r.status_code, r.json()["updated"]), (200, 6))
+        after = list(Match.objects.filter(competition__slug=cs).order_by("round", "id"))
+        self.assertEqual([(m.home_id, m.away_id) for m in after], before, "same pairings")
+        self.assertEqual(len({m.kickoff.date() for m in after}), 3, "2 a day over 3 days")
+        self.assertEqual(self.owner.call("post", url + "/dates", {}).status_code, 400, "nothing left to date")
+
 
 class ImportLeagueTest(Helpers, TestCase):
     def test_original_league_becomes_a_competition(self):

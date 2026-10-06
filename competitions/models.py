@@ -40,6 +40,8 @@ class Competition(Logo):
     status = models.CharField(max_length=10, choices=COMP_STATUS, default="draft")
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
+    schedule = models.JSONField(default=dict, blank=True)
+    money = models.JSONField(default=dict, blank=True)       # {"currency", "entryFee", "prizes": [{"label", "amount"}]}   # how fixtures get dates: see engine.SCHEDULE_DEFAULT
     rules = models.TextField(blank=True, max_length=10000)
     points_win = models.PositiveSmallIntegerField(default=3)
     points_draw = models.PositiveSmallIntegerField(default=1)
@@ -51,7 +53,8 @@ class Competition(Logo):
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+")
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
-    featured = models.BooleanField(default=False)          # set by the platform owner: python manage.py feature <slug>
+    featured = models.BooleanField(default=False)
+    suspended = models.BooleanField(default=False)          # set by a super admin: hidden publicly and read-only          # set by the platform owner: python manage.py feature <slug>
     views = models.PositiveIntegerField(default=0)          # public page views, for "popular"
 
     def __str__(self):
@@ -69,6 +72,7 @@ class Team(Logo):
     colors = models.CharField(max_length=40, blank=True)
     description = models.TextField(blank=True, max_length=2000)
     created = models.DateTimeField(auto_now_add=True)
+    suspended = models.BooleanField(default=False)          # set by a super admin: no public page
 
     def __str__(self):
         return self.name
@@ -102,6 +106,9 @@ class Match(models.Model):
     round = models.PositiveSmallIntegerField(default=1)            # matchday / round number
     round_name = models.CharField(max_length=40, blank=True)
     leg = models.PositiveSmallIntegerField(default=1)
+    slot = models.PositiveSmallIntegerField(default=0)             # knockout plan: tie number within its round
+    home_from = models.CharField(max_length=60, blank=True)        # knockout plan: where the team comes from (see bracket.py)
+    away_from = models.CharField(max_length=60, blank=True)
     home = models.ForeignKey(Entry, null=True, blank=True, on_delete=models.RESTRICT, related_name="+")
     away = models.ForeignKey(Entry, null=True, blank=True, on_delete=models.RESTRICT, related_name="+")
     kickoff = models.DateTimeField(null=True, blank=True)
@@ -116,6 +123,7 @@ class Match(models.Model):
     notes = models.TextField(blank=True, max_length=2000)
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
+    finished_at = models.DateTimeField(null=True, blank=True)   # when the result was entered (for analytics)
 
     class Meta:
         ordering = ["round", "kickoff", "id"]

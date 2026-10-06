@@ -1,52 +1,46 @@
 {% extends "public/base.html" %}
 {% block content %}
 <section class="hero2">
-  <h1>Run your league or tournament <span>online</span></h1>
-  <p>Create a competition, register teams, generate fixtures and enter results. Standings update automatically, and every
-  table and match gets a public page you can share on WhatsApp in one tap.</p>
+  <span class="eyebrow"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m12 7 4 3-1.5 4.5h-5L8 10z"/></svg>Leagues · Cups · School &amp; community tournaments</span>
+  <h1>Every league and tournament, live in one place</h1>
+  <p>Follow tables, fixtures, results and match details from competitions near you. Organizers run everything from one dashboard, and standings update the moment a result is entered.</p>
   <div class="ctas">
-    <a class="btn lg" href="/app/signup?next=/app/new">Create a competition</a>
-    <a class="btn g lg" href="/app/signup?next=/app/new">Register your league</a>
-    <a class="btn g lg" href="/app">Manage your tournament</a>
+    <a class="btn lg" href="/competitions">Browse competitions</a>
+    <a class="btn g lg" href="/app">Organizer log in</a>
   </div>
-  <form class="sbox" action="/search" method="get" role="search"><input name="q" placeholder="Search competitions, teams or matches" aria-label="Search competitions, teams or matches" maxlength="80"><button class="btn">Search</button></form>
+  <form class="sbox" action="/search" method="get" role="search"><input name="q" placeholder="Search a competition, team or match…" aria-label="Search competitions, teams or matches" maxlength="80"><button class="btn">Search</button></form>
   {% if stats %}<div class="stats3"><div><b>{{ stats.competitions }}</b><span>competitions</span></div><div><b>{{ stats.teams }}</b><span>teams</span></div><div><b>{{ stats.matches }}</b><span>matches played</span></div></div>{% endif %}
 </section>
 
 {% if featured %}<h2 class="h2">Featured competitions <a href="/competitions">Browse all →</a></h2><div class="cards">{% for x in featured %}{% include "public/_card.html" %}{% endfor %}</div>{% endif %}
 
-<h2 class="h2">Everything you need to run a competition</h2>
-<div class="feat">
-  <div><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M12 13v3M8 20h8"/></svg><span><b>Create and manage leagues</b><small>Leagues, cups, groups and knockouts, with your own points and tie-breaker rules.</small></span></div>
-  <div><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7"/></svg><span><b>Register teams and squads</b><small>Teams, logos, home grounds and players, reused across competitions.</small></span></div>
-  <div><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span><b>Fixtures in one click</b><small>Everyone-plays-everyone schedules, home and away, dated and fairly shuffled. Random knockout draws.</small></span></div>
-  <div><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19h16M7 15V9M12 15V5M17 15v-3"/></svg><span><b>Automatic standings</b><small>Enter a score and the table, form and top scorers update by themselves.</small></span></div>
-  <div><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="m12 7 4 3-1.5 4.5h-5L8 10z"/></svg><span><b>Match details</b><small>Goals, assists, cards, substitutions, venue, referee and kick-off times.</small></span></div>
-  <div><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg><span><b>Public, shareable pages</b><small>A website for every competition, table, match and team. No app needed for fans.</small></span></div>
-  <div><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg><span><b>Staff with the right access</b><small>Invite organizers, admins, editors, moderators and viewers, each with their own permissions.</small></span></div>
-  <div><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="7" height="7" rx="1"/><rect x="14" y="4" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span><b>Many competitions, one account</b><small>Run several leagues, seasons and organizations from the same dashboard.</small></span></div>
-</div>
-
-<div class="aud" style="margin-top:34px">
-  <section><h3>For league organizers</h3><p>Manage your entire competition from one dashboard.</p><ul><li>Set up the format, rules and points</li><li>Generate fixtures and draw knockouts</li><li>Publish a live table and results</li></ul><a class="btn sm" href="/app/signup?next=/app/new">Create a competition</a></section>
-  <section><h3>For teams</h3><p>Register your team, manage your squad and follow fixtures and results.</p><ul><li>Team page with crest and squad</li><li>Every fixture and result in one place</li><li>Share your form with fans</li></ul><a class="btn sm" href="/app/signup?next=/app/new%3Fintent%3Dteam">Register your team</a></section>
-  <section><h3>For organizers</h3><p>Invite editors, moderators and other organizers to help run competitions.</p><ul><li>Invite by email or link</li><li>Six roles with clear permissions</li><li>See who did what</li></ul><a class="btn sm" href="/app">Manage your tournament</a></section>
-  <section><h3>For fans</h3><p>Follow competitions, league tables, fixtures, results and match details through public links.</p><ul><li>No account needed</li><li>Works on any phone</li><li>Times shown in your time zone</li></ul><a class="btn sm" href="/competitions">Find a competition</a></section>
-</div>
-
-<h2 class="h2">How it works</h2>
-<ol class="steps">
-  <li><b>Sign up free</b><br><span class="note">Create your account and your organization.</span></li>
-  <li><b>Add teams</b><br><span class="note">Register clubs and squads, or invite people to help.</span></li>
-  <li><b>Create the competition</b><br><span class="note">Choose a league, groups or knockouts and generate fixtures.</span></li>
-  <li><b>Enter results, share the link</b><br><span class="note">The table updates itself; fans follow your public page.</span></li>
-</ol>
-
 {% if upcoming %}<h2 class="h2">Upcoming matches</h2><section class="card">{% for m in upcoming %}{% include "public/_match.html" with show_comp=1 %}{% endfor %}</section>{% endif %}
-{% if popular %}<h2 class="h2">Popular competitions <a href="/competitions?sort=popular">See more →</a></h2><div class="cards">{% for x in popular %}{% include "public/_card.html" %}{% endfor %}</div>{% endif %}
-{% if starting %}<h2 class="h2">Starting soon <a href="/competitions?status=upcoming">See more →</a></h2><div class="cards">{% for x in starting %}{% include "public/_card.html" %}{% endfor %}</div>{% endif %}
-{% if countries %}<h2 class="h2">Browse by country</h2><div class="chips">{% for c in countries %}<a href="/competitions?country={{ c.country|urlencode }}">{{ c.country }} <small>{{ c.n }}</small></a>{% endfor %}</div>{% endif %}
 
-<section class="cta-band"><h2>Your competition deserves a proper home</h2><p>School league, Sunday league, academy tournament or corporate cup: set it up in minutes, free.</p>
-  <div class="ctas"><a class="btn lg" href="/app/signup?next=/app/new">Create a competition</a><a class="btn g lg" href="/competitions">Browse competitions</a></div></section>
+<h2 class="h2">What the platform does</h2>
+<p class="lead">A complete competition manager: organizers set it up once, and fans get a live website for every competition.</p>
+<div class="feat">
+  <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M12 13v3M8 20h8"/></svg><b>Create and manage leagues</b><small>Leagues, cups, group stages and knockouts with their own points and tie-breaker rules.</small></div>
+  <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7"/></svg><b>Register teams and squads</b><small>Clubs, crests, home grounds and players, reused across competitions and seasons.</small></div>
+  <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><b>Fixtures in one click</b><small>Fair, randomly drawn schedules, home and away, with dates and venues.</small></div>
+  <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19h16M7 15V9M12 15V5M17 15v-3"/></svg><b>Automatic standings</b><small>Enter a score: the table, form guide and top scorers update by themselves.</small></div>
+  <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="m12 7 4 3-1.5 4.5h-5L8 10z"/></svg><b>Match details</b><small>Goals, assists, cards, substitutions, referees, venues and kick-off times.</small></div>
+  <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg><b>Shareable public pages</b><small>Every table and match has its own link that looks great on WhatsApp and social media.</small></div>
+  <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg><b>Staff and permissions</b><small>Invite organizers, editors and moderators, each with exactly the access they need.</small></div>
+  <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="7" height="7" rx="1"/><rect x="14" y="4" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><b>Many competitions, one account</b><small>Run several leagues, seasons and organizations from the same dashboard.</small></div>
+</div>
+
+<h2 class="h2">Built for everyone in the game</h2>
+<div class="aud">
+  <section><h3>League organizers</h3><p>Manage your entire competition from one dashboard.</p><ul><li>Format, rules and points</li><li>Fixtures and knockout draws</li><li>Live table and results</li></ul><a class="btn sm g" href="/app">Log in to your dashboard</a></section>
+  <section><h3>Teams</h3><p>Keep your squad and team information up to date and follow every fixture.</p><ul><li>Team page with crest and squad</li><li>All fixtures and results</li><li>Form guide for fans</li></ul><a class="btn sm g" href="/app">Team log in</a></section>
+  <section><h3>Organizers &amp; staff</h3><p>Editors, moderators and co-organizers help run competitions together.</p><ul><li>Invitations by email or link</li><li>Six roles, clear permissions</li><li>Full activity history</li></ul><a class="btn sm g" href="/app">Staff log in</a></section>
+  <section><h3>Fans</h3><p>Follow tables, fixtures, results and match details. No account needed.</p><ul><li>Works on any phone</li><li>Times in your time zone</li><li>Share with one tap</li></ul><a class="btn sm" href="/competitions">Find a competition</a></section>
+</div>
+
+{% if popular %}<h2 class="h2">Popular now <a href="/competitions?sort=popular">See more →</a></h2><div class="cards">{% for x in popular %}{% include "public/_card.html" %}{% endfor %}</div>{% endif %}
+{% if starting %}<h2 class="h2">Starting soon <a href="/competitions?status=upcoming">See more →</a></h2><div class="cards">{% for x in starting %}{% include "public/_card.html" %}{% endfor %}</div>{% endif %}
+{% if countries %}<h2 class="h2">Browse by country</h2><div class="chips">{% for c in countries %}<a href="/competitions?country={{ c.country|urlencode }}">{{ c.country }}<small>{{ c.n }}</small></a>{% endfor %}</div>{% endif %}
+
+<section class="cta-band"><h2>Find your competition</h2><p>School league, Sunday league, academy tournament or corporate cup: the table is one search away.</p>
+  <div class="ctas"><a class="btn lg" href="/competitions">Browse competitions</a><a class="btn g lg" href="/search">Search</a></div></section>
 {% endblock %}

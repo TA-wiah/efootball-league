@@ -190,5 +190,8 @@ def cleanup():
     Audit.objects.filter(ts__lt=now - timedelta(days=90)).delete()
 
 
-def audit(actor, action, ip=""):
-    Audit.objects.create(actor=(actor or "")[:254], action=action[:300], ip=(ip or "")[:64])
+def audit(actor, action, ip="", resource="", old=None, new=None, status="ok", device=""):
+    """Write one line to the platform audit log (shown to super admins)."""
+    as_text = lambda v: "" if v is None else (v if isinstance(v, str) else json.dumps(v, default=str))[:2000]   # noqa: E731
+    Audit.objects.create(actor=(actor or "")[:254], action=action[:300], ip=(ip or "")[:64], resource=(resource or "")[:200],
+                         old=as_text(old), new=as_text(new), status=status[:10], device=(device or "")[:200])

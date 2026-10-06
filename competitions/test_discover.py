@@ -1,4 +1,6 @@
 """Landing page, discovery and search: only public competitions are ever listed."""
+import re
+
 from django.core.management import call_command
 from django.test import Client, TestCase, override_settings
 
@@ -32,10 +34,11 @@ class DiscoverTest(Helpers, TestCase):
 
     def test_landing_explains_the_platform(self):
         html = self.text("/")
-        for s in ("Run your league or tournament", "Create a competition", "Register your league", "Manage your tournament",
-                  "Register your team", "For league organizers", "For teams", "For fans", "Automatic standings", "Kasoa Sunday League",
-                  "Browse by country", "Ghana"):
+        for s in ("What the platform does", "Organizer log in", "Browse competitions", "League organizers", "Teams", "Fans",
+                  "Automatic standings", "Kasoa Sunday League", "Browse by country", "Ghana"):
             self.assertIn(s, html)
+        self.assertNotIn("/app/signup", html, "creating needs a login: no sign-up or create buttons on public pages")
+        self.assertNotIn("/app/new", html)
         self.assertNotIn("Hidden Unlisted Cup", html)
         self.assertNotIn("Secret Private League", html)
         self.assertIn('href="/competitions"', html)
@@ -56,6 +59,15 @@ class DiscoverTest(Helpers, TestCase):
         self.assertIn("Kasoa Sunday League", self.text("/competitions?status=active"), "generating fixtures starts a competition")
         self.assertEqual(Client().get("/competitions?type=<script>&sort=bad&page=999").status_code, 200, "bad parameters are ignored")
 
+    def test_location_falls_back_to_the_organizer(self):
+        self.make("No Place Cup", "public", ["Omega", "Sigma"])          # no country given; the organization is in Ghana
+        html = Client().get("/competitions?country=Ghana").content.decode()
+        self.assertIn("No Place Cup", html)
+        self.assertIn("Ghana (3)", Client().get("/competitions").content.decode())
+        self.assertNotIn("No Place Cup", Client().get("/competitions?country=Nigeria").content.decode())
+        self.assertIn("No Place Cup", Client().get("/competitions?country=Ghana&region=Central").content.decode())
+        self.assertIn("No Place Cup", Client().get("/search?q=ghana").content.decode())
+
     def test_featured_and_popular(self):
         call_command("feature", "lagos-schools-shield", stdout=open(__import__("os").devnull, "w"))
         html = self.text("/competitions")
@@ -72,9 +84,10 @@ class DiscoverTest(Helpers, TestCase):
         html = self.text("/search?q=kasoa")
         self.assertIn("Kasoa Sunday League", html)
         self.assertIn("/team/kasoa-stars", html)
-        self.assertIn("/organization/kasoa-community-league", html)
+        self.assertIn("/org/kasoa-community-league", html)
         vs = self.text("/search?q=Kasoa%20vs%20Winneba")
-        self.assertIn("/match/kasoa-stars-vs-winneba-lions", vs)
+        self.assertTrue(re.search(r"/match/(kasoa-stars-vs-winneba-lions|winneba-lions-vs-kasoa-stars)", vs),
+                        "finds the match whichever team was at home")
         for hidden in ("Hidden", "Secret", "Gamma", "Alpha"):
             page = self.text(f"/search?q={hidden}")
             self.assertIn("Nothing found", page, hidden)
@@ -83,7 +96,7 @@ class DiscoverTest(Helpers, TestCase):
 
     def test_original_league_moves_to_classic_with_opt_out(self):
         self.assertIn("eFootball", self.text("/classic"))
-        self.assertIn("Run your league or tournament", self.text("/"))
+        self.assertIn("What the platform does", self.text("/"))
         with override_settings(HOME_PAGE="league", LEAGUE_PATH="/"):
             self.assertIn("eFootball", self.text("/"))
         self.assertIn("/competitions", self.text("/sitemap.xml"))

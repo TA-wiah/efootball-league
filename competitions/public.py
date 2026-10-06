@@ -4,6 +4,7 @@ Visibility:  public   → listed, indexed, shareable
              unlisted → works for anyone with the link, but "noindex" and never listed elsewhere
              private  → 404 for everyone except the organization's members (who see a marked preview)
 """
+import re
 import secrets
 from collections import OrderedDict
 
@@ -15,8 +16,8 @@ from django.utils import timezone
 from league.http import base_url, session_user
 from orgs.models import Membership, Organization
 
-from . import engine
-from .models import EVENT_KINDS, MATCH_STATUS, POSITIONS, Announcement, Competition, Entry, Match, MatchEvent, Team
+from . import bracket, engine
+from .models import EVENT_KINDS, MATCH_STATUS, POSITIONS, Announcement, Competition, Entry, Match, MatchEvent, Player, Team
 
 STATUS_L = dict(MATCH_STATUS) | {"finished": "Full time"}
 EVENT_L = dict(EVENT_KINDS)
@@ -27,21 +28,29 @@ KIND_L = {"league": "League", "tournament": "Tournament", "cup": "Cup", "champio
 
 
 # ---------- helpers ----------
+def listed(prefix=""):
+    """What may appear publicly: public visibility, not suspended, and an organization in good standing."""
+    return Q(**{f"{prefix}visibility": "public", f"{prefix}suspended": False, f"{prefix}org__status": "active"})
+
+
 def is_member(request, org_id):
+    """Members of the organization, and platform super admins, may preview things that aren't public."""
     user = session_user(request)
-    return bool(user and Membership.objects.filter(org_id=org_id, user=user).exists())
+    return bool(user and (user.is_superuser or Membership.objects.filter(org_id=org_id, user=user).exists()))
 
 
-def page(request, template, ctx, *, index=True, private=False):
+def page(request, template, ctx, *, index=True, private=False, banner=None):
+    """`private`: never cached or indexed. `banner`: show the members-only preview notice (defaults to `private`)."""
     nonce = secrets.token_urlsafe(16)
     base = base_url(request)
-    ctx.update(nonce=nonce, base=base, url=base + request.path, index=index and not private, private_preview=private,
+    ctx.update(nonce=nonce, base=base, url=base + request.path, index=index and not private, private_preview=private if banner is None else banner,
                app_url="/app")
     resp = render(request, f"public/{template}", ctx)
-    resp["Content-Security-Policy"] = (f"default-src 'self'; script-src 'nonce-{nonce}'; style-src 'self' 'unsafe-inline'; "
+    resp["Content-Security-Policy"] = (f"default-src 'self'; script-src 'nonce-{nonce}'; style-src 'self' 'unsafe-inline'; font-src 'self'; "
                                        "img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; "
                                        "form-action 'self'; frame-ancestors 'none'")
-    resp["Cache-Control"] = "private, no-store" if private else "public, max-age=60"
+    # Visitors get a short cache; logged-in people (organizers checking their changes) always see the latest version.
+    resp["Cache-Control"] = "private, no-store" if private or session_user(request) else "public, max-age=60"
     if not ctx["index"]:
         resp["X-Robots-Tag"] = "noindex"
     return resp
@@ -49,7 +58,10 @@ def page(request, template, ctx, *, index=True, private=False):
 
 def competition_for(request, slug):
     c = Competition.objects.select_related("org").filter(slug=slug).first()
-    if not c or (c.visibility == "private" and not is_member(request, c.org_id)):
+    if not c:
+        raise Http404
+    c.hidden = c.visibility == "private" or c.suspended or c.org.status != "active"
+    if c.hidden and not is_member(request, c.org_id):
         raise Http404
     return c
 
@@ -58,9 +70,13 @@ def logo(kind, obj):
     return f"/media/{kind}/{obj.id}/logo?v={obj.version}" if obj.data else None
 
 
+def org_logo(org):
+    return f"/media/org/{org.id}/logo?v={org.logo_version}" if org.logo_data else None
+
+
 def public_team_ids(team_ids):
     """Teams that get their own public page: those playing in at least one public competition."""
-    return set(Entry.objects.filter(team_id__in=team_ids, competition__visibility="public").values_list("team_id", flat=True))
+    return set(Entry.objects.filter(listed("competition__"), team_id__in=team_ids, team__suspended=False).values_list("team_id", flat=True))
 
 
 def team_view(t, linkable):
@@ -75,6 +91,7 @@ def match_view(m, linkable):
     return {"slug": m.slug, "home": team_view(home, linkable), "away": team_view(away, linkable), "kickoff": m.kickoff,
             "round": m.round_name or f"Round {m.round}", "group": m.group, "leg": m.leg, "stage": m.stage, "status": m.status,
             "status_label": STATUS_L[m.status], "played": m.home_score is not None and m.away_score is not None,
+            "home_label": bracket.label(m.home_from) or "To be decided", "away_label": bracket.label(m.away_from) or "To be decided",
             "hs": m.home_score, "as": m.away_score, "hp": m.home_pens, "ap": m.away_pens, "venue": m.venue,
             "competition": {"name": m.competition.name, "slug": m.competition.slug}}
 
@@ -103,7 +120,7 @@ def standings_view(c, linkable, only_group=None):
         for r in rows:
             r["team"] = team_view(r["team"], linkable)
             r["qualifies"] = c.format == "groups_knockout" and r["position"] <= c.qualifiers_per_group
-        groups.append({"name": g, "rows": rows})
+        groups.append({"name": g, "rows": rows, "through": c.qualifiers_per_group if c.format == "groups_knockout" else 0})
     return groups
 
 
@@ -111,12 +128,12 @@ MATCHES = Match.objects.select_related("competition", "home__team", "away__team"
 
 
 # ---------- competition ----------
-TABS = [("", "Overview"), ("table", "Table"), ("fixtures", "Fixtures"), ("results", "Results"), ("teams", "Teams")]
+TABS = [("", "Overview"), ("table", "Table"), ("fixtures", "Fixtures"), ("results", "Results"), ("knockouts", "Knockouts"), ("teams", "Teams")]
 
 
 def competition(request, slug, tab=""):
     c = competition_for(request, slug)
-    if tab not in dict(TABS):
+    if tab not in dict(TABS) or (tab == "knockouts" and c.format == "league"):
         raise Http404
     entries = list(c.entries.select_related("team").order_by("team__name"))
     linkable = public_team_ids([e.team_id for e in entries])
@@ -124,7 +141,8 @@ def competition(request, slug, tab=""):
     upcoming = [m for m in matches if m.status in ("scheduled", "live", "postponed")]
     results = sorted([m for m in matches if m.status == "finished"], key=lambda m: (m.kickoff is not None, m.kickoff, m.round), reverse=True)
     has_table = c.format != "knockout"
-    ctx = {"c": c, "tab": tab, "tabs": [(t, label) for t, label in TABS if t != "table" or has_table], "logo": logo("competition", c),
+    ctx = {"c": c, "tab": tab, "tabs": [(t, label) for t, label in TABS if (t != "table" or has_table) and (t != "knockouts" or c.format != "league")],
+           "logo": logo("competition", c), "share_image": logo("competition", c) or org_logo(c.org),
            "kind": KIND_L.get(c.kind, "Competition"), "format": FORMAT_L[c.format], "has_table": has_table,
            "team_count": len(entries), "played": len(results), "total": len(matches),
            "points": f"Win {c.points_win} · Draw {c.points_draw} · Loss {c.points_loss}",
@@ -142,15 +160,18 @@ def competition(request, slug, tab=""):
     ctx["show_round"] = tab == "results"
     if tab == "results":
         ctx["sections"] = [(k, [match_view(m, linkable) for m in v]) for k, v in group_by(results, day_label)]
+    if tab == "knockouts":
+        ko = [m for m in matches if m.stage == "knockout"]
+        ctx["rounds"] = group_by([match_view(m, linkable) for m in sorted(ko, key=lambda m: (m.round, m.slot, m.leg, m.id))], lambda m: m["round"])
     if tab == "teams":
         ctx["teams"] = [{**team_view(e.team, linkable), "group": e.group, "city": e.team.city} for e in entries]
-    if c.visibility == "public" and tab in ("", "table"):
+    if not c.hidden and c.visibility == "public" and tab in ("", "table"):
         Competition.objects.filter(id=c.id).update(views=F("views") + 1)     # for "popular" (doesn't touch `updated`)
-    title = {"": c.name, "table": f"{c.name} table", "fixtures": f"{c.name} fixtures", "results": f"{c.name} results", "teams": f"{c.name} teams"}[tab]
+    title = {"": c.name, "table": f"{c.name} table", "fixtures": f"{c.name} fixtures", "results": f"{c.name} results", "teams": f"{c.name} teams", "knockouts": f"{c.name} knockouts"}[tab]
     ctx["title"] = title + (f" {c.season}" if c.season else "")
     ctx["description"] = (c.description[:180] if c.description else
                           f"{ctx['kind']} with {len(entries)} teams: live table, fixtures, results and match details.")
-    return page(request, "competition.html", ctx, index=c.visibility == "public", private=c.visibility == "private")
+    return page(request, "competition.html", ctx, index=c.visibility == "public" and not c.hidden, private=c.hidden)
 
 
 # ---------- match ----------
@@ -195,8 +216,8 @@ def match(request, slug):
         desc = f"{title}, {when}. {c.name}, {mv['round']}."
     ctx = {"c": c, "m": mv, "events": events, "aggregate": aggregate, "table": table, "same_round": same_round, "referee": m.referee,
            "title": title + (f" {m.home_score}–{m.away_score}" if mv["played"] else ""), "description": desc,
-           "logo": logo("competition", c), "notes": m.notes}
-    return page(request, "match.html", ctx, index=c.visibility == "public", private=c.visibility == "private")
+           "logo": logo("competition", c), "share_image": logo("competition", c) or org_logo(c.org), "notes": m.notes}
+    return page(request, "match.html", ctx, index=c.visibility == "public" and not c.hidden, private=c.hidden)
 
 
 # ---------- team ----------
@@ -205,7 +226,7 @@ def team(request, slug):
     if not t:
         raise Http404
     member = is_member(request, t.org_id)
-    public_comps = list(Competition.objects.filter(entries__team=t, visibility="public").order_by("-created"))
+    public_comps = [] if t.suspended else list(Competition.objects.filter(listed(), entries__team=t).order_by("-created"))
     if not public_comps and not member:
         raise Http404                                          # only shown for teams that play in public competitions
     comp_ids = [c.id for c in public_comps] if not member else list(Competition.objects.filter(entries__team=t).values_list("id", flat=True))
@@ -227,22 +248,136 @@ def team(request, slug):
 
 
 # ---------- organization ----------
-def organization(request, slug):
+HEX6 = re.compile(r"^#[0-9a-f]{6}$")
+LINK = re.compile(r"(https?://[^\s<>\"']+[^\s<>\"'.,;:!?)])")
+
+
+def render_text(body):
+    """An organization's page text → safe HTML. Everything is escaped first; only headings, lists, paragraphs and
+    full http(s) links are turned into markup."""
+    from django.utils.html import escape
+    from django.utils.safestring import mark_safe
+
+    def inline(line):
+        out, last = [], 0
+        for m in LINK.finditer(line):
+            out.append(escape(line[last:m.start()]))
+            url = m.group(1)
+            out.append(f'<a href="{escape(url)}" rel="nofollow noopener noreferrer" target="_blank">{escape(url)}</a>')
+            last = m.end()
+        out.append(escape(line[last:]))
+        return "".join(out)
+
+    html, para, items = [], [], []
+
+    def flush():
+        if para:
+            html.append("<p>" + "<br>".join(inline(x) for x in para) + "</p>")
+            para.clear()
+        if items:
+            html.append("<ul>" + "".join(f"<li>{inline(x)}</li>" for x in items) + "</ul>")
+            items.clear()
+    for raw in (body or "").split("\n"):
+        line = raw.rstrip()
+        if not line.strip():
+            flush()
+        elif line.startswith("## ") or line.startswith("# "):
+            flush()
+            html.append(f"<h2>{inline(line.lstrip('#').strip())}</h2>")
+        elif line.lstrip().startswith(("- ", "* ")):
+            if para:
+                flush()
+            items.append(line.lstrip()[2:])
+        else:
+            if items:
+                flush()
+            para.append(line)
+    flush()
+    return mark_safe("".join(html))
+
+
+def org_site_context(request, o):
+    s = o.site()
+    color, ink = brand(o.brand_color)
+    return {"o": o, "s": s, "brand": color, "brand_ink": ink, "org_logo": org_logo(o), "share_image": org_logo(o),
+            "kind": ORG_KIND_L.get(o.kind, "Organization"), "pages": list(o.pages.filter(published=True).only("slug", "title"))}
+
+
+def org_page(request, slug, page_slug):
+    """One of the organization's own pages: /org/<slug>/p/<page>."""
     o = Organization.objects.filter(slug=slug).first()
-    if not o:
+    if not o or (o.status != "active" and not is_member(request, o.id)):
         raise Http404
-    comps = list(o.competitions.filter(visibility="public").order_by("-status", "-created"))
+    pg = o.pages.filter(slug=page_slug).first()
+    if not pg or (not pg.published and not is_member(request, o.id)):
+        raise Http404
+    ctx = {**org_site_context(request, o), "pg": pg, "content": render_text(pg.body), "title": f"{pg.title} · {o.name}",
+           "description": (pg.body.strip().split("\n")[0] if pg.body.strip() else o.description)[:180] or o.name}
+    return page(request, "org_page.html", ctx, index=pg.published and o.status == "active", private=not pg.published or o.status != "active")
+ORG_KIND_L = {"league": "League", "school": "School", "club": "Club", "academy": "Academy", "company": "Company",
+              "community": "Community", "association": "Association", "other": "Organization"}
+
+
+def brand(color):
+    """The organization's colour (validated again here, it goes into CSS) and a readable text colour on top of it."""
+    c = color if color and HEX6.match(color) else "#2563eb"
+    lin = [(v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4) for v in (int(c[i:i + 2], 16) / 255 for i in (1, 3, 5))]
+    lum = 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
+    return c, ("#ffffff" if 1.05 / (lum + 0.05) >= (lum + 0.05) / 0.0563 else "#061024")
+
+
+def organization(request, slug):
+    """The organization's own public website: /org/<slug>. What's shown follows its website settings."""
+    o = Organization.objects.filter(slug=slug).first()
+    if not o or (o.status != "active" and not is_member(request, o.id)):
+        raise Http404
+    s = o.site()
+    comps = list(o.competitions.filter(listed()).order_by("-status", "-created"))
     ms = MATCHES.filter(competition__in=comps)
-    teams = list(Team.objects.filter(entries__competition__in=comps).distinct().order_by("name"))
+    teams = list(Team.objects.filter(entries__competition__in=comps, suspended=False).distinct().order_by("name"))
     linkable = {x.id for x in teams}
     now = timezone.now()
-    ctx = {"o": o, "comps": [{"c": c, "logo": logo("competition", c), "kind": KIND_L.get(c.kind, "Competition"), "teams": c.entries.count()} for c in comps],
-           "teams": [team_view(x, linkable) for x in teams],
-           "upcoming": [match_view(x, linkable) for x in ms.filter(status__in=["scheduled", "live"], kickoff__gte=now).order_by("kickoff")[:6]],
-           "recent": [match_view(x, linkable) for x in ms.filter(status="finished").order_by("-kickoff")[:6]],
-           "news": list(Announcement.objects.filter(org=o, published=True).filter(Q(competition__isnull=True) | Q(competition__in=comps)).order_by("-pinned", "-created")[:5]),
-           "title": o.name, "description": o.description[:180] or f"{o.name}: competitions, tables, fixtures and results."}
-    return page(request, "organization.html", ctx, index=bool(comps))
+    color, ink = brand(o.brand_color)
+    ctx = {"o": o, "s": s, "brand": color, "brand_ink": ink, "kind": ORG_KIND_L.get(o.kind, "Organization"),
+           "org_logo": org_logo(o), "share_image": org_logo(o),
+           "comps": [{"c": c, "logo": logo("competition", c), "kind": KIND_L.get(c.kind, "Competition"), "teams": c.entries.count()} for c in comps],
+           "title": o.name, "description": (s["tagline"] or o.description)[:180] or f"{o.name}: competitions, tables, fixtures and results."}
+    if s["show_teams"]:
+        ctx["teams"] = [team_view(x, linkable) for x in teams]
+    if s["show_players"] and teams:
+        players = Player.objects.select_related("team").filter(team__in=teams, active=True).order_by("team__name", "number", "name")[:400]
+        ctx["players"] = group_by(players, lambda p: p.team.name)
+    if s["show_fixtures"]:
+        soon = ms.filter(status__in=["scheduled", "live"]).filter(Q(kickoff__gte=now - timezone.timedelta(hours=3)) | Q(kickoff__isnull=True))
+        ctx["upcoming"] = [match_view(x, linkable) for x in soon.order_by(F("kickoff").asc(nulls_last=True), "round", "id")[:8]]
+    if s["show_results"]:
+        ctx["recent"] = [match_view(x, linkable) for x in ms.filter(status="finished").order_by("-kickoff")[:8]]
+    if s["show_standings"]:
+        ctx["tables"] = [{"c": c, "groups": standings_view(c, linkable)} for c in comps if c.format != "knockout"][:4]
+    if s["show_brackets"]:
+        brackets = []
+        for c in comps:
+            if c.format == "league":
+                continue
+            ko = [match_view(x, linkable) for x in ms.filter(competition=c, stage="knockout").order_by("round", "slot", "leg", "id")]
+            if ko:
+                brackets.append({"c": c, "rounds": group_by(ko, lambda m: m["round"])})
+        ctx["brackets"] = brackets[:3]
+    if s["show_news"]:
+        ctx["news"] = list(Announcement.objects.filter(org=o, published=True).filter(Q(competition__isnull=True) | Q(competition__in=comps))
+                           .select_related("competition").order_by("-pinned", "-created")[:6])
+    nav = [("competitions", "Competitions", True), ("fixtures", "Fixtures", ctx.get("upcoming") is not None),
+           ("results", "Results", ctx.get("recent") is not None), ("standings", "Standings", bool(ctx.get("tables"))),
+           ("brackets", "Brackets", bool(ctx.get("brackets"))), ("teams", "Teams", bool(ctx.get("teams"))),
+           ("players", "Players", bool(ctx.get("players"))), ("news", "News", bool(ctx.get("news"))),
+           ("about", "About", bool(s["about"] or s["contact"] or o.description))]
+    ctx["nav"] = [(k, label) for k, label, on in nav if on]
+    ctx["pages"] = list(o.pages.filter(published=True).only("slug", "title"))
+    return page(request, "organization.html", ctx, index=bool(comps) and o.status == "active", private=o.status != "active")
+
+
+def organization_alias(request, slug):
+    return redirect(f"/org/{slug}", permanent=True)
 
 
 # ---------- old addresses, robots and sitemap ----------
@@ -258,11 +393,11 @@ def robots(request):
 def sitemap(request):
     base = base_url(request)
     urls = [("/", None), ("/competitions", None)]
-    for c in Competition.objects.filter(visibility="public").only("slug", "updated"):
+    for c in Competition.objects.filter(listed()).only("slug", "updated"):
         urls += [(f"/competition/{c.slug}{t}", c.updated) for t in ("", "/table", "/fixtures", "/results", "/teams")]
-    urls += [(f"/match/{s}", u) for s, u in Match.objects.filter(competition__visibility="public").values_list("slug", "updated")[:20000]]
-    urls += [(f"/team/{s}", None) for s in Team.objects.filter(entries__competition__visibility="public").distinct().values_list("slug", flat=True)]
-    urls += [(f"/organization/{s}", None) for s in Organization.objects.filter(competitions__visibility="public").distinct().values_list("slug", flat=True)]
+    urls += [(f"/match/{s}", u) for s, u in Match.objects.filter(listed("competition__")).values_list("slug", "updated")[:20000]]
+    urls += [(f"/team/{s}", None) for s in Team.objects.filter(listed("entries__competition__"), suspended=False).distinct().values_list("slug", flat=True)]
+    urls += [(f"/org/{s}", None) for s in Organization.objects.filter(listed("competitions__")).distinct().values_list("slug", flat=True)]
     from xml.sax.saxutils import escape
     body = "".join(f"<url><loc>{escape(base + u)}</loc>{f'<lastmod>{d.date().isoformat()}</lastmod>' if d else ''}</url>" for u, d in urls)
     return HttpResponse(f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{body}</urlset>',

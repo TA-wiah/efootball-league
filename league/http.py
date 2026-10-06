@@ -1,14 +1,16 @@
 """Helpers shared by every JSON endpoint: errors, request parsing, sessions, login checks and serving pages."""
 import functools
 import json
+import re
 import secrets
 
 from django.conf import settings
-from django.contrib.auth import login, logout
+from django.contrib.auth import get_user_model, login, logout
 from django.contrib.auth.hashers import make_password
 from django.core.exceptions import RequestDataTooBig
 from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
+from django.utils import timezone
 
 from .logic import audit, clear, hit, over
 
@@ -65,6 +67,10 @@ def session_user(request):
     if request.session.get("epoch") != u.session_epoch:
         logout(request)
         return None
+    now = timezone.now()
+    if not u.last_seen or (now - u.last_seen).total_seconds() > 300:     # "last activity", at most one write per 5 minutes
+        get_user_model().objects.filter(pk=u.pk).update(last_seen=now)
+        u.last_seen = now
     return u
 
 
@@ -90,9 +96,12 @@ def check_login(ident, password, ip, eligible=lambda u: True):
     if not good:
         hit("ip:" + ip, 10, 900)
         hit(acct, 5, 900)
-        audit(ident or "?", "failed login", ip)
+        audit(ident or "?", "failed login", ip, resource=f"user:{u.username}" if u else "", status="failed")
         raise ApiError(401, GENERIC)
     clear(acct)
+    if not u.is_active:      # only said after the right password, so it can't be used to probe accounts
+        audit(u.username, "login blocked: account suspended", ip, resource=f"user:{u.username}", status="denied")
+        raise ApiError(403, "This account has been suspended. Contact the platform's support.")
     return u
 
 
@@ -124,6 +133,24 @@ def base_url(request):
 _pages = {}
 
 
+FONT_RE = re.compile(r"^[a-z0-9-]+\.(woff2|css|txt)$")
+FONT_TYPES = {"woff2": "font/woff2", "css": "text/css; charset=utf-8", "txt": "text/plain; charset=utf-8"}
+
+
+def font_file(request, name):
+    """The site's own fonts (public/fonts): no visitor data goes to a font service."""
+    from django.conf import settings
+    if not FONT_RE.fullmatch(name):
+        return not_found(request)
+    path = settings.BASE_DIR / "public" / "fonts" / name
+    if not path.is_file():
+        return not_found(request)
+    ext = name.rsplit(".", 1)[1]
+    return HttpResponse(path.read_bytes(), content_type=FONT_TYPES[ext],
+                        headers={"Cache-Control": "public, max-age=31536000, immutable" if ext == "woff2" else "public, max-age=86400",
+                                 "X-Content-Type-Options": "nosniff"})
+
+
 def serve_page(request, path):
     """Serve an HTML file with a fresh CSP nonce on its inline scripts."""
     if request.method != "GET":
@@ -131,7 +158,7 @@ def serve_page(request, path):
     if path not in _pages or settings.DEBUG:
         _pages[path] = path.read_text(encoding="utf-8")
     nonce = secrets.token_urlsafe(16)
-    csp = (f"default-src 'self'; script-src 'nonce-{nonce}'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; "
+    csp = (f"default-src 'self'; script-src 'nonce-{nonce}'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; "
            "connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
     return HttpResponse(_pages[path].replace("<script>", f'<script nonce="{nonce}">'), content_type="text/html; charset=utf-8",
                         headers={"Content-Security-Policy": csp, "Cache-Control": "no-store"})

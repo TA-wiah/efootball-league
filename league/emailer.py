@@ -26,22 +26,40 @@ def _env(name, default=""):
     return os.environ.get(name, default)
 
 
+def config():
+    """Email settings: the ones saved in the admin panel win; otherwise the environment variables."""
+    try:
+        from superadmin.store import get
+        db = get("email")
+    except Exception:                       # settings table not ready yet (first start)
+        db = {}
+    if db.get("provider"):
+        return {"provider": db["provider"].lower(), "host": db.get("host", ""), "port": int(db.get("port") or 587),
+                "user": db.get("user", ""), "password": db.get("password", ""), "from": db.get("from", ""),
+                "api_key": db.get("api_key", ""), "secure": db.get("secure", ""), "source": "admin panel"}
+    return {"provider": (_env("EMAIL_PROVIDER") or ("smtp" if _env("SMTP_HOST") else "")).lower(), "host": _env("SMTP_HOST"),
+            "port": int(_env("SMTP_PORT", "587") or 587), "user": _env("SMTP_USER"), "password": _env("SMTP_PASS"),
+            "from": _env("EMAIL_FROM") or _env("SMTP_FROM") or _env("SMTP_USER"), "api_key": _env("EMAIL_API_KEY"),
+            "secure": _env("SMTP_SECURE"), "source": "environment"}
+
+
 def provider():
-    return (_env("EMAIL_PROVIDER") or ("smtp" if _env("SMTP_HOST") else "")).lower()
+    return config()["provider"]
 
 
-def sender():
-    raw = _env("EMAIL_FROM") or _env("SMTP_FROM") or _env("SMTP_USER")
-    name, addr = parseaddr(raw)
+def sender(cfg=None):
+    cfg = cfg or config()
+    name, addr = parseaddr(cfg["from"] or cfg["user"])
     return name or SITE, addr
 
 
-def ready():
-    p = provider()
+def ready(cfg=None):
+    cfg = cfg or config()
+    p = cfg["provider"]
     if p in ("brevo", "resend"):
-        return bool(_env("EMAIL_API_KEY") and sender()[1])
+        return bool(cfg["api_key"] and sender(cfg)[1])
     if p == "smtp":
-        return bool(_env("SMTP_HOST") and sender()[1])
+        return bool(cfg["host"] and sender(cfg)[1])
     return p == "console"
 
 
@@ -67,23 +85,24 @@ def send(to, subject, text, html):
     if not re.fullmatch(r"[^\s@<>()\",;:]{1,64}@[A-Za-z0-9.-]{1,253}\.[A-Za-z]{2,}", to or ""):
         raise MailError("bad recipient")
     subject = re.sub(r"[\r\n]+", " ", subject).strip()
-    name, addr = sender()
-    p = provider()
-    if not ready():
+    cfg = config()
+    name, addr = sender(cfg)
+    p = cfg["provider"]
+    if not ready(cfg):
         raise MailError("email is not set up")
     if p == "brevo":
-        _post("https://api.brevo.com/v3/smtp/email", {"api-key": _env("EMAIL_API_KEY")},
+        _post("https://api.brevo.com/v3/smtp/email", {"api-key": cfg["api_key"]},
               {"sender": {"name": name, "email": addr}, "to": [{"email": to}], "subject": subject, "textContent": text, "htmlContent": html})
     elif p == "resend":
-        _post("https://api.resend.com/emails", {"Authorization": f"Bearer {_env('EMAIL_API_KEY')}"},
+        _post("https://api.resend.com/emails", {"Authorization": f"Bearer {cfg['api_key']}"},
               {"from": f"{name} <{addr}>", "to": [to], "subject": subject, "text": text, "html": html})
     elif p == "console":
         log.info("EMAIL to %s: %s\n%s", to, subject, text)
     else:
-        port = int(_env("SMTP_PORT", "587"))
-        use_ssl = _env("SMTP_SECURE") == "1" if _env("SMTP_SECURE") else port == 465
-        conn = get_connection("django.core.mail.backends.smtp.EmailBackend", host=_env("SMTP_HOST"), port=port,
-                              username=_env("SMTP_USER") or None, password=_env("SMTP_PASS") or None,
+        port = cfg["port"]
+        use_ssl = str(cfg["secure"]) == "1" if cfg["secure"] not in ("", None) else port == 465
+        conn = get_connection("django.core.mail.backends.smtp.EmailBackend", host=cfg["host"], port=port,
+                              username=cfg["user"] or None, password=cfg["password"] or None,
                               use_ssl=use_ssl, use_tls=not use_ssl, timeout=20)   # never sends the password unencrypted
         msg = EmailMultiAlternatives(subject, text, f"{name} <{addr}>", [to], connection=conn)
         msg.attach_alternative(html, "text/html")
