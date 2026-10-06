@@ -11,14 +11,17 @@ class Invoice(models.Model):
     competition = models.ForeignKey("competitions.Competition", null=True, blank=True, on_delete=models.SET_NULL, related_name="bills")
     team = models.ForeignKey("competitions.Team", null=True, blank=True, on_delete=models.SET_NULL, related_name="bills")
     customer_name = models.CharField(max_length=100)
-    customer_email = models.EmailField()
+    customer_email = models.EmailField(blank=True)                           # empty: phone only (we text the pay link)
     customer_phone = models.CharField(max_length=30, blank=True)
     description = models.CharField(max_length=200)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     currency = models.CharField(max_length=3)
     due_date = models.DateField(null=True, blank=True)
     status = models.CharField(max_length=10, default=PENDING, db_index=True)
-    code = models.CharField(max_length=64, blank=True, db_index=True)        # PayNova invoice_code
+    code = models.CharField(max_length=64, blank=True, db_index=True)        # PayNova invoice_code (invoices with an email)
+    reference = models.CharField(max_length=80, blank=True, db_index=True)   # PayNova payment reference (phone-only invoices)
+    sms = models.CharField(max_length=120, blank=True)                       # what happened to the text with the pay link
+    reminded_at = models.DateTimeField(null=True, blank=True)                # last payment reminder by text
     number = models.PositiveIntegerField(null=True, blank=True)
     pay_url = models.URLField(max_length=500, blank=True)
     mode = models.CharField(max_length=4, blank=True)                         # test / live

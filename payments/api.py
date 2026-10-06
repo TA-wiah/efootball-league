@@ -60,7 +60,8 @@ def need_ready():
 
 
 def invoice_json(i):
-    return {"id": i.id, "customerName": i.customer_name, "customerEmail": i.customer_email, "customerPhone": i.customer_phone or None,
+    return {"id": i.id, "customerName": i.customer_name, "customerEmail": i.customer_email or None, "customerPhone": i.customer_phone or None,
+            "sms": i.sms or None, "remindedAt": ms(i.reminded_at),
             "description": i.description, "amount": f"{i.amount:.2f}", "currency": i.currency, "status": i.status,
             "dueDate": i.due_date.isoformat() if i.due_date else None, "payUrl": i.pay_url or None, "number": i.number, "mode": i.mode,
             "fee": f"{i.fee:.2f}", "net": f"{i.net:.2f}", "paidAt": ms(i.paid_at), "created": ms(i.created),
@@ -122,7 +123,7 @@ def sync(org=None, force=False):
     if not paynova.ready(cfg):
         return 0
     now = timezone.now()
-    q = Invoice.objects.exclude(code="").filter(Q(status=Invoice.PENDING) | Q(status=Invoice.CANCELLED, created__gte=now - timedelta(days=90)))
+    q = Invoice.objects.exclude(code="", reference="").filter(Q(status=Invoice.PENDING) | Q(status=Invoice.CANCELLED, created__gte=now - timedelta(days=90)))
     if org:
         q = q.filter(org=org)
     if not force:
@@ -130,12 +131,15 @@ def sync(org=None, force=False):
     todo = list(q.select_related("org"))
     if not todo:
         return 0
-    remote = paynova.list_invoices(cfg)
+    remote = paynova.list_invoices(cfg) if any(i.code for i in todo) else {}
+    for inv in todo[:40]:
+        if inv.reference and not inv.code:
+            remote[f"ref:{inv.reference}"] = paynova.verify(inv.reference, cfg)
     changed = 0
     with transaction.atomic():
         for inv in todo:
             inv.checked_at = now
-            r = remote.get(inv.code)
+            r = remote.get(inv.code) if inv.code else remote.get(f"ref:{inv.reference}")
             status = str((r or {}).get("status", "")).lower()
             if r and status == "paid" and inv.status != Invoice.PAID and mark_paid(inv, r):
                 changed += 1
@@ -185,12 +189,30 @@ def one_invoice(request, org, user, cfg, b, competition=None, team=None):
     name, email = text(b, "name", 100), text(b, "email", 254).lower()
     if len(name) < 2:
         raise ApiError(400, "Enter who the invoice is for.")
-    if not EMAIL_RE.fullmatch(email):
-        raise ApiError(400, f"Enter a valid email for {name}: PayNova emails the pay link there.")
     phone = text(b, "phone", 30).replace(" ", "")
+    if not email and not phone:
+        raise ApiError(400, f"Enter an email or a phone number for {name}, so they get the pay link.")
+    if email and not EMAIL_RE.fullmatch(email):
+        raise ApiError(400, f"Check the email for {name}.")
     if phone and not PHONE_RE.fullmatch(phone):
         raise ApiError(400, f"Check the phone number for {name}.")
     return name, email, phone
+
+
+def text_pay_link(inv, user):
+    """Text the pay link (even when PayNova also emails an invoice). Never blocks the invoice itself."""
+    from sms import api as sms_api, providers
+    if not inv.customer_phone or not inv.pay_url:
+        return ""
+    if not providers.ready():
+        return "" if inv.customer_email else "Not texted: SMS isn't set up. Copy the pay link and send it yourself."
+    body_text = (f"Hi {inv.customer_name.split()[0]}, {inv.org.name} sent you a bill of {inv.currency} {inv.amount:.2f} for "
+                 f"{inv.description}. Pay securely here: {inv.pay_url}")
+    try:
+        sms_api.send_text(inv.org, user, [inv.customer_phone], body_text, kind="invoice")
+        return "Texted"
+    except ApiError as e:
+        return ("Not texted: " + e.message)[:120]
 
 
 @endpoint("POST", login_required=True)
@@ -239,13 +261,21 @@ def org_invoices(request, user, ip, slug):
                       description=description, amount=amount, currency=currency, due_date=due, fee_percent=pct, fee_fixed=fixed,
                       mode=paynova.mode(cfg["secret_key"]), created_by=user)
         try:
-            remote = paynova.create_invoice(name, email, amount, currency, description, phone, due, cfg)
+            if email:                                     # PayNova emails (and texts) its own invoice
+                remote = paynova.create_invoice(name, email, amount, currency, description, phone, due, cfg)
+                inv.code, inv.pay_url = str(remote.get("invoice_code", ""))[:64], str(remote.get("pay_url", ""))[:500]
+                inv.number = remote.get("invoice_number") if isinstance(remote.get("invoice_number"), int) else None
+            else:                                         # phone only: a payment link that we text to them
+                remote = paynova.initialize_payment(amount, currency, f"{description} ({org.name})",
+                                                    metadata={"kind": "invoice", "org": org.slug, "for": name}, cfg=cfg)
+                inv.reference, inv.pay_url = remote["reference"], remote["checkout_url"]
         except paynova.PayNovaError as e:
             failed.append({"name": name, "error": str(e)})
             continue
-        inv.code, inv.pay_url = str(remote.get("invoice_code", ""))[:64], str(remote.get("pay_url", ""))[:500]
-        inv.number = remote.get("invoice_number") if isinstance(remote.get("invoice_number"), int) else None
         inv.save()
+        inv.sms = text_pay_link(inv, user)
+        if inv.sms:
+            inv.save(update_fields=["sms"])
         made.append(inv)
     if made:
         log(org, user, f"sent {len(made)} invoice{'s' if len(made) != 1 else ''} of {amount:.2f} {currency} ({description})")
@@ -253,6 +283,43 @@ def org_invoices(request, user, ip, slug):
     if not made and failed:
         raise ApiError(502, failed[0]["error"])
     return {"ok": True, "sent": len(made), "failed": failed, "invoices": [invoice_json(i) for i in made]}
+
+
+@endpoint("POST", login_required=True)
+def org_invoice_remind(request, user, ip, slug):
+    """Text a ready-made payment reminder (with the pay link) to unpaid invoices: {ids: [...]} or {all: true}.
+    Each person gets at most one reminder every 12 hours."""
+    from sms import api as sms_api, templates
+    org, m = access(user, slug, "payments.manage")
+    b = body(request)
+    q = Invoice.objects.select_related("org").filter(org=org, status=Invoice.PENDING).exclude(customer_phone="").exclude(pay_url="")
+    if b.get("all") is not True:
+        ids = b.get("ids") if isinstance(b.get("ids"), list) else []
+        q = q.filter(id__in=[i for i in ids if isinstance(i, int)])
+    now = timezone.now()
+    todo = list(q[:200])
+    if not todo:
+        raise ApiError(400, "There are no unpaid invoices with a phone number to remind.")
+    sent, skipped, problem = 0, 0, None
+    for inv in todo:
+        if inv.reminded_at and inv.reminded_at > now - timedelta(hours=12):
+            skipped += 1
+            continue
+        try:
+            sms_api.send_text(org, user, [inv.customer_phone], templates.payment_reminder(inv), kind="reminder")
+        except ApiError as e:
+            problem = e.message
+            if e.status in (402, 502) or "set up" in e.message:
+                break                                      # out of credits or provider down: stop here
+            continue
+        inv.reminded_at = now
+        inv.save(update_fields=["reminded_at"])
+        sent += 1
+    if sent:
+        log(org, user, f"texted {sent} payment reminder{'s' if sent != 1 else ''}")
+    if not sent and problem:
+        raise ApiError(400, problem)
+    return {"ok": True, "sent": sent, "skipped": skipped, "problem": problem}
 
 
 @endpoint("POST", login_required=True)

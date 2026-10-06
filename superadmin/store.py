@@ -10,9 +10,13 @@ DEFAULTS = {
     # PayNova: the platform's payment account. Organizations invoice through it; the platform can keep a fee.
     "payments": {"enabled": False, "secret_key": "", "currency": "GHS", "wallet_id": "", "fee_enabled": False, "fee_percent": "0",
                  "fee_fixed": "0"},
+    # Text messages: the provider and its keys, and what organizations pay per credit (1 credit = 1 SMS to 1 person).
+    "sms": {"enabled": False, "provider": "", "api_key": "", "sender": "", "country_code": "233",
+            "credit_price": "0.05", "currency": "GHS", "min_credits": 100},
 }
-SECRETS = {"email": {"password", "api_key"}, "payments": {"secret_key"}}
-TYPES = {"allow_signups": bool, "require_org_approval": bool, "max_orgs_per_user": int, "port": int, "enabled": bool, "fee_enabled": bool}
+SECRETS = {"email": {"password", "api_key"}, "payments": {"secret_key"}, "sms": {"api_key"}}
+TYPES = {"allow_signups": bool, "require_org_approval": bool, "max_orgs_per_user": int, "port": int, "enabled": bool, "fee_enabled": bool,
+         "min_credits": int}
 
 
 def get(section):

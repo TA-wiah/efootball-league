@@ -44,6 +44,7 @@ PERMISSIONS = [
     ("content.moderate", "Moderate announcements and content", _MGMT | {MODERATOR}, True),
     ("org.settings", "Edit organization profile, branding and public website", {OWNER, ADMIN}, True),
     ("payments.manage", "Send invoices, see payments and request payouts", {OWNER, ADMIN}, True),
+    ("messages.send", "Send text messages (SMS) to people", _MGMT, True),
     ("roles.manage", "Change what each role can do", {OWNER}, False),
     ("org.transfer", "Transfer ownership", {OWNER}, False),
     ("org.delete", "Delete the organization", {OWNER}, False),

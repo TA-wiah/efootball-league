@@ -748,6 +748,8 @@ def platform_settings(request, user, ip):
             raise ApiError(400, "Unknown settings section.")
         if section == "payments":
             check_payment_settings(changes)
+        if section == "sms":
+            check_sms_settings(changes)
         if section == "email":
             if changes.get("provider", "") not in ("", "smtp", "brevo", "resend", "console"):
                 raise ApiError(400, "Choose an email provider.")
@@ -761,9 +763,35 @@ def platform_settings(request, user, ip):
     cfg = emailer.config()
     from payments import paynova
     pay = paynova.config()
-    return {"site": store.masked("site"), "email": store.masked("email"), "payments": store.masked("payments"),
+    from sms import providers as smsp
+    return {"site": store.masked("site"), "email": store.masked("email"), "payments": store.masked("payments"), "sms": store.masked("sms"),
+            "smsStatus": {"ready": smsp.ready(), "providers": smsp.PROVIDERS},
             "paymentStatus": {"ready": paynova.ready(pay), "mode": paynova.mode(pay["secret_key"]) or None, "source": pay["source"] or None},
             "emailStatus": {"ready": emailer.ready(cfg), "provider": cfg["provider"] or None, "source": cfg["source"]}}
+
+
+def check_sms_settings(c):
+    from decimal import Decimal, InvalidOperation
+    from payments.api import CURRENCIES
+    from sms.providers import PROVIDERS
+    if "provider" in c and c["provider"] not in ("", *PROVIDERS):
+        raise ApiError(400, "Choose an SMS provider.")
+    if c.get("sender") and not re.fullmatch(r"[A-Za-z0-9 ]{2,11}", str(c["sender"]).strip()):
+        raise ApiError(400, "The sender ID is 2–11 letters or numbers, approved by your SMS provider.")
+    if "country_code" in c and not re.fullmatch(r"[1-9][0-9]{0,3}", str(c["country_code"]).strip()):
+        raise ApiError(400, "The country code is digits only, e.g. 233 for Ghana.")
+    if "currency" in c and c["currency"] not in CURRENCIES:
+        raise ApiError(400, "Choose a supported currency.")
+    if "min_credits" in c and (not isinstance(c["min_credits"], int) or not 1 <= c["min_credits"] <= 100000):
+        raise ApiError(400, "The smallest purchase must be from 1 to 100,000 credits.")
+    if "credit_price" in c:
+        try:
+            v = Decimal(str(c["credit_price"]).strip() or "0")
+        except InvalidOperation:
+            raise ApiError(400, "The price per credit must be a number, e.g. 0.05.") from None
+        if not Decimal("0") <= v <= Decimal("100") or v.as_tuple().exponent < -4:
+            raise ApiError(400, "The price per credit must be from 0 to 100 (up to 4 decimals).")
+        c["credit_price"] = str(v.normalize()) if v else "0"
 
 
 def check_payment_settings(c):

@@ -113,3 +113,25 @@ def send(email, amount, currency, note, cfg=None):
 def payout(wallet_id, amount, method, destination, cfg=None):
     return call("POST", "/payouts/", {"wallet_id": wallet_id, "amount": f"{money(amount):.2f}", "method": method,
                                       "destination": destination}, cfg=cfg)
+
+
+def initialize_payment(amount, currency, description, success_url="", cancel_url="", metadata=None, email="", split_code="", cfg=None):
+    """A payment link for someone without an email address (we text them the link). Returns {reference, checkout_url}."""
+    data = {"amount": f"{money(amount):.2f}", "currency": currency, "description": description[:200]}
+    for k, v in (("customer_email", email), ("success_url", success_url), ("cancel_url", cancel_url), ("split_code", split_code)):
+        if v:
+            data[k] = v
+    if metadata:
+        data["metadata"] = metadata
+    res = call("POST", "/payments/initialize/", data, cfg=cfg)
+    pay = res.get("payment") or {}
+    ref, url = pay.get("reference") or res.get("reference"), res.get("checkout_url") or res.get("payment_url")
+    if not ref or not url:
+        raise PayNovaError("PayNova didn't return a payment link.")
+    return {"reference": str(ref)[:80], "checkout_url": str(url)[:500]}
+
+
+def verify(reference, cfg=None):
+    """{status: pending|paid|expired|cancelled, amount, currency, paid_at} for one payment, checked with PayNova."""
+    import urllib.parse
+    return call("GET", f"/payments/{urllib.parse.quote(reference, safe='')}/verify/", cfg=cfg)

@@ -8,6 +8,7 @@ from competitions import discover
 from competitions import public as pub
 from orgs import api as o
 from payments import api as pay
+from sms import api as sms
 from superadmin import api as sa
 
 handler404 = "league.http.not_found"
@@ -72,7 +73,13 @@ urlpatterns = [
     path("api/orgs/<slug:slug>/payments/sync", pay.org_sync),
     path("api/orgs/<slug:slug>/invoices", pay.org_invoices),
     path("api/orgs/<slug:slug>/invoices/<int:inv_id>/cancel", pay.org_invoice_cancel),
+    path("api/orgs/<slug:slug>/invoices/remind", pay.org_invoice_remind),
     path("api/orgs/<slug:slug>/payouts", pay.org_payouts),
+    path("api/orgs/<slug:slug>/sms", sms.org_sms),
+    path("api/orgs/<slug:slug>/sms/check", sms.org_sms_check),
+    path("api/orgs/<slug:slug>/sms/send", sms.org_sms_send),
+    path("api/orgs/<slug:slug>/sms/buy", sms.org_sms_buy),
+    path("api/orgs/<slug:slug>/sms/purchases/<int:purchase_id>/<slug:action>", lambda r, slug, purchase_id, action: sms.org_sms_purchase(r, slug=slug, purchase_id=purchase_id, action=action) if action in ("check", "cancel") else not_found(r)),
     path("api/orgs/<slug:slug>/payouts/<int:payout_id>/cancel", pay.org_payout_cancel),
     path("api/orgs/<slug:slug>/activity", o.activity),
     path("api/orgs/<slug:slug>/logo", o.org_logo_upload),
@@ -148,6 +155,10 @@ urlpatterns = [
     path("api/admin/settings", sa.platform_settings),
     path("api/admin/settings/test-email", sa.test_email),
     path("api/admin/payments", pay.admin_payments),
+    path("api/admin/sms", sms.admin_sms),
+    path("api/admin/sms/credit", sms.admin_sms_credit),
+    path("api/admin/sms/test", sms.admin_sms_test),
+    path("api/admin/sms/purchases/<int:purchase_id>/<slug:action>", lambda r, purchase_id, action: sms.admin_sms_purchase(r, purchase_id=purchase_id, action=action) if action in ("grant", "reject") else not_found(r)),
     path("api/admin/payments/test", pay.admin_payments_test),
     path("api/admin/payouts/<int:payout_id>/<slug:action>", lambda r, payout_id, action: pay.admin_payout_act(r, payout_id=payout_id, action=action) if action in ("approve", "reject") else not_found(r)),
     path("api/admin/system", sa.system),
