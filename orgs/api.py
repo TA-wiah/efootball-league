@@ -150,7 +150,7 @@ def account_json(user):
     if not user:
         return None
     return {"id": user.id, "username": user.username, "email": user.email or None, "leagueAccess": user.league_access,
-            "superAdmin": user.is_superuser}
+            "superAdmin": user.is_superuser, "firstName": user.first_name, "lastName": user.last_name, "phone": user.phone or None}
 
 
 def unique_slug(name):
@@ -225,6 +225,76 @@ def me(request, user, ip):
     return {"user": account_json(user), "csrf": get_token(request), "orgs": orgs, "site": {"name": site["name"], "signups": site["allow_signups"],
             "notice": site["notice"], "supportEmail": site["support_email"]}, "announcements": news,
             "invitations": my_pending_invitations(user).count() if user else 0}
+
+
+PHONE_RE = re.compile(r"^\+?[0-9 ]{9,20}$")
+
+
+@endpoint("GET", "PATCH", login_required=True)
+def account(request, user, ip):
+    """Your own profile. Changing the username or email needs your current password."""
+    if request.method == "GET":
+        return {"user": account_json(user), "joined": ms(user.date_joined),
+                "orgs": [{"name": m.org.name, "slug": m.org.slug, **role_json(m.role)} for m in Membership.objects.select_related("org").filter(user=user).order_by("org__name")]}
+    b = body(request)
+    old = {"username": user.username, "email": user.email}
+    if "firstName" in b:
+        user.first_name = text(b, "firstName", 60)
+    if "lastName" in b:
+        user.last_name = text(b, "lastName", 60)
+    if "phone" in b:
+        phone = text(b, "phone", 30)
+        if phone and not PHONE_RE.fullmatch(phone):
+            raise ApiError(400, "Enter the phone number with digits only, e.g. +233241234567.")
+        user.phone = phone.replace(" ", "")
+    username, email = text(b, "username", 64) if "username" in b else user.username, text(b, "email", 254).lower() if "email" in b else user.email
+    if username != user.username or email != (user.email or ""):
+        pw = b.get("password") if isinstance(b.get("password"), str) else ""
+        if not pw or not user.check_password(pw):
+            if hit(f"pwcheck:{user.id}", 5, 900):
+                raise ApiError(429, "Too many wrong passwords. Try again in 15 minutes.")
+            raise ApiError(403, "Enter your current password to change your username or email.")
+        if not USER_RE.fullmatch(username):
+            raise ApiError(400, "Username: 3–32 letters, numbers, dot, dash or underscore.")
+        if not EMAIL_RE.fullmatch(email):
+            raise ApiError(400, "Enter a valid email address.")
+        if Admin.objects.exclude(id=user.id).filter(Q(username__iexact=username) | Q(email__iexact=username)).exists():
+            raise ApiError(409, "That username is taken.")
+        if Admin.objects.exclude(id=user.id).filter(Q(email__iexact=email) | Q(username__iexact=email)).exists():
+            raise ApiError(409, "An account with that email already exists.")
+        user.username, user.email = username, email
+    try:
+        user.save()
+    except IntegrityError:
+        raise ApiError(409, "That username or email is taken.") from None
+    new = {"username": user.username, "email": user.email}
+    audit(user.username, "updated their profile", ip, resource=f"user:{user.username}", old=old if old != new else None, new=new if old != new else None)
+    return {"ok": True, "user": account_json(user)}
+
+
+@endpoint("POST", login_required=True)
+def account_password(request, user, ip):
+    """Change your password. Other devices are signed out; this one stays signed in."""
+    b = body(request)
+    current = b.get("current") if isinstance(b.get("current"), str) else ""
+    new = b.get("new") if isinstance(b.get("new"), str) else ""
+    if hit(f"pwchange:{user.id}", 5, 900):
+        raise ApiError(429, "Too many attempts. Try again in 15 minutes.")
+    if not user.check_password(current):
+        audit(user.username, "password change: wrong current password", ip, resource=f"user:{user.username}", status="denied")
+        raise ApiError(403, "Your current password isn't right.")
+    problem = password_problem(new, user)
+    if problem:
+        raise ApiError(400, problem)
+    if user.check_password(new):
+        raise ApiError(400, "Choose a password you haven't been using.")
+    user.set_password(new)
+    user.session_epoch += 1
+    user.must_change = False
+    user.save(update_fields=["password", "session_epoch", "must_change"])
+    start_session(request, user)
+    audit(user.username, "changed their password", ip, resource=f"user:{user.username}")
+    return {"ok": True, "csrf": get_token(request)}
 
 
 @endpoint("GET")

@@ -7,9 +7,12 @@ DEFAULTS = {
     "site": {"name": "Competition Manager", "support_email": "", "allow_signups": True, "require_org_approval": False,
              "max_orgs_per_user": 25, "notice": ""},
     "email": {"provider": "", "host": "", "port": 587, "user": "", "password": "", "from": "", "api_key": "", "secure": ""},
+    # PayNova: the platform's payment account. Organizations invoice through it; the platform can keep a fee.
+    "payments": {"enabled": False, "secret_key": "", "currency": "GHS", "wallet_id": "", "fee_enabled": False, "fee_percent": "0",
+                 "fee_fixed": "0"},
 }
-SECRETS = {"email": {"password", "api_key"}}
-TYPES = {"allow_signups": bool, "require_org_approval": bool, "max_orgs_per_user": int, "port": int}
+SECRETS = {"email": {"password", "api_key"}, "payments": {"secret_key"}}
+TYPES = {"allow_signups": bool, "require_org_approval": bool, "max_orgs_per_user": int, "port": int, "enabled": bool, "fee_enabled": bool}
 
 
 def get(section):

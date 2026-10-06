@@ -7,6 +7,7 @@ from competitions import api as c
 from competitions import discover
 from competitions import public as pub
 from orgs import api as o
+from payments import api as pay
 from superadmin import api as sa
 
 handler404 = "league.http.not_found"
@@ -56,6 +57,8 @@ urlpatterns = [
     re_path(r"^app/.*$", app_page),
     path("invite/<str:token>", app_page),
     path("api/auth/me", o.me),
+    path("api/account", o.account),
+    path("api/account/password", o.account_password),
     path("api/auth/signup", o.signup),
     path("api/auth/login", o.login_view),
     path("api/auth/logout", o.logout_view),
@@ -65,6 +68,12 @@ urlpatterns = [
     path("api/orgs/<slug:slug>", o.org_detail),
     path("api/orgs/<slug:slug>/transfer", o.transfer),
     path("api/orgs/<slug:slug>/permissions", o.org_permissions),
+    path("api/orgs/<slug:slug>/payments", pay.org_payments),
+    path("api/orgs/<slug:slug>/payments/sync", pay.org_sync),
+    path("api/orgs/<slug:slug>/invoices", pay.org_invoices),
+    path("api/orgs/<slug:slug>/invoices/<int:inv_id>/cancel", pay.org_invoice_cancel),
+    path("api/orgs/<slug:slug>/payouts", pay.org_payouts),
+    path("api/orgs/<slug:slug>/payouts/<int:payout_id>/cancel", pay.org_payout_cancel),
     path("api/orgs/<slug:slug>/activity", o.activity),
     path("api/orgs/<slug:slug>/logo", o.org_logo_upload),
     path("api/orgs/<slug:slug>/leave", o.leave),
@@ -138,6 +147,9 @@ urlpatterns = [
     path("api/admin/org-announcements/<int:aid>", sa.org_announcement),
     path("api/admin/settings", sa.platform_settings),
     path("api/admin/settings/test-email", sa.test_email),
+    path("api/admin/payments", pay.admin_payments),
+    path("api/admin/payments/test", pay.admin_payments_test),
+    path("api/admin/payouts/<int:payout_id>/<slug:action>", lambda r, payout_id, action: pay.admin_payout_act(r, payout_id=payout_id, action=action) if action in ("approve", "reject") else not_found(r)),
     path("api/admin/system", sa.system),
     path("api/admin/security/logout-everyone", sa.logout_everyone),
     path("api/admin/tickets", sa.tickets),

@@ -13,6 +13,7 @@ class Admin(AbstractUser):
     # Can edit the original single league (/). Platform sign-ups start without it.
     league_access = models.BooleanField(default=False)
     last_seen = models.DateTimeField(null=True, blank=True)    # last request while logged in ("active users")
+    phone = models.CharField(max_length=30, blank=True)
     # is_superuser (from Django) = platform super admin: sees and manages the whole platform at /admin.
     # is_active = False means suspended: can't log in, and existing sessions stop working.
 

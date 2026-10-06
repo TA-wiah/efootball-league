@@ -90,7 +90,7 @@ def comp_json(c, extra=False):
     d = {"id": c.id, "name": c.name, "slug": c.slug, "description": c.description, "country": c.country, "region": c.region,
          "season": c.season, "kind": c.kind, "format": c.format, "visibility": c.visibility, "status": c.status,
          "startDate": c.start_date.isoformat() if c.start_date else None, "endDate": c.end_date.isoformat() if c.end_date else None,
-         "logo": logo_url("competition", c)}
+         "logo": logo_url("competition", c), "money": {"currency": "GHS", "entryFee": None, "prizes": [], **(c.money or {})}}
     if extra:
         d["schedule"] = {**engine.SCHEDULE_DEFAULT, **(c.schedule or {})}
         d.update({"rules": c.rules, "pointsWin": c.points_win, "pointsDraw": c.points_draw, "pointsLoss": c.points_loss,
@@ -184,8 +184,38 @@ def summary(request, user, ip, slug):
 
 # ---------- competitions ----------
 COMP_STRUCTURE = {"name", "country", "region", "season", "kind", "format", "visibility", "status", "startDate", "endDate", "pointsWin",
-                  "pointsDraw", "pointsLoss", "tiebreakers", "legs", "maxTeams", "qualifiersPerGroup", "schedule"}
+                  "pointsDraw", "pointsLoss", "tiebreakers", "legs", "maxTeams", "qualifiersPerGroup", "schedule", "money"}
 COMP_CONTENT = {"description", "rules"}
+
+
+def clean_money(m):
+    """Entry fee and prizes shown on the competition (amounts are text with 2 decimals)."""
+    from decimal import Decimal, InvalidOperation
+    from payments.api import CURRENCIES
+    if not isinstance(m, dict):
+        raise ApiError(400, "Bad prize settings.")
+    cur = str(m.get("currency") or "GHS").upper()
+    if cur not in CURRENCIES:
+        raise ApiError(400, "Choose a supported currency.")
+
+    def amt(v, what):
+        try:
+            d = Decimal(str(v).strip())
+        except InvalidOperation:
+            raise ApiError(400, f"{what} must be a number, e.g. 50 or 25.50.") from None
+        if not Decimal("0") <= d <= Decimal("10000000") or d.as_tuple().exponent < -2:
+            raise ApiError(400, f"{what} must be a positive amount with up to 2 decimals.")
+        return f"{d:.2f}"
+    fee = m.get("entryFee")
+    prizes = m.get("prizes") or []
+    if not isinstance(prizes, list) or len(prizes) > 12:
+        raise ApiError(400, "Add up to 12 prizes.")
+    clean = []
+    for p in prizes:
+        if not isinstance(p, dict) or not str(p.get("label", "")).strip():
+            raise ApiError(400, "Give every prize a name, e.g. Champion.")
+        clean.append({"label": str(p["label"]).strip()[:40], "amount": amt(p.get("amount"), str(p["label"]).strip()[:40] or "The prize")})
+    return {"currency": cur, "entryFee": amt(fee, "The entry fee") if fee not in (None, "") else None, "prizes": clean}
 
 
 def apply_competition(c, b):
@@ -222,6 +252,8 @@ def apply_competition(c, b):
             c.schedule = {**(c.schedule or {}), **engine.clean_schedule(b["schedule"])}
         except ValueError as e:
             raise ApiError(400, str(e)) from None
+    if "money" in b:
+        c.money = clean_money(b["money"])
     if "qualifiersPerGroup" in b:
         c.qualifiers_per_group = num(b, "qualifiersPerGroup", 0, 32, allow_null=False)
 

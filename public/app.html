@@ -266,7 +266,7 @@ function go(path,replace){history[replace?"replaceState":"pushState"](null,"",pa
 document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest("a[data-nav]");if(a&&!e.ctrlKey&&!e.metaKey&&!e.shiftKey&&e.button===0){e.preventDefault();go(a.getAttribute("href"))}});
 window.addEventListener("popstate",route);
 // ---------- organization look: avatar, colours, dropdown menus ----------
-Object.assign(IC,{home:'<path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/>',pulse:'<path d="M3 12h4l3-8 4 16 3-8h4"/>',bell:'<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/>',
+Object.assign(IC,{wallet:'<rect x="3" y="6" width="18" height="14" rx="2"/><path d="M3 10h18M16 15h2M6 6l9-3 1 3"/>',home:'<path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/>',pulse:'<path d="M3 12h4l3-8 4 16 3-8h4"/>',bell:'<path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/>',
   cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',check:'<path d="m5 12 5 5L20 7"/>',list:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
   bracket:'<path d="M4 5h5v6H4M4 13h5v6H4M9 8h4v8H9M13 12h7"/>',user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',whistle:'<circle cx="9" cy="14" r="5"/><path d="M13 11l8-5M9 14h.01M13 9V5h-3"/>',
   badge:'<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M8 17h8"/>',building:'<path d="M4 21V5l8-3 8 3v16M9 21v-5h6v5M8 8h.01M12 8h.01M16 8h.01M8 12h.01M12 12h.01M16 12h.01"/>',
@@ -295,7 +295,7 @@ function topnav(){var cm=location.pathname.match(/^\/app\/org\/([a-z0-9-]+)/),cu
   (ORGS.length?'<div class="dd"><button type="button" class="switch" data-dd aria-haspopup="true" aria-expanded="false" title="Switch organization">'+(cur?avatar(cur,20):ic("swap"))+'<span class="grow">'+esc(cur?cur.name:"Organizations")+'</span><span aria-hidden="true">▾</span></button>'+
     '<div class="ddm wide" hidden><div class="ddh">Switch organization</div>'+ORGS.map(function(g){return'<a href="/app/org/'+esc(g.slug)+'" data-nav class="'+(cur&&cur.slug===g.slug?"on":"")+'">'+avatar(g,26)+'<span class="grow">'+esc(g.name)+'</span>'+pill(g.role,g.roleLabel)+'</a>'}).join("")+
     '<hr><a href="'+mineUrl()+'" data-nav>'+ic("users")+' All organizations</a><a href="/app/new" data-nav>'+ic("plus")+' Create organization</a></div></div>':'')+
-  (ME.superAdmin?'<a href="/admin" data-nav class="adm-link">'+ic("shield")+' Admin panel</a>':'')+(INV?'<a href="'+mineUrl()+'" data-nav>Invitations <span class="pill pending">'+INV+'</span></a>':'')+'<span class="who">'+esc(ME.username)+'</span><button class="btn g sm" id="logout">Log out</button>'
+  (ME.superAdmin?'<a href="/admin" data-nav class="adm-link">'+ic("shield")+' Admin panel</a>':'')+(INV?'<a href="'+mineUrl()+'" data-nav>Invitations <span class="pill pending">'+INV+'</span></a>':'')+'<a class="who" href="/app/profile" data-nav title="My profile" style="text-decoration:none">'+esc(ME.username)+'</a><button class="btn g sm" id="logout">Log out</button>'
   :(function(){var n=/^\/invite\//.test(location.pathname)?"?next="+encodeURIComponent(location.pathname):"";
      return'<a href="/competitions">Competitions</a><a class="btn sm" href="/app/login'+n+'" data-nav>Log in</a>'})());
   var lo=$("logout");if(lo)lo.onclick=function(){api("/api/auth/logout","POST",{}).then(loadMe).then(function(){toast("Logged out");go("/app/login")})}}
@@ -308,6 +308,7 @@ function route(){topnav();var p=location.pathname.replace(/\/+$/,"")||"/",m;
   if(p==="/app"&&ME.superAdmin&&new URLSearchParams(location.search).get("view")!=="orgs")return go("/admin",true);
   if(p==="/app")return dashboard();
   if(p==="/app/support")return supportView();
+  if(p==="/app/profile")return profileView();
   if(p==="/app/new")return createOrgView();
   if((m=p.match(/^\/app\/org\/([a-z0-9-]+)(?:\/([a-z]+)(?:\/(.+))?)?$/)))return orgView(m[1],m[2]||"overview",m[3]);
   main('<div class="card empty"><h2>Page not found</h2><p class="note">That page doesn\'t exist.</p><a class="btn" href="/app" data-nav>Go to my organizations</a></div>')}
@@ -338,10 +339,10 @@ function U(inner,o){o=o||{};var L=function(h,label,on){return'<a href="'+h+'" da
         return'<div class="ag open"><div class="agh-static">'+esc(grp)+'</div><div class="agi">'+items.map(function(s){
           if(s[0]==="preview")return'<a href="/org/'+esc(g.slug)+'" target="_blank" rel="noopener">'+ic(s[4])+' '+esc(s[1])+' ↗</a>';
           return L(s[0]==="newcomp"?app0("/competitions?new=1"):app0(s[0]==="overview"?"":"/"+s[0]),ic(s[4])+' '+esc(s[1]),s[0]===o.section)}).join("")+'</div></div>'}).join("")+
-      '<div class="asb-f"><a href="'+mineUrl()+'" data-nav>← All organizations</a><a href="/app/support" data-nav>Help &amp; support</a>'+(ME.superAdmin?'<a href="/admin" data-nav>Admin panel</a>':'')+'</div>'}
+      '<div class="asb-f"><a href="'+mineUrl()+'" data-nav>← All organizations</a><a href="/app/profile" data-nav>My profile</a><a href="/app/support" data-nav>Help &amp; support</a>'+(ME.superAdmin?'<a href="/admin" data-nav>Admin panel</a>':'')+'</div>'}
   else side='<div class="asb-h">'+ic("trophy")+' Dashboard</div><div class="asb-who">'+esc(ME.username)+(ME.superAdmin?' <span class="sb amber">Super admin</span>':'')+'</div>'+
     '<div class="ag open"><div class="agh-static">Menu</div><div class="agi">'+L(mineUrl(),ic("users")+" My organizations",o.key==="orgs")+L("/app/new",ic("plus")+" Create organization",o.key==="new")+
-    L("/app/support",ic("mail")+" Help &amp; support",o.key==="support")+(ME.superAdmin?L("/admin",ic("shield")+" Admin panel"):"")+'</div></div>'+
+    L("/app/profile",ic("user")+" My profile",o.key==="profile")+L("/app/support",ic("mail")+" Help &amp; support",o.key==="support")+(ME.superAdmin?L("/admin",ic("shield")+" Admin panel"):"")+'</div></div>'+
     (ORGS.length?'<div class="ag open"><div class="agh-static">Your organizations</div><div class="agi">'+ORGS.map(function(g){return L("/app/org/"+g.slug,'<span class="dot" style="background:'+safeColor(g.brandColor)+'"></span>'+esc(g.name),false)}).join("")+'</div></div>':'')+
     '<div class="asb-f"><a href="/competitions">Public competitions</a><a href="/">Public home page</a>'+(ME.leagueAccess?'<a href="/classic">Original league site</a>':'')+'</div>';
   return'<div class="ashell"><aside class="asb" id="asb" aria-label="'+(o.org?"Organization menu":"Dashboard menu")+'">'+side+'</aside>'+
@@ -471,11 +472,12 @@ function wzFinish(){var d=WZ.d,b=$("wzn");busy(b,true,"Creating…");
       loadMe().then(function(){go("/app/org/"+slug)})})})}
 
 // ---------- one organization ----------
-var OGROUPS=["Overview","Competition management","People","Organization","Public website"];
+var OGROUPS=["Overview","Competition management","People","Payments","Organization","Public website"];
 var SECTIONS=[["overview","Dashboard","Overview",0,"home"],["activity","Activity","Overview",0,"pulse"],["notifications","Notifications","Overview",0,"bell"],
   ["competitions","Competitions","Competition management",0,"trophy"],["newcomp","Create competition","Competition management","competitions.manage","plus"],["fixtures","Fixtures","Competition management",0,"cal"],
   ["results","Results","Competition management",0,"check"],["tables","Standings","Competition management",0,"list"],["brackets","Brackets","Competition management",0,"bracket"],
   ["teams","Teams","People",0,"shield"],["players","Players","People",0,"user"],["coaches","Coaches","People",0,"whistle"],["staff","Staff","People",0,"badge"],["members","Members","People",0,"users"],["invitations","Invitations","People","members.invite","mail"],
+  ["payments","Balance & payouts","Payments","payments.manage","wallet"],["invoices","Invoices","Payments","payments.manage","file"],
   ["profile","Organization profile","Organization",0,"building"],["branding","Branding","Organization","org.settings","palette"],["settings","Organization settings","Organization",0,"sliders"],["roles","Roles & permissions","Organization",0,"key"],["access","Team access","Organization",0,"lock"],
   ["site","Public site","Public website",0,"globe"],["website","Website settings","Public website","org.settings","sliders"],["pages","Pages","Public website","org.settings","file"],["announcements","Announcements","Public website",0,"megaphone"],["link","Public link","Public website",0,"link"],["preview","Preview website","Public website",0,"eye"]];
 var ORG=null;
@@ -496,7 +498,7 @@ function orgView(slug,section,rest){
       {org:o.slug,section:navOn,crumbs:'<nav class="crumbs" aria-label="Breadcrumb"><a href="'+mineUrl()+'" data-nav>My organizations</a><span>/</span><a href="'+base+'" data-nav>'+esc(o.name)+'</a>'+(navOn!=="overview"?'<span>/</span><b style="color:var(--tx)">'+esc(label)+'</b>':'')+'</nav>'});
     var S={overview:overview,activity:activitySec,notifications:notificationsSec,competitions:competitionsSec,fixtures:function(){matchesSec("upcoming")},results:function(){matchesSec("results")},matches:function(){matchesSec("all")},
       tables:tablesSec,brackets:bracketsSec,teams:teamsSec,players:playersSec,coaches:function(){peopleSec("coaches")},staff:function(){peopleSec("staff")},members:function(){peopleSec("all")},invitations:invitationsSec,
-      profile:profileSec,branding:brandingSec,settings:settingsSec,roles:rolesSec,access:accessSec,site:siteSec,website:websiteSec,pages:pagesSec,announcements:announcementsSec,link:linkSec,match:matchPage}[section];
+      profile:profileSec,branding:brandingSec,settings:settingsSec,roles:rolesSec,access:accessSec,site:siteSec,website:websiteSec,payments:paymentsSec,invoices:invoicesSec,pages:pagesSec,announcements:announcementsSec,link:linkSec,match:matchPage}[section];
     if(!S||(sec&&sec[3]&&!has(sec[3]))){$("sec").innerHTML='<div class="card empty">'+ic("lock")+'<h2>'+(S?"Not available for your role":"Page not found")+'</h2><p class="note">'+(S?"Your role doesn't include this. Ask the owner if you need it.":"")+'</p><a class="btn g" href="'+base+'" data-nav>Back to the dashboard</a></div>';return}
     $("sec").innerHTML=LOADING;S(rest)})}
 
@@ -668,7 +670,7 @@ function compForm(c,crit){var v=function(k,d){return c&&c[k]!=null?c[k]:d},tb=c?
     '<div class="row"><label for="cs">Season<input id="cs" maxlength="30" value="'+esc(v("season",""))+'" placeholder="2026/27"></label><label for="ck">Type<select id="ck">'+opts(KIND_L,v("kind","league"))+'</select></label></div>'+
     '<div class="row"><label for="cfm">Format<select id="cfm">'+opts(FMT_L,v("format","league"))+'</select></label><label for="cv">Who can see it<select id="cv">'+opts(VIS_L,v("visibility","public"))+'</select></label></div>'+
     '<div class="row"><label for="csd">Start date<input id="csd" type="date" value="'+esc(v("startDate",""))+'"></label><label for="ced">End date<input id="ced" type="date" value="'+esc(v("endDate",""))+'"></label></div>'+
-    '<details style="margin-top:12px" open><summary>Match schedule</summary><p class="note" style="margin:6px 0 0">Fixtures start on the start date and must finish by the end date. This is used every time you generate fixtures or draw a knockout round.</p>'+schedFields(v("schedule",null),"s")+'</details>'+
+    '<details style="margin-top:12px" open><summary>Match schedule</summary><p class="note" style="margin:6px 0 0">Fixtures start on the start date and must finish by the end date. This is used every time you generate fixtures or draw a knockout round.</p>'+schedFields(v("schedule",null),"s")+'</details>'+moneyFields(v("money",null))+
     '<div class="row"><label for="cco">Country<input id="cco" maxlength="60" value="'+esc(v("country",ORG.org.country||""))+'"></label><label for="cre">Region / city<input id="cre" maxlength="60" value="'+esc(v("region",ORG.org.region||""))+'"></label></div>'+
     (c?'<label for="cst">Status<select id="cst">'+opts(ST_L,v("status","draft"))+'</select></label>':'')+
     '<details style="margin-top:12px"'+(c?" open":"")+'><summary>Points, legs and tie-breakers</summary><div class="row"><label for="pw">Points for a win<input id="pw" type="number" min="0" max="10" value="'+v("pointsWin",3)+'"></label><label for="pd">Points for a draw<input id="pd" type="number" min="0" max="10" value="'+v("pointsDraw",1)+'"></label></div>'+
@@ -680,7 +682,7 @@ function compForm(c,crit){var v=function(k,d){return c&&c[k]!=null?c[k]:d},tb=c?
 function bindCompForm(c){$("cf").onsubmit=function(e){e.preventDefault();var b=$("cgo"),d={description:val("cd"),rules:val("cr")};
   if($("cn"))Object.assign(d,{name:val("cn"),season:val("cs"),kind:val("ck"),format:val("cfm"),visibility:val("cv"),startDate:val("csd")||null,endDate:val("ced")||null,country:val("cco"),region:val("cre"),
     pointsWin:+val("pw"),pointsDraw:+val("pd"),pointsLoss:+val("pl"),legs:+val("lg"),maxTeams:intOrNull(val("mt")),qualifiersPerGroup:+val("qg"),
-    tiebreakers:["points",val("tb1"),val("tb2"),val("tb3"),val("tb4")].filter(Boolean),schedule:schedVal("s")});
+    tiebreakers:["points",val("tb1"),val("tb2"),val("tb3"),val("tb4")].filter(Boolean),schedule:schedVal("s"),money:moneyVal()});
   if($("cst"))d.status=val("cst");
   busy(b,true,"Saving…");api(c?api0("/competitions/"+c.slug):api0("/competitions"),c?"PATCH":"POST",d).then(function(r){busy(b,false);
     if(!r.ok){$("cmsg").innerHTML=errBox(r);return}toast(c?"Saved":"Competition created");go(app0("/competitions/"+r.data.competition.slug+(c?"/settings":"/teams")),!!c)})}}
@@ -1020,6 +1022,142 @@ function loadInvites(){var slug=ORG.org.slug;api("/api/orgs/"+slug+"/invitations
   document.querySelectorAll("[data-re]").forEach(function(b){b.onclick=function(){busy(b,true,"…");api("/api/orgs/"+slug+"/invitations/"+b.dataset.re+"/resend","POST",{}).then(function(r){
     busy(b,false);if(!r.ok){toast(r.data.error||"Couldn't renew",true);return}$("ires").innerHTML=linkBox(r.data);bindLinkBox();toast(r.data.emailed?"Invitation sent again":"New link created");loadInvites()})}})})}
 
+// ---------- my profile ----------
+function profileView(){document.title="My profile · Competition Manager";
+  UM('<div class="ph"><div><h1>My profile</h1><p>Your details, how you sign in, and the organizations you belong to.</p></div></div><div id="pf">'+LOADING+'</div>',{key:"profile"});
+  api("/api/account").then(function(r){if(!r.ok){$("pf").innerHTML=errBox(r);return}var u=r.data.user,orgs=r.data.orgs;
+    $("pf").innerHTML='<div class="agrid"><form class="card" id="pff" novalidate><div class="gh">Your details</div>'+
+      '<div class="row"><label for="pfn">First name<input id="pfn" maxlength="60" value="'+esc(u.firstName)+'" autocomplete="given-name"></label><label for="pln">Last name<input id="pln" maxlength="60" value="'+esc(u.lastName)+'" autocomplete="family-name"></label></div>'+
+      '<label for="pph">Phone (optional)<input id="pph" type="tel" maxlength="30" value="'+esc(u.phone||"")+'" placeholder="+233241234567" autocomplete="tel"></label>'+
+      '<div class="row"><label for="pun">Username<input id="pun" maxlength="32" value="'+esc(u.username)+'" autocapitalize="none" spellcheck="false" autocomplete="username"></label><label for="pem">Email<input id="pem" type="email" maxlength="254" value="'+esc(u.email||"")+'" autocomplete="email"></label></div>'+
+      '<div id="pcur" hidden><label for="ppw">Current password (needed to change your username or email)<input id="ppw" type="password" autocomplete="current-password"></label></div>'+
+      '<div class="actions"><button class="btn" id="psave">Save profile</button></div></form>'+
+      '<form class="card" id="pwf" novalidate><div class="gh">Password</div><label for="pw0">Current password<input id="pw0" type="password" autocomplete="current-password"></label>'+
+      '<label for="pw1">New password<input id="pw1" type="password" autocomplete="new-password"></label><div class="note">At least 10 characters. A short sentence works well. Your other devices will be signed out.</div>'+
+      '<label for="pw2">Repeat the new password<input id="pw2" type="password" autocomplete="new-password"></label><div class="actions"><button class="btn" id="pwgo">Change password</button></div></form></div>'+
+      '<div class="card" style="margin-top:14px"><div class="gh">Your organizations</div><p class="note" style="margin-top:0">Member since '+date(r.data.joined)+'.</p>'+
+      (orgs.length?orgs.map(function(o){return'<div class="actions" style="margin:6px 0;align-items:center"><a href="/app/org/'+esc(o.slug)+'" data-nav><b>'+esc(o.name)+'</b></a>'+pill(o.role,o.roleLabel)+'</div>'}).join(""):'<p class="note">None yet.</p>')+'</div>';
+    var showCur=function(){$("pcur").hidden=val("pun").trim()===u.username&&val("pem").trim().toLowerCase()===(u.email||"").toLowerCase()};$("pun").oninput=showCur;$("pem").oninput=showCur;
+    $("pff").onsubmit=function(e){e.preventDefault();var b=$("psave"),d={firstName:val("pfn"),lastName:val("pln"),phone:val("pph"),username:val("pun").trim(),email:val("pem").trim()};
+      if(!$("pcur").hidden)d.password=val("ppw");busy(b,true,"Saving…");
+      api("/api/account","PATCH",d).then(function(r){busy(b,false);if(!r.ok){toast(r.data.error||"Couldn't save",true);return}toast("Profile saved");loadMe().then(function(){topnav();profileView()})})};
+    $("pwf").onsubmit=function(e){e.preventDefault();if(val("pw1")!==val("pw2")){toast("The two new passwords don't match",true);return}var b=$("pwgo");busy(b,true,"Changing…");
+      api("/api/account/password","POST",{current:val("pw0"),new:val("pw1")}).then(function(r){busy(b,false);if(!r.ok){toast(r.data.error||"Couldn't change it",true);return}
+        CSRF=r.data.csrf;$("pwf").reset();toast("Password changed. Your other devices are signed out.")})}})}
+
+// ---------- money: shared pieces ----------
+var CURS=["GHS","NGN","USD","EUR","GBP","KES","ZAR","XOF","TZS","UGX","RWF","EGP","AED"];
+function curOpts(sel){var m={};CURS.forEach(function(c){m[c]=c});return opts(m,sel||"GHS")}
+function money(a,c){return'<span style="white-space:nowrap">'+esc(c)+' '+esc(a)+'</span>'}
+var PST={pending:["Unpaid","amber"],paid:["Paid","green"],cancelled:["Cancelled","grey"],requested:["Waiting for approval","amber"],processing:["Sending…","blue"],sent:["Sent","green"],rejected:["Rejected","red"]};
+function pst(s){var x=PST[s]||[s,"grey"];return'<span class="sb '+x[1]+'">'+esc(x[0])+'</span>'}
+function payBanner(P){return(!P.ready?'<div class="banner">Payments aren’t switched on for this platform yet. The platform super admin connects the PayNova account first.</div>':'')+
+  (P.ready&&P.mode==="test"?'<div class="banner">Test mode: invoices and payouts are practice runs. No real money moves.</div>':'')+
+  (P.syncError?'<div class="err" style="margin:0 0 14px">'+esc(P.syncError)+'</div>':'')}
+function destText(p){var d=p.destination||{};return p.method==="paynova"?esc(d.email):p.method==="mobile_money"?esc((PAY&&PAY.networks[d.network])||d.network)+' '+esc(d.phone_number):esc(d.bank_name)+' · '+esc(d.account_number)}
+var PAY=null;
+
+// ---------- organization: balance, prizes and payouts ----------
+function paymentsSec(){Promise.all([api(api0("/payments")),api(api0("/competitions"))]).then(function(res){var r=res[0];if(!r.ok)return fail(r);var P=PAY=r.data,cs=(res[1].data||{}).competitions||[];
+  var prizes=[];cs.forEach(function(c){((c.money||{}).prizes||[]).forEach(function(p){prizes.push({c:c,p:p,cur:c.money.currency})})});
+  $("sec").innerHTML=payBanner(P)+
+    '<div class="qa"><button class="btn g sm" id="psync">'+ic("check")+' Check for new payments</button><a class="btn g sm" href="'+app0("/invoices")+'" data-nav>'+ic("file")+' Invoices</a></div>'+
+    (P.balances.length?'<div class="kpis">'+P.balances.map(function(b){return'<div class="kpi"><span>Available to pay out · '+esc(b.currency)+'</span><b>'+esc(b.available)+'</b><small>'+esc(b.paid)+' paid in by '+b.invoices+' invoice'+(b.invoices===1?"":"s")+
+      (+b.fees?' · '+esc(b.fees)+' platform fee':'')+(+b.waiting?' · '+esc(b.waiting)+' waiting for approval':'')+(+b.sent?' · '+esc(b.sent)+' paid out':'')+'</small></div>'}).join("")+'</div>'
+      :'<div class="card empty">'+ic("wallet")+'<h2>No money in yet</h2><p class="note">Send invoices (for example each team’s entry fee). When they’re paid, the money shows here.</p><a class="btn" href="'+app0("/invoices")+'" data-nav>'+ic("plus")+' Send invoices</a></div>')+
+    (P.fee?'<p class="note">The platform keeps '+(+P.fee.percent?esc(P.fee.percent)+'%':'')+(+P.fee.percent&&+P.fee.fixed?' + ':'')+(+P.fee.fixed?esc(P.fee.fixed)+' per invoice':'')+' of each paid invoice.</p>':'')+
+    (prizes.length?'<div class="card"><div class="gh">Prizes</div><p class="note" style="margin-top:0">Tap a prize to fill in the payout below.</p><div class="chips">'+prizes.map(function(x,i){return'<button type="button" class="chip" data-prize="'+i+'">'+esc(x.p.label)+' · '+esc(x.c.name)+' · '+money(x.p.amount,x.cur)+'</button>'}).join("")+'</div></div>':'')+
+    '<form class="card" id="pof" novalidate><div class="gh">Pay out a prize or withdraw</div><p class="note" style="margin-top:0">The platform super admin approves every payout before the money is sent.</p>'+
+      '<label for="popu">What it’s for<input id="popu" maxlength="200" placeholder="Champion prize: Robotics Championship"></label>'+
+      '<div class="row"><label for="poam">Amount<input id="poam" inputmode="decimal" placeholder="0.00"></label><label for="pocu">Currency<select id="pocu">'+curOpts(P.currency)+'</select></label></div>'+
+      '<div class="row"><label for="pome">Pay to<select id="pome">'+opts(P.methods,"paynova")+'</select></label><label for="poco">Competition (optional)<select id="poco"><option value="">—</option>'+cs.map(function(c){return'<option value="'+esc(c.slug)+'">'+esc(c.name)+'</option>'}).join("")+'</select></label></div>'+
+      '<div id="podest"></div><div class="actions"><button class="btn" id="pogo"'+(P.balances.length?'':' disabled')+'>Request payout</button></div></form>'+
+    '<div class="card"><div class="gh">Payouts</div>'+(P.payouts.length?'<div class="tbl"><table class="dt"><thead><tr><th>Requested</th><th>For</th><th>To</th><th class="num">Amount</th><th>Status</th><th></th></tr></thead><tbody>'+P.payouts.map(function(p){
+      return'<tr><td>'+date(p.created)+'<small>'+esc(p.requestedBy||"")+'</small></td><td>'+esc(p.purpose)+(p.competition?'<small>'+esc(p.competition.name)+'</small>':'')+'</td><td>'+esc(p.methodLabel)+'<small>'+destText(p)+'</small></td><td class="num">'+money(p.amount,p.currency)+'</td><td>'+pst(p.status)+(p.note?'<small>'+esc(p.note)+'</small>':'')+(p.reference?'<small>Ref. '+esc(p.reference)+'</small>':'')+'</td><td>'+
+        (p.status==="requested"?'<button class="btn g sm" data-pcx="'+p.id+'">Cancel</button>':'')+'</td></tr>'}).join("")+'</tbody></table></div>':'<p class="note">No payouts yet.</p>')+'</div>';
+  var dest=function(){var m=val("pome");$("podest").innerHTML=m==="paynova"?'<div class="row"><label for="pde">Their PayNova account email<input id="pde" type="email" placeholder="winner@example.com"></label><label for="pdn">Their name (optional)<input id="pdn" maxlength="100"></label></div>'
+      :m==="mobile_money"?'<div class="row"><label for="pdw">Network<select id="pdw">'+opts(P.networks,"mtn")+'</select></label><label for="pdp">Mobile money number<input id="pdp" type="tel" placeholder="0241234567"></label></div><label for="pdn">Name on the account (optional)<input id="pdn" maxlength="100"></label>'
+      :'<label for="pdb">Bank<input id="pdb" maxlength="100" placeholder="GCB Bank"></label><div class="row"><label for="pda">Account number<input id="pda" maxlength="40"></label><label for="pdn">Account name<input id="pdn" maxlength="100"></label></div>'};
+  dest();$("pome").onchange=dest;
+  document.querySelectorAll("[data-prize]").forEach(function(b){b.onclick=function(){var x=prizes[+b.dataset.prize];$("popu").value=x.p.label+" prize: "+x.c.name;$("poam").value=x.p.amount;$("pocu").value=x.cur;$("poco").value=x.c.slug;$("popu").scrollIntoView({block:"center"});$("pde")&&$("pde").focus()}});
+  $("psync").onclick=function(){var b=this;busy(b,true,"Checking…");api(api0("/payments/sync"),"POST",{}).then(function(r){busy(b,false);if(!r.ok){toast(r.data.error,true);return}toast(r.data.changed?r.data.changed+" invoice"+(r.data.changed===1?"":"s")+" updated":"No new payments yet");paymentsSec()})};
+  $("pof").onsubmit=function(e){e.preventDefault();var m=val("pome"),d=m==="paynova"?{email:val("pde"),name:val("pdn")}:m==="mobile_money"?{network:val("pdw"),phone_number:val("pdp"),name:val("pdn")}:{bank_name:val("pdb"),account_number:val("pda"),account_name:val("pdn")};
+    var b=$("pogo"),amt=val("poam").trim(),cur=val("pocu");
+    confirmBox("Request a payout of "+cur+" "+amt+"?","It goes to "+(m==="paynova"?d.email:m==="mobile_money"?d.phone_number:d.account_number)+" once the platform approves it. The amount is held from your balance until then.",{ok:"Request payout"}).then(function(ok){if(!ok)return;busy(b,true,"Sending request…");
+      api(api0("/payouts"),"POST",{amount:amt,currency:cur,method:m,destination:d,purpose:val("popu"),competition:val("poco")||null}).then(function(r){busy(b,false);if(!r.ok){toast(r.data.error,true);return}toast("Payout requested. The platform will approve it.");paymentsSec()})})};
+  document.querySelectorAll("[data-pcx]").forEach(function(b){b.onclick=function(){confirmBox("Cancel this payout request?","The amount goes back to your available balance.",{ok:"Cancel payout",danger:true}).then(function(ok){if(ok)api(api0("/payouts/"+b.dataset.pcx+"/cancel"),"POST",{}).then(function(r){toast(r.ok?"Payout cancelled":r.data.error,!r.ok);paymentsSec()})})}})})}
+
+// ---------- organization: invoices ----------
+var IVF="all";
+function invoicesSec(){Promise.all([api(api0("/payments")),api(api0("/competitions"))]).then(function(res){var r=res[0];if(!r.ok)return fail(r);var P=PAY=r.data,cs=(res[1].data||{}).competitions||[];
+  var counts=function(s){return P.invoices.filter(function(i){return s==="all"||i.status===s}).length},rows=P.invoices.filter(function(i){return IVF==="all"||i.status===IVF});
+  $("sec").innerHTML=payBanner(P)+
+    '<form class="card" id="ivf" novalidate><div class="gh">Send invoices</div><p class="note" style="margin-top:0">PayNova emails each person a link to pay by mobile money or card. When they pay, the money is added to your balance under Payments.</p>'+
+      '<div class="chips" role="tablist"><button type="button" class="chip on" data-ivm="team">Every team in a competition</button><button type="button" class="chip" data-ivm="one">One person</button></div>'+
+      '<div id="ivteam"><label for="ivc">Competition<select id="ivc"><option value="">Choose a competition…</option>'+cs.map(function(c){return'<option value="'+esc(c.slug)+'">'+esc(c.name)+'</option>'}).join("")+'</select></label><div id="ivrows" style="margin-top:10px"></div></div>'+
+      '<div id="ivone" hidden><div class="row"><label for="ivn">Name<input id="ivn" maxlength="100" placeholder="Kasoa Stars FC"></label><label for="ive">Email<input id="ive" type="email" placeholder="manager@example.com"></label></div><label for="ivp">Phone for an SMS (optional)<input id="ivp" type="tel" placeholder="+233241234567"></label></div>'+
+      '<label for="ivd">What it’s for<input id="ivd" maxlength="200" placeholder="Entry fee: Robotics Championship"></label>'+
+      '<div class="row"><label for="iva">Amount<input id="iva" inputmode="decimal" placeholder="50.00"></label><label for="ivcu">Currency<select id="ivcu">'+curOpts(P.currency)+'</select></label></div>'+
+      '<label for="ivdue" style="max-width:260px">Due date (optional)<input id="ivdue" type="date"></label>'+
+      '<div class="actions"><button class="btn" id="ivgo"'+(P.ready?'':' disabled')+'>'+ic("mail")+' Send invoices</button></div><div id="ivmsg"></div></form>'+
+    '<div class="card"><div class="gh">Invoices</div><div class="chips">'+["all","pending","paid","cancelled"].map(function(s){return'<button type="button" class="chip'+(IVF===s?" on":"")+'" data-ivs="'+s+'">'+({all:"All",pending:"Unpaid",paid:"Paid",cancelled:"Cancelled"}[s])+' ('+counts(s)+')</button>'}).join("")+'</div>'+
+      (rows.length?'<div class="tbl"><table class="dt"><thead><tr><th>Sent</th><th>To</th><th>For</th><th class="num">Amount</th><th>Status</th><th></th></tr></thead><tbody>'+rows.map(function(i){
+        return'<tr><td>'+date(i.created)+(i.dueDate?'<small>Due '+fmtDay(i.dueDate)+'</small>':'')+'</td><td><b>'+esc(i.customerName)+'</b><small>'+esc(i.customerEmail)+'</small></td><td>'+esc(i.description)+(i.competition?'<small>'+esc(i.competition.name)+'</small>':'')+'</td>'+
+          '<td class="num">'+money(i.amount,i.currency)+(i.status==="paid"&&+i.fee?'<small>'+esc(i.net)+' after fee</small>':'')+'</td><td>'+pst(i.status)+(i.paidAt?'<small>'+date(i.paidAt)+'</small>':'')+'</td><td style="white-space:nowrap;text-align:right">'+
+          (i.payUrl&&i.status==="pending"?'<button type="button" class="btn g sm" data-copylink="'+esc(i.payUrl)+'">'+ic("copy")+' Pay link</button> ':'')+(i.status==="pending"?'<button type="button" class="btn g sm" data-ivx="'+i.id+'">Cancel</button>':'')+'</td></tr>'}).join("")+'</tbody></table></div>':'<p class="note">No invoices here yet.</p>')+'</div>';
+  var mode="team";
+  document.querySelectorAll("[data-ivm]").forEach(function(b){b.onclick=function(){mode=b.dataset.ivm;document.querySelectorAll("[data-ivm]").forEach(function(x){x.classList.toggle("on",x===b)});$("ivteam").hidden=mode!=="team";$("ivone").hidden=mode!=="one"}});
+  document.querySelectorAll("[data-ivs]").forEach(function(b){b.onclick=function(){IVF=b.dataset.ivs;invoicesSec()}});
+  $("ivc").onchange=function(){var slug=val("ivc");$("ivrows").innerHTML=slug?LOADING:"";if(!slug)return;var c=cs.filter(function(x){return x.slug===slug})[0];
+    if(c){if(!val("ivd"))$("ivd").value="Entry fee: "+c.name;if(c.money&&c.money.entryFee&&!val("iva"))$("iva").value=c.money.entryFee;if(c.money&&c.money.currency)$("ivcu").value=c.money.currency}
+    api(api0("/competitions/"+slug)).then(function(r){if(!r.ok){$("ivrows").innerHTML=errBox(r);return}var E=r.data.entries;
+      $("ivrows").innerHTML=E.length?'<p class="note" style="margin:0 0 6px">Enter the email of each team’s manager. Untick a team to skip it.</p>'+E.map(function(e){return'<div class="irow" data-ivt="'+e.team.id+'" data-name="'+esc(e.team.name)+'" style="grid-template-columns:auto 1fr 1fr 170px"><input type="checkbox" checked aria-label="Invoice '+esc(e.team.name)+'" style="width:18px;height:18px;margin:0 0 12px"><label style="margin:0"><b style="color:var(--tx)">'+esc(e.team.name)+'</b><input type="email" placeholder="Manager’s email"></label><label style="margin:0">&nbsp;<input type="tel" placeholder="Phone (optional)"></label><span></span></div>'}).join("")
+        :'<p class="note">This competition has no teams yet.</p>'})};
+  $("ivf").onsubmit=function(e){e.preventDefault();var b=$("ivgo"),d={amount:val("iva").trim(),currency:val("ivcu"),description:val("ivd"),dueDate:val("ivdue")||null};
+    if(mode==="team"){d.competition=val("ivc");d.recipients=[].map.call(document.querySelectorAll("[data-ivt]"),function(row){var ins=row.querySelectorAll("input");return ins[0].checked?{teamId:+row.dataset.ivt,name:row.dataset.name,email:ins[1].value.trim(),phone:ins[2].value.trim()}:null}).filter(Boolean);
+      if(!d.competition||!d.recipients.length){toast("Choose a competition and at least one team",true);return}}
+    else{d.recipients=[{name:val("ivn"),email:val("ive").trim(),phone:val("ivp").trim()}]}
+    confirmBox("Send "+d.recipients.length+" invoice"+(d.recipients.length===1?"":"s")+" of "+d.currency+" "+d.amount+"?","PayNova emails each one a link to pay.",{ok:"Send invoices"}).then(function(ok){if(!ok)return;busy(b,true,"Sending…");
+      api(api0("/invoices"),"POST",d).then(function(r){busy(b,false);if(!r.ok){$("ivmsg").innerHTML=errBox(r);return}
+        toast(r.data.sent+" invoice"+(r.data.sent===1?"":"s")+" sent"+(r.data.failed.length?", "+r.data.failed.length+" failed":""),r.data.failed.length>0);
+        if(r.data.failed.length)$("ivmsg").innerHTML=errBox({data:{error:r.data.failed.map(function(f){return f.name+": "+f.error}).join(" · ")}});else invoicesSec()})})};
+  document.querySelectorAll("[data-ivx]").forEach(function(b){b.onclick=function(){confirmBox("Cancel this invoice?","It’s marked as cancelled here. If they still pay the link, the payment is recorded.",{ok:"Cancel invoice",danger:true}).then(function(ok){if(ok)api(api0("/invoices/"+b.dataset.ivx+"/cancel"),"POST",{}).then(function(r){toast(r.ok?"Invoice cancelled":r.data.error,!r.ok);invoicesSec()})})}})})}
+
+// ---------- competition settings: entry fee and prizes ----------
+function prizeRow(p){p=p||{};return'<div class="irow mzr" style="grid-template-columns:1fr 160px auto"><input data-pl maxlength="40" placeholder="Champion" value="'+esc(p.label||"")+'" aria-label="Prize"><input data-pa inputmode="decimal" placeholder="0.00" value="'+esc(p.amount||"")+'" aria-label="Amount"><button type="button" class="btn g sm" data-pxr aria-label="Remove prize">✕</button></div>'}
+function moneyFields(mo){mo=mo||{currency:"GHS",entryFee:null,prizes:[]};var ps=mo.prizes&&mo.prizes.length?mo.prizes:[{label:"Champion"},{label:"Runner-up"},{label:"Third place"}];
+  return'<details style="margin-top:12px"'+(mo.prizes&&mo.prizes.length||mo.entryFee?" open":"")+'><summary>Entry fee and prizes</summary><p class="note" style="margin:6px 0 0">Shown on the public competition page. Send entry-fee invoices and pay prizes from Payments.</p>'+
+    '<div class="row"><label for="mcur">Currency<select id="mcur">'+curOpts(mo.currency)+'</select></label><label for="mfee">Entry fee per team (optional)<input id="mfee" inputmode="decimal" value="'+esc(mo.entryFee||"")+'" placeholder="50.00"></label></div>'+
+    '<div id="mprz">'+ps.map(prizeRow).join("")+'</div><div class="actions" style="margin-top:8px"><button type="button" class="btn g sm" id="madd">'+ic("plus")+' Add a prize</button></div></details>'}
+function moneyVal(){return{currency:val("mcur"),entryFee:val("mfee").trim()||null,prizes:[].map.call(document.querySelectorAll(".mzr"),function(r){return{label:r.querySelector("[data-pl]").value.trim(),amount:r.querySelector("[data-pa]").value.trim()}}).filter(function(p){return p.label&&p.amount})}}
+document.addEventListener("click",function(e){var t=e.target.closest&&e.target.closest("[data-pxr],#madd");if(!t)return;if(t.id==="madd"){if(document.querySelectorAll(".mzr").length<12)$("mprz").insertAdjacentHTML("beforeend",prizeRow());}else t.closest(".mzr").remove()});
+
+// ---------- super admin: payments ----------
+function aPayments(){var sec=A("Payments & payouts",[["Payments"]]);
+  api("/api/admin/payments").then(function(r){if(!r.ok){sec.innerHTML=errBox(r);return}var d=r.data;
+    var row=function(p,act){return'<tr><td>'+dt(p.created)+'</td><td><a href="/admin/organizations/'+p.org.id+'" data-nav>'+esc(p.org.name)+'</a><small>'+esc(p.requestedBy||"")+'</small></td><td>'+esc(p.purpose)+(p.competition?'<small>'+esc(p.competition.name)+'</small>':'')+'</td><td>'+esc(p.methodLabel)+'<small>'+destText(p)+(p.destination&&p.destination.name?' · '+esc(p.destination.name):'')+'</small></td><td class="num">'+money(p.amount,p.currency)+'</td><td>'+pst(p.status)+(p.note?'<small>'+esc(p.note)+'</small>':'')+(p.reference?'<small>Ref. '+esc(p.reference)+'</small>':'')+'</td>'+
+      (act?'<td style="white-space:nowrap"><button class="btn sm" data-pok="'+p.id+'">Approve &amp; send</button> <button class="btn bad sm" data-pno="'+p.id+'">Reject</button></td>':'')+'</tr>'};
+    var head=function(act){return'<div class="tbl"><table class="dt"><thead><tr><th>Requested</th><th>Organization</th><th>For</th><th>To</th><th class="num">Amount</th><th>Status</th>'+(act?'<th></th>':'')+'</tr></thead><tbody>'};
+    sec.innerHTML=(!d.ready?'<div class="banner">PayNova isn’t connected. <a href="/admin/settings" data-nav>Add the secret key in Platform settings</a>.</div>':d.mode==="test"?'<div class="banner">Test mode: payments and payouts are practice runs.</div>':'')+
+      (d.syncError?'<div class="err" style="margin:0 0 14px">'+esc(d.syncError)+'</div>':'')+
+      '<div class="kpis">'+(d.totals.length?d.totals.map(function(t){return'<div class="kpi"><span>Paid in · '+esc(t.currency)+'</span><b>'+esc(t.paid)+'</b><small>'+t.invoices+' invoices · platform fees '+esc(t.fees)+' · paid out '+esc(t.paidOut)+'</small></div>'}).join(""):'<div class="kpi"><span>Paid in</span><b>0</b></div>')+
+        '<div class="kpi warn"><span>Payouts waiting</span><b>'+d.waiting.length+'</b></div><div class="kpi"><span>Unpaid invoices</span><b>'+d.pendingInvoices+'</b></div></div>'+
+      '<div class="card"><div class="gh">Payouts waiting for approval</div>'+(d.waiting.length?'<p class="note" style="margin-top:0">Approving sends the money through PayNova straight away.</p>'+head(true)+d.waiting.map(function(p){return row(p,p.status==="requested")}).join("")+'</tbody></table></div>':'<p class="note">Nothing waiting.</p>')+'</div>'+
+      '<div class="card"><div class="gh">Recent payouts</div>'+(d.recentPayouts.length?head(false)+d.recentPayouts.map(function(p){return row(p,false)}).join("")+'</tbody></table></div>':'<p class="note">None yet.</p>')+'</div>'+
+      '<div class="card"><div class="gh">Recent invoices</div>'+(d.recentInvoices.length?'<div class="tbl"><table class="dt"><thead><tr><th>Sent</th><th>Organization</th><th>To</th><th>For</th><th class="num">Amount</th><th class="num">Fee</th><th>Status</th></tr></thead><tbody>'+d.recentInvoices.map(function(i){
+        return'<tr><td>'+dt(i.created)+'</td><td>'+esc(i.org.name)+'</td><td>'+esc(i.customerName)+'<small>'+esc(i.customerEmail)+'</small></td><td>'+esc(i.description)+'</td><td class="num">'+money(i.amount,i.currency)+'</td><td class="num">'+(i.status==="paid"?esc(i.fee):"—")+'</td><td>'+pst(i.status)+'</td></tr>'}).join("")+'</tbody></table></div>':'<p class="note">None yet.</p>')+'</div>';
+    document.querySelectorAll("[data-pok]").forEach(function(b){b.onclick=function(){var p=d.waiting.filter(function(x){return x.id===+b.dataset.pok})[0];
+      confirmBox("Send "+p.currency+" "+p.amount+" now?","To "+(p.methodLabel)+": "+(p.destination.email||p.destination.phone_number||p.destination.account_number)+". For: "+p.purpose+" ("+p.org.name+"). This moves real money"+(d.mode==="test"?" (test mode: practice only)":"")+".",{ok:"Approve & send"}).then(function(ok){if(!ok)return;busy(b,true,"Sending…");
+        api("/api/admin/payouts/"+p.id+"/approve","POST",{}).then(function(r){busy(b,false);toast(r.ok?"Payout sent":r.data.error,!r.ok);aPayments()})})}});
+    document.querySelectorAll("[data-pno]").forEach(function(b){b.onclick=function(){confirmBox("Reject this payout?","The amount goes back to the organization’s balance.",{ok:"Reject",danger:true}).then(function(ok){if(ok)api("/api/admin/payouts/"+b.dataset.pno+"/reject","POST",{note:"Rejected by the platform"}).then(function(r){toast(r.ok?"Payout rejected":r.data.error,!r.ok);aPayments()})})}})})}
+function paySettingsCard(P,st,chk){return'<form class="card" id="payf" novalidate style="margin-top:14px"><div class="gh" id="payments">PAYMENTS (PAYNOVA)</div><p class="note" style="margin-top:0">Status: '+(st.ready?sb("ok","Connected")+" · "+esc(st.mode)+" mode, key from the "+esc(st.source):sb("failed","Not connected"))+'. Organizations send invoices through this account; payouts need your approval.</p>'+
+    chk("pen",P.enabled,"Payments switched on","When off, organizations can’t send invoices.")+
+    '<label for="pkey">Secret key '+(P.secret_key_set?'<span class="sb green">saved</span>':'')+'<input id="pkey" type="password" autocomplete="off" placeholder="'+(P.secret_key_set?"Leave blank to keep the saved key":"sk_test_… or sk_live_…")+'"></label><div class="note">Only the secret key (sk_…) goes here, never the public key. It stays on the server and is never shown again.</div>'+
+    '<div class="row"><label for="pcur">Default currency<select id="pcur">'+curOpts(P.currency)+'</select></label><label for="pwal">Wallet ID for mobile money and bank payouts<input id="pwal" maxlength="64" value="'+esc(P.wallet_id)+'" placeholder="3f2b8c1e-…"></label></div>'+
+    chk("pfe",P.fee_enabled,"Charge a platform fee","Taken from each paid invoice before it reaches the organization’s balance.")+
+    '<div class="row"><label for="pfp">Fee percentage (0–50)<input id="pfp" inputmode="decimal" value="'+esc(P.fee_percent)+'"></label><label for="pff2">Fixed fee per paid invoice<input id="pff2" inputmode="decimal" value="'+esc(P.fee_fixed)+'"></label></div>'+
+    '<div class="actions"><button class="btn">Save payment settings</button><button type="button" class="btn g" id="ptest">Test connection</button>'+(P.secret_key_set?'<button type="button" class="btn g" id="pclr">Remove saved key</button>':'')+'</div><div id="pbal"></div></form>'}
+
 // ---------- accepting an invitation ----------
 function inviteView(token){document.title="Invitation · Competition Manager";main('<div class="card note auth">Checking your invitation…</div>');
   Promise.all([loadMe(),api("/api/invitations/"+encodeURIComponent(token))]).then(function(res){topnav();var r=res[1];
@@ -1053,6 +1191,7 @@ var AMENU=[
   ["Staff",[["/admin/staff?role=owner","Owners"],["/admin/staff?role=organizer","Organizers"],["/admin/staff?role=admin","Sub-admins"],["/admin/staff?role=editor","Editors"],["/admin/staff?role=moderator","Moderators"],["/admin/invitations","Invitations"]]],
   ["Reports & analytics",[["/admin/analytics","Analytics"],["/admin/activity","Activity report"]]],
   ["Announcements",[["/admin/announcements","Platform announcements"],["/admin/announcements?scope=org","Competition announcements"]]],
+  ["Payments",[["/admin/payments","Payments & payouts"],["/admin/settings","PayNova settings"]]],
   ["System",[["/admin/settings","Platform settings"],["/admin/roles","Roles & permissions"],["/admin/security","Security"],["/admin/audit","Audit logs"],["/admin/integrations","API & integrations"],["/admin/config","Configuration"]]],
   ["Support",[["/admin/support","Support tickets"],["/admin/support?kind=complaint","User complaints"],["/admin/support?kind=organizer_request","Organizer requests"]]]];
 var ASEC=null;
@@ -1130,7 +1269,7 @@ function chart(s,labels,unit){var W=560,H=180,L=34,B=22,T=10,max=Math.max(1,Math
 
 // ---------- router ----------
 function adminView(sec,rest){var V={"":aOverview,analytics:aAnalytics,activity:aActivity,system:aSystem,search:aSearch,users:aUsers,organizations:aOrgs,competitions:aComps,teams:aTeams,players:aPlayers,
-  matches:aMatches,fixtures:aFixtures,results:aResults,groups:aGroups,tables:aTables,staff:aStaff,invitations:aInvites,audit:aAudit,announcements:aAnnouncements,settings:aSettings,
+  matches:aMatches,fixtures:aFixtures,results:aResults,groups:aGroups,tables:aTables,staff:aStaff,invitations:aInvites,audit:aAudit,announcements:aAnnouncements,settings:aSettings,payments:aPayments,
   roles:aRoles,security:aSecurity,integrations:aIntegrations,config:aConfig,support:aSupport}[sec];
   if(!V){A("Not found");ASEC.innerHTML='<div class="card empty"><p class="note">That admin page doesn\'t exist.</p></div>';return}V(rest)}
 var ULINK=function(u){return u?'<a href="/admin/users/'+u.id+'" data-nav>'+esc(u.username)+'</a>':"—"};
@@ -1355,9 +1494,13 @@ function aSettings(){var sec=A("Platform settings",[["System"],["Settings"]]);
       '<label for="esec" style="max-width:280px">Encryption<select id="esec">'+opts({"":"Automatic (465 = TLS, otherwise STARTTLS)","1":"TLS from the start","0":"STARTTLS"},e.secure)+'</select></label></div>'+
       '<div id="apibox"><label for="ek">API key '+(e.api_key_set?'<span class="sb green">saved</span>':'')+'<input id="ek" type="password" autocomplete="off" placeholder="'+(e.api_key_set?"Leave blank to keep the saved key":"xkeysib-…")+'"></label></div>'+
       '<div class="actions"><button class="btn">Save email settings</button>'+(e.password_set||e.api_key_set?'<button type="button" class="btn g" id="eclr">Remove saved secrets</button>':'')+'</div>'+
-      '<div class="row" style="margin-top:14px;align-items:end"><label for="eto">Send a test email to<input id="eto" type="email" value="'+esc(ME.email||"")+'"></label><div><button type="button" class="btn g" id="etest">Send test</button></div></div></form></div>';
+      '<div class="row" style="margin-top:14px;align-items:end"><label for="eto">Send a test email to<input id="eto" type="email" value="'+esc(ME.email||"")+'"></label><div><button type="button" class="btn g" id="etest">Send test</button></div></div></form></div>'+paySettingsCard(r.data.payments,r.data.paymentStatus,chk);
     var showBoxes=function(){var p=$("ep").value;$("smtpbox").style.display=p==="smtp"?"block":"none";$("apibox").style.display=p==="brevo"||p==="resend"?"block":"none"};showBoxes();$("ep").onchange=showBoxes;
     var save=function(section,changes){return act("/api/admin/settings","PATCH",{section:section,changes:changes},"Settings saved").then(function(x){if(x)route()})};
+    $("payf").onsubmit=function(ev){ev.preventDefault();save("payments",{enabled:$("pen").checked,secret_key:$("pkey").value,currency:$("pcur").value,wallet_id:$("pwal").value,fee_enabled:$("pfe").checked,fee_percent:$("pfp").value,fee_fixed:$("pff2").value})};
+    $("ptest").onclick=function(){var b=$("ptest");busy(b,true,"Testing…");api("/api/admin/payments/test","POST",{}).then(function(r){busy(b,false);if(!r.ok){toast(r.data.error,true);return}toast("PayNova connection works");
+      $("pbal").innerHTML='<div class="okm">Connected. Balances: '+(r.data.balances.map(function(x){return esc(x.currency)+" "+esc(x.available)}).join(" · ")||"none yet")+'</div>'})};
+    if($("pclr"))$("pclr").onclick=function(){confirmBox("Remove the saved PayNova key?","Payments stop working until a new key is added.",{danger:true,ok:"Remove"}).then(function(y){if(y)save("payments",{secret_key_clear:true,enabled:false})})};
     $("sitef").onsubmit=function(ev){ev.preventDefault();save("site",{name:$("sn").value,support_email:$("se").value,allow_signups:$("ss").checked,require_org_approval:$("sa").checked,max_orgs_per_user:parseInt($("sm").value,10)||1,notice:$("sno").value})};
     $("mailf").onsubmit=function(ev){ev.preventDefault();save("email",{provider:$("ep").value,from:$("efrom").value,host:$("eh").value,port:parseInt($("eport").value,10)||587,user:$("eu").value,password:$("epw").value,secure:$("esec").value,api_key:$("ek").value})};
     if($("eclr"))$("eclr").onclick=function(){confirmBox("Remove saved secrets?","The saved SMTP password and API key are deleted.",{danger:true,ok:"Remove"}).then(function(y){if(y)save("email",{password_clear:true,api_key_clear:true})})};

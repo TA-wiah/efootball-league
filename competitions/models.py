@@ -40,7 +40,8 @@ class Competition(Logo):
     status = models.CharField(max_length=10, choices=COMP_STATUS, default="draft")
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
-    schedule = models.JSONField(default=dict, blank=True)   # how fixtures get dates: see engine.SCHEDULE_DEFAULT
+    schedule = models.JSONField(default=dict, blank=True)
+    money = models.JSONField(default=dict, blank=True)       # {"currency", "entryFee", "prizes": [{"label", "amount"}]}   # how fixtures get dates: see engine.SCHEDULE_DEFAULT
     rules = models.TextField(blank=True, max_length=10000)
     points_win = models.PositiveSmallIntegerField(default=3)
     points_draw = models.PositiveSmallIntegerField(default=1)

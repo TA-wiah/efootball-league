@@ -21,6 +21,10 @@
     </div>
     <div>
       <section class="card"><div class="gh">Share</div>{% include "public/_share.html" with share_url=url share_text=c.name %}</section>
+      {% if c.money.prizes or c.money.entryFee %}<section class="card"><div class="gh">Prizes</div><table class="facts"><tbody>
+        {% for p in c.money.prizes %}<tr><td>{{ p.label }}</td><td><b>{{ c.money.currency }} {{ p.amount }}</b></td></tr>{% endfor %}
+        {% if c.money.entryFee %}<tr><td>Entry fee</td><td>{{ c.money.currency }} {{ c.money.entryFee }}</td></tr>{% endif %}
+      </tbody></table></section>{% endif %}
       {% if c.description %}<section class="card"><div class="gh">About</div><p style="margin:0;white-space:pre-wrap">{{ c.description }}</p></section>{% endif %}
       {% if news %}<section class="card"><div class="gh">News</div>{% for n in news %}<div class="news"><b>{{ n.title }}</b> {% if n.pinned %}<span class="pill">Pinned</span>{% endif %}<div class="note"><time datetime="{{ n.created|date:'c' }}" data-f="date">{{ n.created|date:"j M Y" }}</time></div><p>{{ n.body }}</p></div>{% endfor %}</section>{% endif %}
       {% if scorers %}<section class="card"><div class="gh">Top scorers</div><div class="tbl"><table><thead><tr><th>#</th><th style="text-align:left">Player</th><th>Goals</th><th>Assists</th></tr></thead><tbody>{% for s in scorers %}<tr><td>{{ forloop.counter }}</td><td style="text-align:left"><b>{{ s.name }}</b>{% if s.team %}<div class="note">{{ s.team.name }}</div>{% endif %}</td><td style="color:var(--gold);font-weight:900">{{ s.goals }}</td><td>{{ s.assists }}</td></tr>{% endfor %}</tbody></table></div></section>{% endif %}

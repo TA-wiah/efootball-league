@@ -3,6 +3,7 @@
 Every endpoint is wrapped in `admin()`, which requires a logged-in user with is_superuser on the server.
 Anyone else gets 403 (and the attempt is written to the audit log), whatever URL they type.
 """
+import re
 import platform as py_platform
 from email.utils import parseaddr
 from datetime import date, datetime, timedelta
@@ -745,6 +746,8 @@ def platform_settings(request, user, ip):
         section, changes = b.get("section"), b.get("changes")
         if section not in store.DEFAULTS or not isinstance(changes, dict):
             raise ApiError(400, "Unknown settings section.")
+        if section == "payments":
+            check_payment_settings(changes)
         if section == "email":
             if changes.get("provider", "") not in ("", "smtp", "brevo", "resend", "console"):
                 raise ApiError(400, "Choose an email provider.")
@@ -756,8 +759,32 @@ def platform_settings(request, user, ip):
             raise ApiError(400, str(e)) from None
         audit(user.username, f"changed {section} settings", ip, resource=f"settings:{section}", old=old, new=new)
     cfg = emailer.config()
-    return {"site": store.masked("site"), "email": store.masked("email"),
+    from payments import paynova
+    pay = paynova.config()
+    return {"site": store.masked("site"), "email": store.masked("email"), "payments": store.masked("payments"),
+            "paymentStatus": {"ready": paynova.ready(pay), "mode": paynova.mode(pay["secret_key"]) or None, "source": pay["source"] or None},
             "emailStatus": {"ready": emailer.ready(cfg), "provider": cfg["provider"] or None, "source": cfg["source"]}}
+
+
+def check_payment_settings(c):
+    from decimal import Decimal, InvalidOperation
+    from payments.api import CURRENCIES
+    key = c.get("secret_key")
+    if key and not (isinstance(key, str) and re.fullmatch(r"sk_(test|live)_[A-Za-z0-9_-]{8,200}", key.strip())):
+        raise ApiError(400, "The PayNova secret key starts with sk_test_ or sk_live_. (Never use the public pk_ key here.)")
+    if "currency" in c and c["currency"] not in CURRENCIES:
+        raise ApiError(400, "Choose a supported currency.")
+    if "wallet_id" in c and c["wallet_id"] and not re.fullmatch(r"[0-9a-fA-F-]{8,64}", str(c["wallet_id"]).strip()):
+        raise ApiError(400, "The wallet ID looks like 3f2b8c1e-0000-0000-0000-000000000000.")
+    for k, hi in (("fee_percent", Decimal("50")), ("fee_fixed", Decimal("10000"))):
+        if k in c:
+            try:
+                v = Decimal(str(c[k]).strip() or "0")
+            except InvalidOperation:
+                raise ApiError(400, "Fees must be numbers, e.g. 5 or 2.50.") from None
+            if not Decimal("0") <= v <= hi or v.as_tuple().exponent < -2:
+                raise ApiError(400, f"The fee must be from 0 to {hi} (up to 2 decimals).")
+            c[k] = f"{v:.2f}"
 
 
 @admin("POST")
