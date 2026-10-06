@@ -81,3 +81,19 @@ class OrgEvent(models.Model):
     ts = models.DateTimeField(auto_now_add=True, db_index=True)
     actor = models.CharField(max_length=150, blank=True)
     action = models.CharField(max_length=300)
+
+
+class OrgPage(models.Model):
+    """A page an organization writes for its public website (Rules, How to join, Contact…).
+    Plain text with a little formatting: "## " headings, "- " lists, blank lines between paragraphs, full web links."""
+    org = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="pages")
+    slug = models.SlugField(max_length=60)
+    title = models.CharField(max_length=80)
+    body = models.TextField(max_length=20000, blank=True)
+    published = models.BooleanField(default=True)
+    position = models.PositiveSmallIntegerField(default=0)
+    updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["position", "id"]
+        constraints = [models.UniqueConstraint(fields=["org", "slug"], name="one_page_slug_per_org")]

@@ -76,13 +76,15 @@ def balance(cfg=None):
     return call("GET", "/payments/balance/", cfg=cfg).get("balances", [])
 
 
-def create_invoice(name, email, amount, currency, description, phone="", due_date=None, cfg=None):
+def create_invoice(name, email, amount, currency, description, phone="", due_date=None, cfg=None, split_code=""):
     data = {"customer_name": name, "customer_email": email, "amount": f"{money(amount):.2f}", "currency": currency,
             "description": description}
     if phone:
         data["customer_phone"] = phone
     if due_date:
         data["due_date"] = due_date.isoformat()
+    if split_code:
+        data["split_code"] = split_code
     inv = call("POST", "/invoices/", data, cfg=cfg).get("invoice") or {}
     if not inv.get("invoice_code"):
         raise PayNovaError("PayNova didn't return an invoice.")

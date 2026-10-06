@@ -18,7 +18,15 @@ from orgs.api import access, log
 from superadmin.api import admin
 
 from . import paynova
-from .models import Invoice, Payout
+from . import notify
+from .models import Invoice, OrgPaySettings, Payout
+
+SPLIT_RE = re.compile(r"^SPL_[A-Za-z0-9_-]{4,50}$")
+
+
+def split_of(org):
+    s = OrgPaySettings.objects.filter(org=org).first()
+    return s.split_code if s else ""
 
 CURRENCIES = ["GHS", "NGN", "USD", "EUR", "GBP", "KES", "ZAR", "XOF", "TZS", "UGX", "RWF", "EGP", "AED"]
 NETWORKS = {"mtn": "MTN", "telecel": "Telecel", "airteltigo": "AirtelTigo"}
@@ -61,7 +69,8 @@ def need_ready():
 
 def invoice_json(i):
     return {"id": i.id, "customerName": i.customer_name, "customerEmail": i.customer_email or None, "customerPhone": i.customer_phone or None,
-            "sms": i.sms or None, "remindedAt": ms(i.reminded_at),
+            "sms": i.sms or None, "remindedAt": ms(i.reminded_at), "direct": bool(i.split_code),
+            "receiptUrl": f"/receipt/{i.receipt_token}" if i.status == Invoice.PAID and i.receipt_token else None,
             "description": i.description, "amount": f"{i.amount:.2f}", "currency": i.currency, "status": i.status,
             "dueDate": i.due_date.isoformat() if i.due_date else None, "payUrl": i.pay_url or None, "number": i.number, "mode": i.mode,
             "fee": f"{i.fee:.2f}", "net": f"{i.net:.2f}", "paidAt": ms(i.paid_at), "created": ms(i.created),
@@ -82,10 +91,12 @@ def payout_json(p, admin_view=False):
 def balances(org):
     """Per currency: what was paid in, the platform's fees, payouts sent or waiting, and what's free to pay out."""
     out = {}
-    for r in Invoice.objects.filter(org=org, status=Invoice.PAID).values("currency").annotate(paid=Sum("amount"), fees=Sum("fee"), net=Sum("net"), n=Count("id")):
-        out[r["currency"]] = {"currency": r["currency"], "paid": r["paid"], "fees": r["fees"], "net": r["net"], "invoices": r["n"], "sent": D0, "waiting": D0}
+    for r in Invoice.objects.filter(org=org, status=Invoice.PAID, split_code="").values("currency").annotate(paid=Sum("amount"), fees=Sum("fee"), net=Sum("net"), n=Count("id")):
+        out[r["currency"]] = {"currency": r["currency"], "paid": r["paid"], "fees": r["fees"], "net": r["net"], "invoices": r["n"], "sent": D0, "waiting": D0, "direct": D0}
+    for r in Invoice.objects.filter(org=org, status=Invoice.PAID).exclude(split_code="").values("currency").annotate(t=Sum("amount")):
+        out.setdefault(r["currency"], {"currency": r["currency"], "paid": D0, "fees": D0, "net": D0, "invoices": 0, "sent": D0, "waiting": D0, "direct": D0})["direct"] = r["t"]
     for r in Payout.objects.filter(org=org).exclude(status=Payout.REJECTED).values("currency", "status").annotate(total=Sum("amount")):
-        row = out.setdefault(r["currency"], {"currency": r["currency"], "paid": D0, "fees": D0, "net": D0, "invoices": 0, "sent": D0, "waiting": D0})
+        row = out.setdefault(r["currency"], {"currency": r["currency"], "paid": D0, "fees": D0, "net": D0, "invoices": 0, "sent": D0, "waiting": D0, "direct": D0})
         row["sent" if r["status"] == Payout.SENT else "waiting"] += r["total"]
     for row in out.values():
         row["available"] = row["net"] - row["sent"] - row["waiting"]
@@ -110,14 +121,19 @@ def mark_paid(inv, remote):
         inv.paid_at = datetime.fromisoformat(str(when).replace("Z", "+00:00")) if when else timezone.now()
     except ValueError:
         inv.paid_at = timezone.now()
+    import secrets
     inv.status = Invoice.PAID
-    inv.fee = paynova.fee_for(inv.amount, inv.fee_percent, inv.fee_fixed)
-    inv.net = inv.amount - inv.fee
+    inv.receipt_token = inv.receipt_token or secrets.token_urlsafe(18)
+    if inv.split_code:                                # PayNova paid the organization directly; the split sets the shares
+        inv.fee, inv.net = D0, D0
+    else:
+        inv.fee = paynova.fee_for(inv.amount, inv.fee_percent, inv.fee_fixed)
+        inv.net = inv.amount - inv.fee
     log(inv.org, None, f"{inv.customer_name} paid {inv.amount:.2f} {inv.currency} ({inv.description})")
     return True
 
 
-def sync(org=None, force=False):
+def sync(org=None, force=False, base=""):
     """Ask PayNova for the status of unpaid invoices (at most once a minute unless forced). Returns how many changed."""
     cfg = paynova.config()
     if not paynova.ready(cfg):
@@ -135,7 +151,7 @@ def sync(org=None, force=False):
     for inv in todo[:40]:
         if inv.reference and not inv.code:
             remote[f"ref:{inv.reference}"] = paynova.verify(inv.reference, cfg)
-    changed = 0
+    changed, paid = 0, []
     with transaction.atomic():
         for inv in todo:
             inv.checked_at = now
@@ -143,16 +159,25 @@ def sync(org=None, force=False):
             status = str((r or {}).get("status", "")).lower()
             if r and status == "paid" and inv.status != Invoice.PAID and mark_paid(inv, r):
                 changed += 1
+                paid.append(inv)
             elif r and status in ("cancelled", "canceled", "void", "expired") and inv.status == Invoice.PENDING:
                 inv.status = Invoice.CANCELLED
                 changed += 1
             inv.save()
+    from django.conf import settings
+    for inv in paid:                                  # emails after the payments are safely recorded
+        notify.invoice_paid(inv, base or settings.APP_URL)
     return changed
 
 
-def overview(org):
+def base_of(request):
+    from django.conf import settings
+    return settings.APP_URL or (f"{request.scheme}://{request.get_host()}" if request else "")
+
+
+def overview(org, base=""):
     try:
-        sync(org)
+        sync(org, base=base)
         sync_error = None
     except paynova.PayNovaError as e:
         sync_error = str(e)
@@ -161,7 +186,7 @@ def overview(org):
     return {"ready": paynova.ready(cfg), "mode": paynova.mode(cfg.get("secret_key", "")) or None, "currency": cfg.get("currency") or "GHS",
             "currencies": CURRENCIES, "networks": NETWORKS, "methods": Payout.METHODS,
             "fee": {"percent": f"{pct:.2f}", "fixed": f"{fixed:.2f}"} if (pct or fixed) else None, "syncError": sync_error,
-            "balances": money_json(balances(org)),
+            "balances": money_json(balances(org)), "direct": bool(split_of(org)),
             "invoices": [invoice_json(i) for i in Invoice.objects.filter(org=org).select_related("competition", "team")[:300]],
             "payouts": [payout_json(p) for p in Payout.objects.filter(org=org).select_related("competition", "requested_by")[:200]]}
 
@@ -170,7 +195,7 @@ def overview(org):
 @endpoint("GET", login_required=True)
 def org_payments(request, user, ip, slug):
     org, m = access(user, slug, "payments.manage")
-    return overview(org)
+    return overview(org, base_of(request))
 
 
 @endpoint("POST", login_required=True)
@@ -179,10 +204,10 @@ def org_sync(request, user, ip, slug):
     if hit(f"paysync:{org.id}", 6, 60):
         raise ApiError(429, "Checked a moment ago. Try again in a minute.")
     try:
-        changed = sync(org, force=True)
+        changed = sync(org, force=True, base=base_of(request))
     except paynova.PayNovaError as e:
         raise ApiError(502, str(e)) from None
-    return {"ok": True, "changed": changed, **overview(org)}
+    return {"ok": True, "changed": changed, **overview(org, base_of(request))}
 
 
 def one_invoice(request, org, user, cfg, b, competition=None, team=None):
@@ -255,19 +280,20 @@ def org_invoices(request, user, ip, slug):
     if hit(f"payinv:{org.id}", 200, 3600):
         raise ApiError(429, "Too many invoices this hour. Try again later.")
     pct, fixed = fee_settings(cfg)
+    split = split_of(org)
     made, failed = [], []
     for (name, email, phone), team in checked:
         inv = Invoice(org=org, competition=comp, team=team, customer_name=name, customer_email=email, customer_phone=phone,
                       description=description, amount=amount, currency=currency, due_date=due, fee_percent=pct, fee_fixed=fixed,
-                      mode=paynova.mode(cfg["secret_key"]), created_by=user)
+                      mode=paynova.mode(cfg["secret_key"]), created_by=user, split_code=split)
         try:
             if email:                                     # PayNova emails (and texts) its own invoice
-                remote = paynova.create_invoice(name, email, amount, currency, description, phone, due, cfg)
+                remote = paynova.create_invoice(name, email, amount, currency, description, phone, due, cfg, split_code=split)
                 inv.code, inv.pay_url = str(remote.get("invoice_code", ""))[:64], str(remote.get("pay_url", ""))[:500]
                 inv.number = remote.get("invoice_number") if isinstance(remote.get("invoice_number"), int) else None
             else:                                         # phone only: a payment link that we text to them
                 remote = paynova.initialize_payment(amount, currency, f"{description} ({org.name})",
-                                                    metadata={"kind": "invoice", "org": org.slug, "for": name}, cfg=cfg)
+                                                    metadata={"kind": "invoice", "org": org.slug, "for": name}, split_code=split, cfg=cfg)
                 inv.reference, inv.pay_url = remote["reference"], remote["checkout_url"]
         except paynova.PayNovaError as e:
             failed.append({"name": name, "error": str(e)})
@@ -404,7 +430,7 @@ def org_payout_cancel(request, user, ip, slug, payout_id):
 @admin("GET")
 def admin_payments(request, user, ip):
     try:
-        sync()
+        sync(base=base_of(request))
         err = None
     except paynova.PayNovaError as e:
         err = str(e)
@@ -417,7 +443,27 @@ def admin_payments(request, user, ip):
             "pendingInvoices": Invoice.objects.filter(status=Invoice.PENDING).count(),
             "waiting": [payout_json(p, True) for p in Payout.objects.filter(status__in=[Payout.REQUESTED, Payout.PROCESSING]).select_related("org", "competition", "requested_by").order_by("id")],
             "recentPayouts": [payout_json(p, True) for p in Payout.objects.exclude(status__in=[Payout.REQUESTED, Payout.PROCESSING]).select_related("org", "competition", "requested_by")[:50]],
-            "recentInvoices": [{**invoice_json(i), "org": {"name": i.org.name, "slug": i.org.slug}} for i in Invoice.objects.select_related("org", "competition", "team")[:50]]}
+            "recentInvoices": [{**invoice_json(i), "org": {"name": i.org.name, "slug": i.org.slug}} for i in Invoice.objects.select_related("org", "competition", "team")[:50]],
+            "splits": [{"org": {"id": s.org_id, "name": s.org.name}, "splitCode": s.split_code} for s in OrgPaySettings.objects.select_related("org").exclude(split_code="")],
+            "orgs": [{"id": o.id, "name": o.name} for o in __import__("orgs.models", fromlist=["Organization"]).Organization.objects.order_by("name")[:500]]}
+
+
+@admin("POST")
+def admin_split(request, user, ip):
+    """Give an organization a PayNova split code (or remove it with an empty code)."""
+    from orgs.models import Organization
+    b = body(request)
+    org = Organization.objects.filter(id=b.get("org")).first()
+    code = text(b, "splitCode", 60)
+    if not org:
+        raise ApiError(400, "Choose an organization.")
+    if code and not SPLIT_RE.fullmatch(code):
+        raise ApiError(400, "A split code looks like SPL_a1b2c3d4e5 (from PayNova → Transaction Splits).")
+    s, _ = OrgPaySettings.objects.get_or_create(org=org)
+    old, s.split_code = s.split_code, code
+    s.save()
+    audit(user.username, f"{'set' if code else 'removed'} the PayNova split for {org.name}", ip, resource=f"org:{org.slug}", old=old or None, new=code or None)
+    return {"ok": True}
 
 
 @admin("POST")
@@ -447,6 +493,7 @@ def admin_payout_act(request, user, ip, payout_id, action):
             p.save()
             audit(user.username, f"rejected a payout for {p.org.name}", ip, resource=f"org:{p.org.slug}", new=f"{p.amount:.2f} {p.currency}")
             log(p.org, None, f"the platform rejected the payout of {p.amount:.2f} {p.currency}: {p.note}")
+            notify.payout_decided(p, base_of(request))
             return {"ok": True, "payout": payout_json(p, True)}
         p.status = Payout.PROCESSING                       # stops a double click from sending twice
         p.save(update_fields=["status"])
@@ -472,5 +519,19 @@ def admin_payout_act(request, user, ip, payout_id, action):
     p.note = str(res.get("message") or "")[:300]
     p.save()
     audit(user.username, f"approved and sent a payout for {p.org.name}", ip, resource=f"org:{p.org.slug}", new=f"{p.amount:.2f} {p.currency} ({p.reference})")
+    notify.payout_decided(p, base_of(request))
     log(p.org, None, f"the platform sent the payout of {p.amount:.2f} {p.currency}: {p.purpose}")
     return {"ok": True, "payout": payout_json(p, True)}
+
+
+
+def receipt(request, token):
+    """The payer's receipt: a private, printable page (the link is only in their receipt email and the organizer's list)."""
+    from django.http import Http404
+    from competitions.public import org_logo, page
+    inv = Invoice.objects.select_related("org", "competition").filter(receipt_token=token, status=Invoice.PAID).first() if len(token) >= 20 else None
+    if not inv:
+        raise Http404
+    return page(request, "receipt.html", {"inv": inv, "o": inv.org, "org_logo": org_logo(inv.org), "number": f"R-{inv.created:%Y}-{inv.id:05d}",
+                                          "title": f"Receipt {inv.currency} {inv.amount:.2f}", "description": f"Payment receipt from {inv.org.name}."},
+                index=False, private=True, banner=False)

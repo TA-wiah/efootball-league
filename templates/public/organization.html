@@ -33,7 +33,7 @@
   </div>
   <div style="margin-top:18px">{% include "public/_share.html" with share_url=url share_text=o.name %}</div>
 </header>
-{% if nav|length > 1 %}<nav class="onav" aria-label="{{ o.name }}">{% for k, label in nav %}<a href="#{{ k }}">{{ label }}</a>{% endfor %}</nav>{% endif %}
+{% if nav|length > 1 or pages %}<nav class="onav" aria-label="{{ o.name }}">{% for k, label in nav %}<a href="#{{ k }}">{{ label }}</a>{% endfor %}{% for p in pages %}<a href="/org/{{ o.slug }}/p/{{ p.slug }}">{{ p.title }}</a>{% endfor %}</nav>{% endif %}
 
 <section class="card" id="competitions"><div class="gh">Competitions</div><div class="grid">
   {% for x in comps %}<a class="tile" href="/competition/{{ x.c.slug }}">{% if x.logo %}<img class="crest" src="{{ x.logo }}" alt="" style="width:40px;height:40px">{% else %}<span class="crest trophy" style="width:40px;height:40px" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M12 13v3M8 20h8"/></svg></span>{% endif %}<span>{{ x.c.name }}<small>{{ x.kind }}{% if x.c.season %} · {{ x.c.season }}{% endif %} · {{ x.teams }} teams</small></span></a>

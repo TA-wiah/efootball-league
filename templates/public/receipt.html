@@ -1,0 +1,36 @@
+{% extends "public/base.html" %}
+{% block content %}
+<style>
+.rcpt{max-width:640px;margin:0 auto;background:#fff;color:#0b1530;border-radius:14px;padding:30px 30px 26px;box-shadow:0 20px 50px -20px rgba(0,0,0,.7);position:relative;overflow:hidden}
+.rcpt:before{content:"";position:absolute;left:0;right:0;top:0;height:6px;background:var(--gold)}
+.rcpt h1{font-family:var(--cond);font-size:34px;margin:0;letter-spacing:.3px;color:#0b1530}
+.rcpt .top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;position:static;background:none;border:0;backdrop-filter:none}
+.rcpt .top:after{display:none}
+.rcpt .org{display:flex;gap:12px;align-items:center}.rcpt .org img,.rcpt .org .ini{width:52px;height:52px;border-radius:12px;object-fit:cover;display:grid;place-items:center;background:#0b1530;color:#fff;font-weight:900;font-size:22px}
+.rcpt .paid{font-family:var(--cond);font-weight:800;font-size:22px;letter-spacing:2px;color:#13904a;border:3px solid #13904a;border-radius:8px;padding:2px 12px;transform:rotate(-6deg);white-space:nowrap}
+.rcpt table{width:100%;border-collapse:collapse;margin:22px 0 6px;font-size:15px}.rcpt td{padding:9px 0;border-top:1px solid #e4e8f2;text-align:left;color:#0b1530}.rcpt td:last-child{text-align:right;font-weight:600}
+.rcpt tbody tr:hover td{background:none}
+.rcpt .total td{font-family:var(--cond);font-size:24px;font-weight:800;border-top:2px solid #0b1530}
+.rcpt .small{color:#55627e;font-size:13px}
+.rbar{max-width:640px;margin:0 auto 14px;display:flex;gap:8px;justify-content:flex-end}
+@media print{header.top,footer,.rbar,.toast{display:none!important}body{background:#fff!important}.w{padding:0}.rcpt{box-shadow:none;max-width:none}}
+</style>
+<div class="rbar"><button type="button" class="btn sm" id="printr">Print or save as PDF</button></div>
+<article class="rcpt" aria-label="Receipt">
+  <div class="top">
+    <div class="org">{% if org_logo %}<img src="{{ org_logo }}" alt="">{% else %}<span class="ini">{{ o.name|slice:":1"|upper }}</span>{% endif %}<div><b style="font-size:18px">{{ o.name }}</b><div class="small">{% if o.region %}{{ o.region }}, {% endif %}{{ o.country }}</div></div></div>
+    <span class="paid">PAID</span>
+  </div>
+  <h1 style="margin-top:22px">Receipt</h1>
+  <div class="small">No. {{ number }} · paid <time datetime="{{ inv.paid_at|date:'c' }}" data-f="date">{{ inv.paid_at|date:"j M Y" }}</time></div>
+  <table><tbody>
+    <tr><td>Paid by</td><td>{{ inv.customer_name }}</td></tr>
+    <tr><td>For</td><td>{{ inv.description }}</td></tr>
+    {% if inv.competition %}<tr><td>Competition</td><td>{{ inv.competition.name }}</td></tr>{% endif %}
+    <tr><td>Payment reference</td><td>{% firstof inv.code inv.reference %}</td></tr>
+    <tr class="total"><td>Total paid</td><td>{{ inv.currency }} {{ inv.amount }}</td></tr>
+  </tbody></table>
+  <p class="small" style="margin:14px 0 0">Paid securely through PayNova{% if inv.mode == "test" %} (test payment: no real money){% endif %}. Questions about this payment? Contact {{ o.name }}.</p>
+</article>
+<script nonce="{{ nonce }}">document.getElementById("printr").addEventListener("click",function(){window.print()});</script>
+{% endblock %}

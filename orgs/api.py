@@ -23,7 +23,7 @@ from league.models import Admin
 from superadmin import store
 from superadmin.models import PlatformAnnouncement
 
-from .models import ORG_KINDS, WEBSITE_DEFAULTS, Invitation, Membership, Organization, OrgEvent
+from .models import ORG_KINDS, WEBSITE_DEFAULTS, Invitation, Membership, Organization, OrgEvent, OrgPage
 from .permissions import (ADMIN, COACH, OWNER, PLAYER, RANK, TEAM_MANAGER, ROLE_INFO, STAFF_ROLES, TEAM_ROLES, assignable_roles, can, can_manage, clean_overrides,
                           matrix, perms_of)
 
@@ -681,3 +681,66 @@ def my_invitation_accept(request, user, ip, inv_id):
     org = join(user, inv)
     return {"ok": True, "org": org_json(org)}
 
+
+
+
+# ---------- the organization's own website pages ----------
+RESERVED_PAGES = {"admin", "api", "app", "new", "edit"}
+
+
+def page_json(pg):
+    return {"id": pg.id, "slug": pg.slug, "title": pg.title, "body": pg.body, "published": pg.published, "position": pg.position,
+            "updated": ms(pg.updated), "url": f"/org/{pg.org.slug}/p/{pg.slug}"}
+
+
+def apply_page(org, pg, b):
+    if "title" in b:
+        title = text(b, "title", 80)
+        if len(title) < 2:
+            raise ApiError(400, "Give the page a title.")
+        pg.title = title
+    if "body" in b:
+        if not isinstance(b["body"], str) or len(b["body"]) > 20000:
+            raise ApiError(400, "Keep the page under 20,000 characters.")
+        pg.body = b["body"].replace("\r\n", "\n").strip()
+    if "published" in b:
+        pg.published = b["published"] is True
+    if "position" in b and isinstance(b["position"], int) and 0 <= b["position"] <= 99:
+        pg.position = b["position"]
+    if not pg.slug:
+        base = slugify(pg.title)[:50].strip("-") or "page"
+        base = base + "-page" if base in RESERVED_PAGES else base
+        slug, n = base, 2
+        while org.pages.filter(slug=slug).exists():
+            slug, n = f"{base}-{n}", n + 1
+        pg.slug = slug
+
+
+@endpoint("GET", "POST", login_required=True)
+def org_pages(request, user, ip, slug):
+    if request.method == "GET":
+        org, m = access(user, slug, "org.view")
+        return {"pages": [page_json(p) for p in org.pages.all()]}
+    org, m = access(user, slug, "org.settings")
+    if org.pages.count() >= 30:
+        raise ApiError(400, "An organization can have up to 30 pages.")
+    pg = OrgPage(org=org, position=org.pages.count())
+    apply_page(org, pg, {"title": "", **body(request, 30_000)})
+    pg.save()
+    log(org, user, f"added the website page “{pg.title}”")
+    return {"ok": True, "page": page_json(pg)}
+
+
+@endpoint("PATCH", "DELETE", login_required=True)
+def org_page_detail(request, user, ip, slug, page_id):
+    org, m = access(user, slug, "org.settings")
+    pg = org.pages.filter(id=page_id).first()
+    if not pg:
+        raise ApiError(404, "Page not found.")
+    if request.method == "DELETE":
+        pg.delete()
+        log(org, user, f"deleted the website page “{pg.title}”")
+        return {"ok": True}
+    apply_page(org, pg, body(request, 30_000))
+    pg.save()
+    return {"ok": True, "page": page_json(pg)}

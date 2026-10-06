@@ -39,10 +39,11 @@ def is_member(request, org_id):
     return bool(user and (user.is_superuser or Membership.objects.filter(org_id=org_id, user=user).exists()))
 
 
-def page(request, template, ctx, *, index=True, private=False):
+def page(request, template, ctx, *, index=True, private=False, banner=None):
+    """`private`: never cached or indexed. `banner`: show the members-only preview notice (defaults to `private`)."""
     nonce = secrets.token_urlsafe(16)
     base = base_url(request)
-    ctx.update(nonce=nonce, base=base, url=base + request.path, index=index and not private, private_preview=private,
+    ctx.update(nonce=nonce, base=base, url=base + request.path, index=index and not private, private_preview=private if banner is None else banner,
                app_url="/app")
     resp = render(request, f"public/{template}", ctx)
     resp["Content-Security-Policy"] = (f"default-src 'self'; script-src 'nonce-{nonce}'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; "
@@ -248,6 +249,71 @@ def team(request, slug):
 
 # ---------- organization ----------
 HEX6 = re.compile(r"^#[0-9a-f]{6}$")
+LINK = re.compile(r"(https?://[^\s<>\"']+[^\s<>\"'.,;:!?)])")
+
+
+def render_text(body):
+    """An organization's page text → safe HTML. Everything is escaped first; only headings, lists, paragraphs and
+    full http(s) links are turned into markup."""
+    from django.utils.html import escape
+    from django.utils.safestring import mark_safe
+
+    def inline(line):
+        out, last = [], 0
+        for m in LINK.finditer(line):
+            out.append(escape(line[last:m.start()]))
+            url = m.group(1)
+            out.append(f'<a href="{escape(url)}" rel="nofollow noopener noreferrer" target="_blank">{escape(url)}</a>')
+            last = m.end()
+        out.append(escape(line[last:]))
+        return "".join(out)
+
+    html, para, items = [], [], []
+
+    def flush():
+        if para:
+            html.append("<p>" + "<br>".join(inline(x) for x in para) + "</p>")
+            para.clear()
+        if items:
+            html.append("<ul>" + "".join(f"<li>{inline(x)}</li>" for x in items) + "</ul>")
+            items.clear()
+    for raw in (body or "").split("\n"):
+        line = raw.rstrip()
+        if not line.strip():
+            flush()
+        elif line.startswith("## ") or line.startswith("# "):
+            flush()
+            html.append(f"<h2>{inline(line.lstrip('#').strip())}</h2>")
+        elif line.lstrip().startswith(("- ", "* ")):
+            if para:
+                flush()
+            items.append(line.lstrip()[2:])
+        else:
+            if items:
+                flush()
+            para.append(line)
+    flush()
+    return mark_safe("".join(html))
+
+
+def org_site_context(request, o):
+    s = o.site()
+    color, ink = brand(o.brand_color)
+    return {"o": o, "s": s, "brand": color, "brand_ink": ink, "org_logo": org_logo(o), "share_image": org_logo(o),
+            "kind": ORG_KIND_L.get(o.kind, "Organization"), "pages": list(o.pages.filter(published=True).only("slug", "title"))}
+
+
+def org_page(request, slug, page_slug):
+    """One of the organization's own pages: /org/<slug>/p/<page>."""
+    o = Organization.objects.filter(slug=slug).first()
+    if not o or (o.status != "active" and not is_member(request, o.id)):
+        raise Http404
+    pg = o.pages.filter(slug=page_slug).first()
+    if not pg or (not pg.published and not is_member(request, o.id)):
+        raise Http404
+    ctx = {**org_site_context(request, o), "pg": pg, "content": render_text(pg.body), "title": f"{pg.title} · {o.name}",
+           "description": (pg.body.strip().split("\n")[0] if pg.body.strip() else o.description)[:180] or o.name}
+    return page(request, "org_page.html", ctx, index=pg.published and o.status == "active", private=not pg.published or o.status != "active")
 ORG_KIND_L = {"league": "League", "school": "School", "club": "Club", "academy": "Academy", "company": "Company",
               "community": "Community", "association": "Association", "other": "Organization"}
 
@@ -306,6 +372,7 @@ def organization(request, slug):
            ("players", "Players", bool(ctx.get("players"))), ("news", "News", bool(ctx.get("news"))),
            ("about", "About", bool(s["about"] or s["contact"] or o.description))]
     ctx["nav"] = [(k, label) for k, label, on in nav if on]
+    ctx["pages"] = list(o.pages.filter(published=True).only("slug", "title"))
     return page(request, "organization.html", ctx, index=bool(comps) and o.status == "active", private=o.status != "active")
 
 

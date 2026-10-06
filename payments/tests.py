@@ -175,3 +175,40 @@ class PaymentsTest(Helpers, TestCase):
         self.assertEqual(paynova.fee_for(Decimal("1"), Decimal("50"), Decimal("10")), Decimal("1.00"), "never more than the amount")
         self.assertEqual(paynova.mode("sk_live_abc"), "live")
         self.assertEqual(paynova.mode("pk_live_abc"), "")
+
+    def test_receipts_emails_and_split_payments(self):
+        from league import emailer
+        self.connect(fee_enabled=True, fee_percent="10")
+        mails = []
+        p1 = mock.patch.object(emailer, "ready", lambda cfg=None: True)
+        p2 = mock.patch.object(emailer, "send", lambda to, subject, txt, html: mails.append((to, subject, txt)))
+        p1.start(), p2.start()
+        self.addCleanup(p1.stop), self.addCleanup(p2.stop)
+        self.boss.call("post", self.base + "/invoices", {"amount": "40", "description": "Entry fee", "recipients": [{"name": "Lions FC", "email": "lions@example.com"}]})
+        self.fake.invoices["INV_0001"]["status"] = "paid"
+        inv = self.boss.call("post", self.base + "/payments/sync").json()["invoices"][0]
+        self.assertTrue(inv["receiptUrl"].startswith("/receipt/"))
+        page = self.client.get(inv["receiptUrl"])
+        self.assertEqual(page.status_code, 200)
+        self.assertIn("GHS 40.00", page.content.decode())
+        self.assertIn("no-store", page["Cache-Control"])
+        self.assertEqual(self.client.get("/receipt/not-a-real-receipt-token-xx").status_code, 404)
+        to = [m[0] for m in mails]
+        self.assertIn("lions@example.com", to, "the payer gets the receipt")
+        self.assertIn("boss@example.com", to, "the organization is told")
+        self.assertIn(inv["receiptUrl"], next(m[2] for m in mails if m[0] == "lions@example.com"))
+        # payout decisions are emailed to whoever asked
+        p = self.boss.call("post", self.base + "/payouts", {"amount": "10", "currency": "GHS", "method": "paynova", "destination": {"email": "w@example.com"},
+                                                            "purpose": "Prize"}).json()["payout"]
+        self.root.call("post", f"/api/admin/payouts/{p['id']}/reject", {"note": "Not yet"})
+        self.assertTrue(any(m[0] == "boss@example.com" and "Payout not approved" in m[1] for m in mails))
+        # a split code: invoices go straight to the organization's own PayNova account
+        org_id = self.boss.get(self.base).json()["org"]["id"]
+        self.assertEqual(self.root.call("post", "/api/admin/payments/split", {"org": org_id, "splitCode": "nope"}).status_code, 400)
+        self.assertEqual(self.boss.call("post", "/api/admin/payments/split", {"org": org_id, "splitCode": "SPL_abc12345"}).status_code, 403)
+        self.assertEqual(self.root.call("post", "/api/admin/payments/split", {"org": org_id, "splitCode": "SPL_abc12345"}).status_code, 200)
+        self.boss.call("post", self.base + "/invoices", {"amount": "60", "description": "Entry fee", "recipients": [{"name": "Tigers", "email": "t@example.com"}]})
+        self.assertEqual([c for c in self.fake.calls if c[1] == "/invoices/" and c[0] == "POST"][-1][2]["split_code"], "SPL_abc12345")
+        self.fake.invoices["INV_0002"]["status"] = "paid"
+        bal = self.boss.call("post", self.base + "/payments/sync").json()["balances"][0]
+        self.assertEqual((bal["paid"], bal["fees"], bal["available"], bal["direct"]), ("40.00", "4.00", "36.00", "60.00"), "split money isn't held by the platform")

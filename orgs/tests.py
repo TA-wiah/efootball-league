@@ -374,3 +374,29 @@ class PortalTest(Helpers, TestCase):
         self.assertEqual(tm.call("post", url, {"role": "player"}).status_code, 403)
         # an admin can invite into any team, including team managers
         self.assertEqual(boss.call("post", f"/api/orgs/{slug}/teams/{tigers}/invitations", {"role": "team_manager"}).status_code, 200)
+
+    def test_custom_website_pages(self):
+        boss, viewer = self.signup("boss"), self.signup("viewer1")
+        slug = self.new_org(boss)
+        self.invite_and_join(boss, slug, viewer, "viewer")
+        url = f"/api/orgs/{slug}/pages"
+        self.assertEqual(viewer.call("post", url, {"title": "Rules"}).status_code, 403)
+        self.assertEqual(boss.call("post", url, {"title": "x"}).status_code, 400)
+        body = ("## Match rules\nEach game lasts 10 minutes.\n\n- Be on time\n- Respect the referee\n\n"
+                "Questions? See https://example.com/faq.\n<script>alert(1)</script> <b>bold</b> [x](javascript:alert(2))")
+        pg = boss.call("post", url, {"title": "Rules & how to join", "body": body}).json()["page"]
+        self.assertEqual(pg["url"], f"/org/{slug}/p/rules-how-to-join")
+        html = Client().get(pg["url"]).content.decode()
+        self.assertIn("<h2>Match rules</h2>", html)
+        self.assertIn("<li>Respect the referee</li>", html)
+        self.assertIn('<a href="https://example.com/faq" rel="nofollow noopener noreferrer" target="_blank">https://example.com/faq</a>.', html)
+        self.assertNotIn("<script>alert(1)", html)
+        self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt; &lt;b&gt;bold&lt;/b&gt;", html)
+        self.assertNotIn('href="javascript', html)
+        self.assertIn(f'href="/org/{slug}/p/rules-how-to-join"', Client().get(f"/org/{slug}").content.decode(), "listed in the site menu")
+        # drafts stay hidden from visitors
+        boss.call("patch", f"{url}/{pg['id']}", {"published": False})
+        self.assertEqual(Client().get(pg["url"]).status_code, 404)
+        self.assertEqual(boss.get(pg["url"]).status_code, 200, "members can preview")
+        self.assertEqual(boss.call("delete", f"{url}/{pg['id']}").status_code, 200)
+        self.assertEqual(boss.get(pg["url"]).status_code, 404)

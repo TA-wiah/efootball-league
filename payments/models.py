@@ -22,6 +22,8 @@ class Invoice(models.Model):
     reference = models.CharField(max_length=80, blank=True, db_index=True)   # PayNova payment reference (phone-only invoices)
     sms = models.CharField(max_length=120, blank=True)                       # what happened to the text with the pay link
     reminded_at = models.DateTimeField(null=True, blank=True)                # last payment reminder by text
+    split_code = models.CharField(max_length=60, blank=True)                 # paid straight to the organization's PayNova account
+    receipt_token = models.CharField(max_length=40, blank=True, db_index=True)   # the private receipt link
     number = models.PositiveIntegerField(null=True, blank=True)
     pay_url = models.URLField(max_length=500, blank=True)
     mode = models.CharField(max_length=4, blank=True)                         # test / live
@@ -59,3 +61,11 @@ class Payout(models.Model):
 
     class Meta:
         ordering = ["-id"]
+
+
+class OrgPaySettings(models.Model):
+    """Set by a super admin: a PayNova split code, so this organization's invoices are paid straight into its own
+    PayNova account (the split in PayNova's dashboard decides each share)."""
+    org = models.OneToOneField("orgs.Organization", on_delete=models.CASCADE, related_name="pay_settings")
+    split_code = models.CharField(max_length=60, blank=True)
+    updated = models.DateTimeField(auto_now=True)
