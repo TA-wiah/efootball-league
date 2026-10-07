@@ -47,6 +47,11 @@ def page(request, template, ctx, *, index=True, private=False, banner=None):
     from .reports import settle_overdue
     settle_overdue()
     ctx.setdefault("rankings_on", ranking_settings()["enabled"])
+    from superadmin import store
+    site = store.site()
+    ctx.setdefault("description", site["description"])
+    ctx.update(site_name=site["name"] or "Competition Manager", site_description=site["description"],
+               share=ctx.get("share_image") or ctx.get("logo") or store.site_logo_url())
     ctx.update(nonce=nonce, base=base, url=base + request.path, index=index and not private, private_preview=private if banner is None else banner,
                app_url="/app")
     resp = render(request, f"public/{template}", ctx)
@@ -251,7 +256,8 @@ def team(request, slug):
     ctx = {"t": team_view(t, {t.id}), "team": t, "rank": team_rank(t.id), "competitions": public_comps if not member else
            list(Competition.objects.filter(id__in=comp_ids)), "upcoming": [match_view(x, linkable) for x in ms if x.status in ("scheduled", "live", "postponed")][:8],
            "recent": [match_view(x, linkable) for x in reversed(finished)][:8], "form": form, "squad": [s for s in squad if s[1]],
-           "title": t.name, "description": t.description[:180] or f"{t.name}: fixtures, results and squad.", "logo": logo("team", t)}
+           "title": t.name, "description": t.description[:180] or f"{t.name}: fixtures, results and squad.", "logo": logo("team", t),
+           "share_image": logo("team", t) or org_logo(t.org)}
     return page(request, "team.html", ctx, index=bool(public_comps), private=not public_comps)
 
 

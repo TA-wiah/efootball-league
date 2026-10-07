@@ -25,8 +25,35 @@ def admins(request):
     return v.invite(request) if request.method == "POST" else v.admins(request)
 
 
-def app_page(request, **kwargs):
-    return serve_page(request, settings.APP_FILE)
+def app_page(request, token=None, **kwargs):
+    """The app. Its share tags are filled in here: an invitation link shows who's inviting you and to what."""
+    from html import escape
+    from league.http import site_url
+    from superadmin import store
+    from competitions.public import org_logo
+    site = store.site()
+    name = site["name"] or "Competition Manager"
+    title, desc, image = name, site["description"], store.site_logo_url()
+    if token:
+        from orgs.api import hash_token
+        from orgs.models import Invitation
+        from orgs.permissions import ROLE_INFO
+        inv = Invitation.objects.select_related("org", "invited_by").filter(token_hash=hash_token(token)).first() if len(token) <= 100 else None
+        if inv:
+            teams = ", ".join(t.name for t in inv.teams.all())
+            title = f"Join {inv.org.name}" + (f" ({teams})" if teams else "")
+            by = getattr(inv.invited_by, "username", None)
+            desc = (f"{by} invited you" if by else "You're invited") + f" to join {inv.org.name} as {ROLE_INFO[inv.role][0]} on {name}."
+            image = org_logo(inv.org) or image
+    base = site_url(request)
+    tags = [f"<title>{escape(title)}</title>", f'<meta name="description" content="{escape(desc)}">',
+            '<meta property="og:type" content="website">', f'<meta property="og:site_name" content="{escape(name)}">',
+            f'<meta property="og:title" content="{escape(title)}">', f'<meta property="og:description" content="{escape(desc)}">',
+            f'<meta property="og:url" content="{escape(base + request.path)}">', '<meta name="twitter:card" content="summary">',
+            f'<meta name="twitter:title" content="{escape(title)}">', f'<meta name="twitter:description" content="{escape(desc)}">']
+    if image:
+        tags += [f'<meta property="og:image" content="{escape(base + image)}">', f'<meta name="twitter:image" content="{escape(base + image)}">']
+    return serve_page(request, settings.APP_FILE, head="\n".join(tags))
 
 
 urlpatterns = [
@@ -166,6 +193,8 @@ urlpatterns = [
     path("api/admin/org-announcements/<int:aid>", sa.org_announcement),
     path("api/admin/settings", sa.platform_settings),
     path("api/admin/settings/test-email", sa.test_email),
+    path("api/admin/site-logo", sa.site_logo),
+    path("media/site/logo", sa.site_logo_file),
     path("api/admin/payments", pay.admin_payments),
     path("api/admin/proleague", pro.admin_overview),
     path("api/admin/proleague/season", pro.admin_new_season),
