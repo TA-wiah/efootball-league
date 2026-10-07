@@ -135,7 +135,7 @@ def overview(org, m):
             break
     from orgs.permissions import can
     people = [{"id": x.id, "username": x.user.username, "name": " ".join(filter(None, [x.user.first_name, x.user.last_name])) or x.user.username,
-               "phone": x.user.phone, "role": x.role} for x in Membership.objects.select_related("user").filter(org=org).exclude(user__phone="")]
+               "phone": x.user.phone, "role": x.role} for x in templates.reachable(org)]
     return {"ready": providers.ready(cfg), "credits": account(org).credits, "price": f"{price(cfg):.4f}".rstrip("0").rstrip("."), "currency": cfg.get("currency") or "GHS",
             "minCredits": cfg.get("min_credits") or 1, "canPay": paynova.ready(), "canBuy": can(m.role, "payments.manage", org),
             "canSend": can(m.role, "messages.send", org), "people": people, "templates": templates.TEMPLATES,
@@ -173,7 +173,7 @@ def org_sms_send(request, user, ip, slug):
     numbers = [str(n) for n in b.get("numbers", []) if str(n).strip()] if isinstance(b.get("numbers"), list) else []
     ids = b.get("memberIds") if isinstance(b.get("memberIds"), list) else []
     if ids:
-        found = list(Membership.objects.select_related("user").filter(org=org, id__in=[i for i in ids if isinstance(i, int)]).exclude(user__phone=""))
+        found = list(templates.reachable(org).filter(id__in=[i for i in ids if isinstance(i, int)]))
         numbers += [x.user.phone for x in found]
     if hit(f"smssend:{org.id}", 30, 3600):
         raise ApiError(429, "Too many messages this hour. Try again later.")

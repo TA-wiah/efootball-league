@@ -133,3 +133,38 @@ class DivisionSizesTest(TestCase):
         self.assertEqual(division_sizes(13, names, 4), [4, 4, 4], "the 13th team waits")
         self.assertEqual(division_sizes(18, names, 6), [6, 6, 6])
         self.assertEqual(division_sizes(3, names, 6), [])
+
+
+class ProLeagueReachTest(Helpers, TestCase):
+    """The Pro League reaches the players of the teams in its divisions (they belong to other organizations)."""
+
+    def test_sms_and_team_list_reach_other_organizations_players(self):
+        from competitions.models import Entry, Team
+        from orgs.models import Membership
+        from sms import providers
+        from .logic import pro_org
+        root = self.signup("root")
+        Admin.objects.filter(username="root").update(is_superuser=True, is_staff=True)
+        boss = self.signup("boss")
+        slug = self.new_org(boss)
+        lions = boss.call("post", f"/api/orgs/{slug}/teams", {"name": "Lions"}).json()["team"]["id"]
+        kofi = self.signup("kofi9")
+        kofi.call("patch", "/api/account", {"phone": "0241234567"})
+        self.invite_and_join(boss, slug, kofi, "player")
+        Membership.objects.get(user__username="kofi9").teams.set([lions])
+        pro = pro_org(Admin.objects.get(username="root"))
+        c = Competition.objects.create(org=pro, name="Premier · Season 1", slug="premier-s1", visibility="public", status="active")
+        e1 = Entry.objects.create(competition=c, team=Team.objects.get(id=lions))
+        e2 = Entry.objects.create(competition=c, team=Team.objects.create(org=Team.objects.get(id=lions).org, name="Tigers", slug="tigers"))
+        m = Match.objects.create(competition=c, home=e1, away=e2, kickoff=__import__("django.utils.timezone", fromlist=["now"]).now(), slug="lions-v-tigers")
+        teams = root.get(f"/api/orgs/{pro.slug}/teams").json()
+        self.assertEqual(sorted(t["name"] for t in teams["guests"]), ["Lions", "Tigers"])
+        root.call("patch", "/api/admin/settings", {"section": "sms", "changes": {"enabled": True, "provider": "console", "sender": "ProLeague"}})
+        p = root.call("post", f"/api/orgs/{pro.slug}/sms/check", {"template": "match_reminder", "match": m.id}).json()
+        self.assertEqual(len(p["memberIds"]), 1, "Kofi plays for Lions in another organization")
+        people = root.get(f"/api/orgs/{pro.slug}/sms").json()["people"]
+        self.assertEqual([x["username"] for x in people], ["kofi9"])
+        # an ordinary organization still only reaches its own members
+        other = self.signup("other")
+        oslug = self.new_org(other, "Other League")
+        self.assertEqual(other.get(f"/api/orgs/{oslug}/sms").json()["people"], [])

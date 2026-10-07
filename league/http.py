@@ -38,9 +38,9 @@ def body(request, max_len=10_000):
     try:
         raw = request.body
     except RequestDataTooBig:
-        raise ApiError(413, "too big") from None
+        raise ApiError(413, "That is too large to send. Try a smaller file.") from None
     if len(raw) > max_len:
-        raise ApiError(413, "too big")
+        raise ApiError(413, "That is too large to send. Try a smaller file.")
     try:
         data = json.loads(raw or b"{}")
     except ValueError:

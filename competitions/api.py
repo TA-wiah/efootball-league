@@ -809,7 +809,9 @@ def apply_team(t, b):
 def teams(request, user, ip, slug):
     if request.method == "GET":
         org, m = access(user, slug, "org.view")
-        return {"teams": [team_json(t) for t in org.teams.order_by("name")]}
+        guests = (Team.objects.select_related("org").filter(entries__competition__org=org).exclude(org=org).distinct().order_by("name"))
+        return {"teams": [team_json(t) for t in org.teams.order_by("name")],
+                "guests": [{**team_brief(t), "org": {"name": t.org.name, "slug": t.org.slug}} for t in guests[:500]]}
     org, m = access(user, slug, "teams.manage")
     if org.teams.count() >= 1000:
         raise ApiError(400, "An organization can have at most 1000 teams.")

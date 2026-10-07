@@ -208,6 +208,8 @@ def org_invitations(request, user, ip, slug):
                 st.refresh_from_db()
             except paynova.PayNovaError:
                 break
+    mine = set(m.teams.values_list("id", flat=True))
+    rows = [st for st in rows if can_answer(m, st) or st.team_id in mine]      # players see their own teams only
     cfg = logic.config()
     return {"league": cfg["name"], "whatsapp": cfg["whatsapp"] or None,
             "invitations": [{**team_row(st), "season": {"id": st.season.id, "name": st.season.name, "status": st.season.status,

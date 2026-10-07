@@ -114,3 +114,16 @@ class FlagsTest(TestCase):
         import re
         for f in pathlib.Path("public/flags").glob("*.svg"):
             self.assertIsNone(re.search(rb"<script|\son\w+\s*=|foreignObject|javascript:", f.read_bytes()), f.name)
+
+
+class ProofSizeTest(ReportsTest):
+    def test_screenshot_sizes(self):
+        import base64
+        png = b"\x89PNG\r\n\x1a\n"
+        ok = "data:image/png;base64," + base64.b64encode(png + b"\0" * (740 * 1024)).decode()
+        r = self.a.call("post", f"/api/report/{self.m.id}/proof", {"kind": "end", "image": ok})
+        self.assertEqual(r.status_code, 200, "a full-size screenshot fits")
+        big = "data:image/png;base64," + base64.b64encode(png + b"\0" * (770 * 1024)).decode()
+        r = self.a.call("post", f"/api/report/{self.m.id}/proof", {"kind": "end", "image": big})
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("smaller than", r.json()["error"])

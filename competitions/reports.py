@@ -136,7 +136,7 @@ def report_checkin(request, user, ip, match_id):
 @endpoint("POST", login_required=True)
 def report_proof(request, user, ip, match_id):
     m, sides, staff = match_for(user, match_id)
-    b = body(request, 2_200_000)
+    b = body(request, 1_090_000)
     side = side_of(b, sides)
     kind = b.get("kind") if b.get("kind") in MatchProof.KINDS else "other"
     if m.proofs.filter(side=side).count() >= MAX_PROOFS:

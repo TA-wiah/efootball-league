@@ -30,9 +30,22 @@ def public(c):
     return c.visibility != "private" and not c.suspended and c.org.status == "active"
 
 
+def reachable(org):
+    """People with a phone this organization may text: its own members. The Pro League also reaches the players and
+    staff assigned to the teams playing in its divisions (they belong to their own organizations)."""
+    from django.db.models import Q
+    from competitions.models import Entry
+    from proleague.logic import config
+    q = Membership.objects.select_related("user").exclude(user__phone="")
+    if config()["org_id"] == org.id:
+        playing = Entry.objects.filter(competition__org=org).values("team_id")
+        return q.filter(Q(org=org) | Q(teams__id__in=playing)).distinct()
+    return q.filter(org=org)
+
+
 def team_people(org, team_ids):
     """Members (players and team staff) assigned to these teams who have a phone number."""
-    return list(Membership.objects.filter(org=org, teams__id__in=team_ids).exclude(user__phone="").values_list("id", flat=True).distinct())
+    return list(reachable(org).filter(teams__id__in=team_ids).values_list("id", flat=True).distinct())
 
 
 def build(org, key, base, b):
