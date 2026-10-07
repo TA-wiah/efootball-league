@@ -375,6 +375,35 @@ class PortalTest(Helpers, TestCase):
         # an admin can invite into any team, including team managers
         self.assertEqual(boss.call("post", f"/api/orgs/{slug}/teams/{tigers}/invitations", {"role": "team_manager"}).status_code, 200)
 
+    def test_smtp_from_admin_panel_sends_every_organizations_invitations(self):
+        from superadmin import store
+        store.update("email", {"provider": "smtp", "host": "smtp.example.com", "port": 587, "user": "me@example.com",
+                               "password": "app-password", "from": "League <me@example.com>"})
+        sent = []
+        with mock.patch("smtplib.SMTP") as smtp:
+            smtp.return_value.sendmail.side_effect = lambda frm, to, msg, *a, **k: sent.append((frm, to, msg))
+            for owner_name, org_name in [("boss", "First League"), ("chief", "Second Cup")]:
+                owner = self.signup(owner_name)
+                slug = self.new_org(owner, org_name)
+                r = owner.call("post", f"/api/orgs/{slug}/invitations", {"role": "player", "email": f"fan.{owner_name}@example.com"}).json()
+                self.assertTrue(r["emailed"], r)
+                team = owner.call("post", f"/api/orgs/{slug}/teams", {"name": "Lions"}).json()["team"]["id"]
+                r = owner.call("post", f"/api/orgs/{slug}/teams/{team}/invitations", {"role": "coach", "email": f"coach.{owner_name}@example.com"}).json()
+                self.assertTrue(r["emailed"], r)
+            self.assertEqual(smtp.call_args[0], ("smtp.example.com", 587))
+            smtp.return_value.starttls.assert_called()
+            smtp.return_value.login.assert_called_with("me@example.com", "app-password")
+        self.assertEqual([to for _, to, _ in sent], [["fan.boss@example.com"], ["coach.boss@example.com"], ["fan.chief@example.com"], ["coach.chief@example.com"]])
+        self.assertIn(b"/invite/", sent[0][2])
+        # a broken mail server doesn't block the invitation: the link is still shown to share by hand
+        with mock.patch("smtplib.SMTP", side_effect=OSError("connection refused")):
+            owner = self.signup("third")
+            slug = self.new_org(owner, "Third League")
+            r = owner.call("post", f"/api/orgs/{slug}/invitations", {"role": "player", "email": "x@example.com"})
+        self.assertEqual(r.status_code, 200)
+        self.assertFalse(r.json()["emailed"])
+        self.assertIn("/invite/", r.json()["link"])
+
     def test_who_can_invite_which_roles(self):
         boss = self.signup("boss")
         slug = self.new_org(boss)
