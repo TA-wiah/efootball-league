@@ -166,6 +166,23 @@ def font_file(request, name):
                                  "X-Content-Type-Options": "nosniff"})
 
 
+FLAG_RE = re.compile(r"^([a-z]{2}(-[a-z]+)?\.svg|countries\.json|LICENSE\.txt)$")
+FLAG_TYPES = {"svg": "image/svg+xml", "json": "application/json", "txt": "text/plain; charset=utf-8"}
+
+
+def flag_file(request, name):
+    """Country flags (public/flags, from the MIT-licensed flag-icons set) for national team logos."""
+    from django.conf import settings
+    if not FLAG_RE.fullmatch(name):
+        return not_found(request)
+    path = settings.BASE_DIR / "public" / "flags" / name
+    if not path.is_file():
+        return not_found(request)
+    return HttpResponse(path.read_bytes(), content_type=FLAG_TYPES[name.rsplit(".", 1)[1]],
+                        headers={"Cache-Control": "public, max-age=604800", "X-Content-Type-Options": "nosniff",
+                                 "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox"})
+
+
 def serve_page(request, path):
     """Serve an HTML file with a fresh CSP nonce on its inline scripts."""
     if request.method != "GET":
