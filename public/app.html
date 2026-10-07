@@ -571,7 +571,7 @@ function overview(){var o=ORG.org;
     if(has("fixtures.manage"))qa.push('<a class="btn g sm" href="'+app0("/competitions?pick=fixtures")+'" data-nav>'+ic("cal")+' Create match</a>');
     if(has("content.edit"))qa.push('<a class="btn g sm" href="'+app0("/announcements")+'" data-nav>'+ic("megaphone")+' Publish announcement</a>');
     qa.push('<a class="btn g sm" href="/org/'+esc(o.slug)+'" target="_blank" rel="noopener">'+ic("globe")+' Open public site ↗</a>');
-    $("sec").innerHTML='<div class="qa" aria-label="Quick actions">'+qa.join("")+'</div>'+
+    $("sec").innerHTML='<div id="prolg"></div><div class="qa" aria-label="Quick actions">'+qa.join("")+'</div>'+
       '<div class="kpis">'+K(s.activeCompetitions,"Active competitions","/competitions",s.competitions+" in total")+K(s.teams,"Total teams","/teams")+K(s.players,"Total players","/players")+
         K(s.staff,"Staff","/staff",s.members+" member"+(s.members===1?"":"s")+" in total")+K(s.upcoming,"Upcoming matches","/fixtures")+K(s.completed,"Matches played","/results")+
         (s.pendingInvitations!=null?K(s.pendingInvitations,"Pending invitations","/invitations"):"")+(s.awaitingResults?K(s.awaitingResults,"Waiting for a result","/fixtures","Kicked off, no score yet","warn"):"")+'</div>'+
@@ -580,7 +580,7 @@ function overview(){var o=ORG.org;
       '<div class="card"><div class="gh">Recent results</div>'+matchList(s.recentResults||[],{comp:1,by:"date",empty:"No results yet."})+'</div></div>'+
       '<div class="agrid" style="margin-top:14px"><div class="card"><div class="gh">Recent activity</div><div class="feed">'+feed(s.activity)+'</div><p style="margin:10px 0 0"><a href="'+app0("/activity")+'" data-nav>All activity →</a></p></div>'+
       '<div class="card"><div class="gh">Your access</div><p style="margin-top:0">'+pill(ORG.me.role,ORG.me.roleLabel)+' <span class="note">'+esc((ROLES.roles.filter(function(x){return x.key===ORG.me.role})[0]||{}).description||"")+'</span></p><ul class="note" style="margin:0;padding-left:18px;line-height:1.7">'+
-        (ROLES.permissions||[]).filter(function(p){return has(p.key)}).map(function(p){return'<li>'+esc(p.label)+'</li>'}).join("")+'</ul></div></div>'})}
+        (ROLES.permissions||[]).filter(function(p){return has(p.key)}).map(function(p){return'<li>'+esc(p.label)+'</li>'}).join("")+'</ul></div></div>';proCard()})}
 
 // ---------- activity & notifications ----------
 function activitySec(){var all=[],more=function(before){api(api0("/activity"+(before?"?before="+before:""))).then(function(r){if(!r.ok)return fail(r);all=all.concat(r.data.events);
@@ -1267,6 +1267,64 @@ function splitCard(d){return'<form class="card" id="splf" novalidate><div class=
   '<div class="row"><label for="splo">Organization<select id="splo">'+d.orgs.map(function(o){return'<option value="'+o.id+'">'+esc(o.name)+'</option>'}).join("")+'</select></label><label for="splc">Split code<input id="splc" maxlength="60" placeholder="SPL_a1b2c3d4e5"></label></div><div class="actions"><button class="btn">Save split code</button></div>'+
   (d.splits.length?'<div class="tbl" style="margin-top:10px"><table class="dt"><tbody>'+d.splits.map(function(s){return'<tr><td>'+esc(s.org.name)+'</td><td>'+esc(s.splitCode)+'</td></tr>'}).join("")+'</tbody></table></div>':'')+'</form>'}
 
+// ---------- super admin: the Pro League ----------
+var STS={proposed:["Proposed","grey"],invited:["Invited","amber"],accepted:["Accepted, not paid","amber"],confirmed:["Confirmed","green"],declined:["Declined","red"],removed:["Removed","grey"]};
+var SNS={draft:["Draft","grey"],inviting:["Invitations sent","amber"],running:["Being played","green"],finished:["Finished","blue"]};
+function stTag(s,map){var x=map[s]||[s,"grey"];return'<span class="sb '+x[1]+'">'+esc(x[0])+'</span>'}
+function aPro(){var sec=A("Pro League",[["Pro League"]]);
+  api("/api/admin/proleague").then(function(r){if(!r.ok){sec.innerHTML=errBox(r);return}var d=r.data,S=d.settings,cur=d.seasons[0]||null;
+    var warn=(!d.rankingsOn?'<div class="banner">Switch the platform rankings on first (Platform settings): the Pro League picks teams from them.</div>':'')+
+      (+S.fee&&!d.paymentsReady?'<div class="banner">There’s an entry fee but PayNova isn’t connected: teams can accept, and you confirm them by hand once they’ve paid.</div>':'');
+    var settingsCard='<form class="card" id="plf" novalidate><div class="gh">Settings</div>'+
+      '<label class="toggle"><span>Pro League switched on<small>When on, you can run seasons from the rankings.</small></span><input type="checkbox" id="plen"'+(S.enabled?" checked":"")+'></label>'+
+      '<label for="pln">League name<input id="pln" maxlength="80" value="'+esc(S.name)+'"></label>'+
+      '<label for="pld">Divisions, top first (separate with commas)<input id="pld" maxlength="1000" value="'+esc(S.divisions)+'" placeholder="La Liga, Segunda, Division C"></label>'+
+      '<div class="row"><label for="pls">Teams in each division<select id="pls">'+opts({4:"Up to 4",5:"Up to 5",6:"Up to 6"},S.size)+'</select></label><label for="plm">Teams going up and down each season<select id="plm">'+opts({0:"None",1:"1",2:"2",3:"3"},S.move)+'</select></label></div>'+
+      '<div class="row"><label for="pll">Teams meet<select id="pll">'+opts({1:"Once",2:"Twice (home and away)"},S.legs)+'</select></label><label for="plc">Which teams<input id="plc" maxlength="60" value="'+esc(S.country)+'" placeholder="Worldwide (or a country, e.g. Ghana)"></label></div>'+
+      '<div class="row"><label for="plfee">Entry fee per team (0 = free)<input id="plfee" inputmode="decimal" value="'+esc(S.fee)+'"></label><label for="plcur">Currency<select id="plcur">'+curOpts(S.currency)+'</select></label></div>'+
+      '<label for="plw">WhatsApp number for results<input id="plw" type="tel" value="'+esc(S.whatsapp?"+"+S.whatsapp:"")+'" placeholder="+233241234567"></label><div class="note">Pro League match pages get a “Send the result on WhatsApp” button to this number.</div>'+
+      '<p class="note">'+d.capacity+' places: '+esc(S.divisions)+', up to '+S.size+' teams each. A division needs at least 4 teams.</p>'+
+      '<div class="actions"><button class="btn">Save settings</button></div></form>';
+    var seasonCard='';
+    if(!cur||cur.status==="finished")seasonCard='<div class="card"><div class="gh">'+(cur?"Next season":"First season")+'</div><p class="note" style="margin-top:0">'+(cur?"The system builds Season "+(cur.number+1)+" from last season’s tables (promotion and relegation), then fills places from the rankings.":"The system picks the best-ranked teams from every organization.")+' You can check the list before any invitation goes out.</p><button class="btn" id="plnew"'+(S.enabled?'':' disabled')+'>'+ic("plus")+' Propose '+(cur?"Season "+(cur.number+1):"Season 1")+'</button></div>';
+    if(cur&&cur.teams){var c=cur.counts||{};
+      seasonCard+='<div class="card"><div class="gh">'+esc(cur.name)+'</div><p style="margin-top:0">'+stTag(cur.status,SNS)+' · '+(c.confirmed||0)+' confirmed · '+(c.invited||0)+' waiting · '+(c.declined||0)+' declined'+(+cur.fee?' · entry fee '+esc(cur.currency)+' '+esc(cur.fee):'')+'</p>'+
+        (cur.status==="inviting"||cur.status==="draft"?'<p class="note">If you start now: '+(cur.plan.length?cur.plan.map(function(n,i){return esc(cur.divisions[i])+" "+n+" teams"}).join(" · "):"not enough confirmed teams yet (at least 4)")+'.</p>':'')+
+        (cur.competitions.length?'<p>'+cur.competitions.map(function(x){return'<a class="btn g sm" href="/app/org/'+esc(d.org.slug)+'/competitions/'+esc(x.slug)+'" data-nav>'+esc(x.division)+': fixtures & results</a> '}).join("")+'</p>':'')+
+        '<div class="actions">'+({draft:'<button class="btn" data-sa="invite">'+ic("mail")+' Send invitations</button><button class="btn bad" data-sa="delete">Delete this draft</button>',
+          inviting:'<button class="btn" data-sa="start">'+ic("check")+' Start the season</button><button class="btn g" data-sa="add">Invite the next ranked team</button>',
+          running:'<button class="btn" data-sa="finish">Finish the season</button>'}[cur.status]||'')+'</div></div>';
+      seasonCard+='<div class="card"><div class="gh">Teams · '+cur.teams.length+'</div><div class="tbl"><table class="dt"><thead><tr><th class="num">#</th><th>Team</th><th>Why</th><th class="num">Rating</th><th>Status</th><th>Division</th><th></th></tr></thead><tbody>'+cur.teams.map(function(t){
+        var acts=(cur.status==="draft"||cur.status==="inviting")?(t.status==="removed"||t.status==="declined"?'<button class="btn g sm" data-ta="restore" data-id="'+t.id+'">Put back</button>':'')+(t.status!=="confirmed"&&t.status!=="removed"?' <button class="btn g sm" data-ta="confirm" data-id="'+t.id+'">Confirm</button>':'')+(t.status!=="removed"?' <button class="btn g sm" data-ta="remove" data-id="'+t.id+'">Remove</button>':''):'';
+        return'<tr><td class="num">'+t.seed+'</td><td><b>'+esc(t.team.name)+'</b><small>'+esc(t.org.name)+'</small></td><td><small>'+esc(t.reason)+'</small></td><td class="num">'+t.rating+'</td><td>'+stTag(t.status,STS)+'</td><td>'+esc(t.division||"—")+(t.finalPosition?'<small>Finished '+t.finalPosition+'</small>':'')+'</td><td style="white-space:nowrap">'+acts+'</td></tr>'}).join("")+'</tbody></table></div></div>'}
+    var past=d.seasons.slice(1);
+    sec.innerHTML=warn+'<div class="agrid">'+settingsCard+'<div>'+seasonCard+'</div></div>'+(past.length?'<div class="card"><div class="gh">Past seasons</div>'+past.map(function(s){return'<p>'+esc(s.name)+' '+stTag(s.status,SNS)+'</p>'}).join("")+'</div>':'');
+    $("plf").onsubmit=function(e){e.preventDefault();act("/api/admin/settings","PATCH",{section:"proleague",changes:{enabled:$("plen").checked,name:val("pln"),divisions:val("pld"),size:+val("pls"),move:+val("plm"),legs:+val("pll"),country:val("plc").trim(),fee:val("plfee").trim()||"0",currency:val("plcur"),whatsapp:val("plw").trim()}},"Settings saved").then(function(x){if(x)aPro()})};
+    if($("plnew"))$("plnew").onclick=function(){var b=this;busy(b,true,"Picking teams…");api("/api/admin/proleague/season","POST",{}).then(function(r){busy(b,false);if(!r.ok){toast(r.data.error,true);return}toast(r.data.season.name+": "+r.data.season.teams.length+" teams proposed");aPro()})};
+    var labels={invite:["Send the invitations?","Each team’s organization is emailed and sees the invitation on its dashboard.","Send invitations"],delete:["Delete this draft?","Nothing has been sent yet.","Delete"],
+      start:["Start the season?","Confirmed teams are put into divisions by strength, and the fixtures are created. Teams that haven’t confirmed are left out.","Start the season"],
+      finish:["Finish the season?","Final tables are saved. They decide promotion and relegation for the next season.","Finish the season"]};
+    document.querySelectorAll("[data-sa]").forEach(function(b){b.onclick=function(){var a=b.dataset.sa,run=function(extra){busy(b,true,"Working…");api("/api/admin/proleague/season/"+cur.id+"/"+a,"POST",extra||{}).then(function(r){busy(b,false);
+        if(r.ok){toast("Done");aPro();return}if(r.data.needsConfirm){confirmBox("Finish anyway?",r.data.error,{ok:"Finish anyway",danger:true}).then(function(ok){if(ok)run({force:true})});return}toast(r.data.error,true)})};
+      if(a==="add")return run({count:1});var l=labels[a];confirmBox(l[0],l[1],{ok:l[2],danger:a==="delete"}).then(function(ok){if(ok)run()})}});
+    document.querySelectorAll("[data-ta]").forEach(function(b){b.onclick=function(){api("/api/admin/proleague/team/"+b.dataset.id+"/"+b.dataset.ta,"POST",{}).then(function(r){toast(r.ok?"Updated":r.data.error,!r.ok);aPro()})}})})}
+
+// ---------- each organization: Pro League invitations on the dashboard ----------
+function proCard(){var box=$("prolg");if(!box)return;var q=new URLSearchParams(location.search),back=q.get("pro");
+  var load=function(){api(api0("/proleague")).then(function(r){if(!r.ok||!r.data.invitations.length){box.innerHTML="";return}var P=r.data;
+    box.innerHTML='<div class="card" style="border:1px solid var(--gold)"><div class="gh">'+esc(P.league)+'</div>'+P.invitations.map(function(i){
+      var st=i.status,s=i.season;
+      return'<div class="actions" style="justify-content:space-between;align-items:center;border-top:1px solid var(--line);padding-top:10px"><div><b>'+esc(i.team.name)+'</b> · '+esc(s.name)+'<div class="note">'+esc(i.reason)+(i.division?' · '+esc(i.division):'')+(+s.fee?' · entry fee '+esc(s.currency)+' '+esc(s.fee):' · free')+'</div></div><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'+stTag(st,STS)+
+        (i.canAnswer&&s.status==="inviting"&&st==="invited"?'<button class="btn sm" data-pa="accept" data-id="'+i.id+'">Accept</button><button class="btn g sm" data-pa="decline" data-id="'+i.id+'">Decline</button>':'')+
+        (i.checkoutUrl?'<a class="btn sm" href="'+esc(i.checkoutUrl)+'">Pay the entry fee</a><button class="btn g sm" data-pa="check" data-id="'+i.id+'">I’ve paid</button>':'')+
+        (i.competition?'<a class="btn g sm" href="/competition/'+esc(i.competition.slug)+'" target="_blank" rel="noopener">Fixtures & table ↗</a>':'')+'</div></div>'}).join("")+
+      (P.whatsapp?'<p class="note" style="margin:10px 0 0">After each Pro League match, send the result on WhatsApp to +'+esc(P.whatsapp)+' (each match page has a button).</p>':'')+'</div>';
+    document.querySelectorAll("[data-pa]").forEach(function(b){b.onclick=function(){var a=b.dataset.pa,run=function(){busy(b,true,"…");api(api0("/proleague/"+b.dataset.id+"/"+a),"POST",{}).then(function(r){busy(b,false);
+        if(!r.ok){toast(r.data.error,true);return}if(r.data.checkoutUrl){toast("Opening PayNova…");location.href=r.data.checkoutUrl;return}
+        toast(a==="check"?(r.data.confirmed?"Payment received: your place is confirmed":"Not paid yet"):a==="accept"?"Accepted: your place is confirmed":"Declined");load()})};
+      if(a==="decline")confirmBox("Decline the invitation?","Your place goes to the next team in the rankings.",{ok:"Decline",danger:true}).then(function(ok){if(ok)run()});else run()}})})};
+  if(back){history.replaceState(null,"",location.pathname);api(api0("/proleague/"+back+"/check"),"POST",{}).then(function(r){if(r.ok&&r.data.confirmed)toast("Payment received: your place is confirmed");load()})}else load()}
+
 // ---------- accepting an invitation ----------
 function inviteView(token){document.title="Invitation · Competition Manager";main('<div class="card note auth">Checking your invitation…</div>');
   Promise.all([loadMe(),api("/api/invitations/"+encodeURIComponent(token))]).then(function(res){topnav();var r=res[1];
@@ -1300,6 +1358,7 @@ var AMENU=[
   ["Staff",[["/admin/staff?role=owner","Owners"],["/admin/staff?role=organizer","Organizers"],["/admin/staff?role=admin","Sub-admins"],["/admin/staff?role=editor","Editors"],["/admin/staff?role=moderator","Moderators"],["/admin/invitations","Invitations"]]],
   ["Reports & analytics",[["/admin/analytics","Analytics"],["/admin/activity","Activity report"]]],
   ["Announcements",[["/admin/announcements","Platform announcements"],["/admin/announcements?scope=org","Competition announcements"]]],
+  ["Pro League",[["/admin/proleague","Seasons & settings"]]],
   ["Payments",[["/admin/payments","Payments & payouts"],["/admin/sms","Text messages (SMS)"],["/admin/settings","PayNova and SMS settings"]]],
   ["System",[["/admin/settings","Platform settings"],["/admin/roles","Roles & permissions"],["/admin/security","Security"],["/admin/audit","Audit logs"],["/admin/integrations","API & integrations"],["/admin/config","Configuration"]]],
   ["Support",[["/admin/support","Support tickets"],["/admin/support?kind=complaint","User complaints"],["/admin/support?kind=organizer_request","Organizer requests"]]]];
@@ -1378,7 +1437,7 @@ function chart(s,labels,unit){var W=560,H=180,L=34,B=22,T=10,max=Math.max(1,Math
 
 // ---------- router ----------
 function adminView(sec,rest){var V={"":aOverview,analytics:aAnalytics,activity:aActivity,system:aSystem,search:aSearch,users:aUsers,organizations:aOrgs,competitions:aComps,teams:aTeams,players:aPlayers,
-  matches:aMatches,fixtures:aFixtures,results:aResults,groups:aGroups,tables:aTables,staff:aStaff,invitations:aInvites,audit:aAudit,announcements:aAnnouncements,settings:aSettings,payments:aPayments,sms:aSms,
+  matches:aMatches,fixtures:aFixtures,results:aResults,groups:aGroups,tables:aTables,staff:aStaff,invitations:aInvites,audit:aAudit,announcements:aAnnouncements,settings:aSettings,payments:aPayments,sms:aSms,proleague:aPro,
   roles:aRoles,security:aSecurity,integrations:aIntegrations,config:aConfig,support:aSupport}[sec];
   if(!V){A("Not found");ASEC.innerHTML='<div class="card empty"><p class="note">That admin page doesn\'t exist.</p></div>';return}V(rest)}
 var ULINK=function(u){return u?'<a href="/admin/users/'+u.id+'" data-nav>'+esc(u.username)+'</a>':"—"};

@@ -9,6 +9,7 @@ from competitions import public as pub
 from orgs import api as o
 from payments import api as pay
 from sms import api as sms
+from proleague import api as pro
 from superadmin import api as sa
 
 handler404 = "league.http.not_found"
@@ -78,6 +79,8 @@ urlpatterns = [
     path("api/orgs/<slug:slug>/invoices/remind", pay.org_invoice_remind),
     path("api/orgs/<slug:slug>/payouts", pay.org_payouts),
     path("api/orgs/<slug:slug>/sms", sms.org_sms),
+    path("api/orgs/<slug:slug>/proleague", pro.org_invitations),
+    path("api/orgs/<slug:slug>/proleague/<int:st_id>/<slug:action>", lambda r, slug, st_id, action: pro.org_answer(r, slug=slug, st_id=st_id, action=action) if action in ("accept", "decline", "check") else not_found(r)),
     path("api/orgs/<slug:slug>/sms/check", sms.org_sms_check),
     path("api/orgs/<slug:slug>/sms/send", sms.org_sms_send),
     path("api/orgs/<slug:slug>/sms/buy", sms.org_sms_buy),
@@ -157,6 +160,10 @@ urlpatterns = [
     path("api/admin/settings", sa.platform_settings),
     path("api/admin/settings/test-email", sa.test_email),
     path("api/admin/payments", pay.admin_payments),
+    path("api/admin/proleague", pro.admin_overview),
+    path("api/admin/proleague/season", pro.admin_new_season),
+    path("api/admin/proleague/season/<int:season_id>/<slug:action>", lambda r, season_id, action: pro.admin_season_act(r, season_id=season_id, action=action)),
+    path("api/admin/proleague/team/<int:st_id>/<slug:action>", lambda r, st_id, action: pro.admin_team_act(r, st_id=st_id, action=action)),
     path("api/admin/sms", sms.admin_sms),
     path("api/admin/sms/credit", sms.admin_sms_credit),
     path("api/admin/sms/test", sms.admin_sms_test),
