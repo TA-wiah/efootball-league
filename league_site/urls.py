@@ -10,6 +10,7 @@ from orgs import api as o
 from payments import api as pay
 from sms import api as sms
 from proleague import api as pro
+from competitions import reports as rep
 from superadmin import api as sa
 
 handler404 = "league.http.not_found"
@@ -66,6 +67,12 @@ urlpatterns = [
     path("api/auth/logout", o.logout_view),
     path("api/roles", o.roles),
     path("api/orgs", o.orgs),
+    path("api/report/mine", rep.my_matches),
+    path("api/report/<int:match_id>", rep.report),
+    path("api/report/<int:match_id>/checkin", rep.report_checkin),
+    path("api/report/<int:match_id>/proof", rep.report_proof),
+    path("api/report/<int:match_id>/proof/<int:proof_id>", rep.report_proof_delete),
+    path("media/proof/<int:proof_id>", rep.proof_file),
     path("api/org-slug", o.slug_check),
     path("api/orgs/<slug:slug>", o.org_detail),
     path("api/orgs/<slug:slug>/transfer", o.transfer),

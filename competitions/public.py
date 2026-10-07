@@ -218,7 +218,8 @@ def match(request, slug):
         desc = f"{title}, {when}. {c.name}, {mv['round']}."
     from proleague.logic import is_pro, whatsapp_link
     wa = whatsapp_link(m) if is_pro(c) and m.status != "finished" else ""
-    ctx = {"c": c, "m": mv, "events": events, "aggregate": aggregate, "whatsapp": wa, "table": table, "same_round": same_round, "referee": m.referee,
+    report = f"/app/report/{m.id}" if is_pro(c) and m.status in ("scheduled", "live", "postponed") else ""
+    ctx = {"c": c, "m": mv, "events": events, "aggregate": aggregate, "whatsapp": wa, "report": report, "decided": m.decided, "table": table, "same_round": same_round, "referee": m.referee,
            "title": title + (f" {m.home_score}–{m.away_score}" if mv["played"] else ""), "description": desc,
            "logo": logo("competition", c), "share_image": logo("competition", c) or org_logo(c.org), "notes": m.notes}
     return page(request, "match.html", ctx, index=c.visibility == "public" and not c.hidden, private=c.hidden)

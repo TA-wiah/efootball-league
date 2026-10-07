@@ -28,7 +28,8 @@ def _played():
             .filter(status="finished", home_score__isnull=False, away_score__isnull=False, home__isnull=False, away__isnull=False,
                     competition__visibility="public", competition__suspended=False, competition__org__status="active",
                     competition__org__in_rankings=True)
-            .exclude(Q(home__team__suspended=True) | Q(away__team__suspended=True)))
+            .exclude(Q(home__team__suspended=True) | Q(away__team__suspended=True))
+            .exclude(decided="walkover"))                     # a walkover isn't a played match: it doesn't move ratings
 
 
 def margin_factor(gd):

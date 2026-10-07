@@ -64,6 +64,8 @@ def notify_invited(season, rows, base):
 # ---------- super admin ----------
 @admin("GET")
 def admin_overview(request, user, ip):
+    from competitions.reports import settle_overdue
+    settle_overdue()
     cfg = logic.config()
     org = None
     from orgs.models import Organization
