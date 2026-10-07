@@ -173,6 +173,12 @@ label.toggle small{display:block;color:var(--soft);font-weight:500}label.toggle 
 .bracket{display:flex;gap:14px;overflow-x:auto;padding-bottom:6px}.bracket .rnd{flex:none;width:240px;display:flex;flex-direction:column;gap:8px}.bracket h3{margin:0 0 2px;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--soft)}
 .bm{display:block;background:var(--card2);border:1px solid var(--line);border-left:3px solid var(--btn);border-radius:10px;padding:8px 10px;color:var(--tx);text-decoration:none;font-size:14px}.bm:hover{border-color:var(--line2)}
 .bm div{display:flex;justify-content:space-between;gap:8px}.bm b{font-variant-numeric:tabular-nums}.bm .w{font-weight:800}.bm small{color:var(--soft)}
+.mbox.studio{max-width:780px}.stgrid{display:grid;grid-template-columns:260px 1fr;gap:18px;align-items:start;margin-top:10px}@media(max-width:640px){.stgrid{grid-template-columns:1fr}}
+.stprev canvas{width:100%;max-width:260px;aspect-ratio:1;display:block;margin:0 auto;background:repeating-conic-gradient(rgba(255,255,255,.05) 0 25%,transparent 0 50%) 0 0/24px 24px;border-radius:12px}
+.stprev .note{font-size:12px}.sw [data-c]{width:30px;height:30px}
+.flist{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;max-height:320px;overflow-y:auto;margin-top:8px;padding-right:4px}
+.flist button{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card2);color:var(--tx);font:inherit;font-size:13px;cursor:pointer;text-align:left}
+.flist button.on{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}.flist img{width:26px;height:26px;border-radius:5px;flex:none}
 .pgal{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}.pgal figure{margin:0;background:var(--card2);border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .pgal img{display:block;width:100%;height:150px;object-fit:cover;background:#000}.pgal figcaption{padding:8px 10px;font-size:13px}.pgal figcaption small{display:block;color:var(--soft)}.pgal .btn{margin-top:6px}
 .nlist a{display:flex;gap:12px;align-items:flex-start;padding:12px 4px;border-top:1px solid var(--line);color:var(--tx);text-decoration:none}.nlist a:first-child{border-top:0}.nlist a:hover{background:rgba(255,255,255,.03)}.nlist .ic{width:20px;height:20px;color:var(--gold);margin-top:2px}.nlist small{display:block;color:var(--soft)}
@@ -830,12 +836,13 @@ function teamPage(id){api(api0("/teams/"+id)).then(function(r){if(!r.ok)return f
     teamPeople(t)+'<form class="card" id="tef" novalidate><div class="gh">Team details</div><div class="row"><label for="ten">Name<input id="ten" maxlength="80" value="'+esc(t.name)+'"'+dis+'></label><label for="tes">Short name<input id="tes" maxlength="12" value="'+esc(t.shortName||"")+'"'+dis+'></label></div>'+
       '<div class="row"><label for="tec">City<input id="tec" maxlength="60" value="'+esc(t.city)+'"'+dis+'></label><label for="tev">Home ground<input id="tev" maxlength="100" value="'+esc(t.venue)+'"'+dis+'></label></div>'+
       '<div class="row"><label for="tef2">Founded<input id="tef2" type="number" min="1800" max="2100" value="'+esc(t.founded||"")+'"'+dis+'></label><label for="tek">Colours<input id="tek" maxlength="40" value="'+esc(t.colors)+'"'+dis+'></label></div>'+
-      '<label for="ted">About<textarea id="ted" maxlength="2000"'+dis+'>'+esc(t.description)+'</textarea></label>'+(can?'<label for="tlogo">Logo (PNG, JPG, GIF or WebP; big photos are made smaller for you)<input id="tlogo" type="file" accept="image/png,image/jpeg,image/gif,image/webp"></label><div class="actions"><button class="btn" id="tsave">Save team</button>'+(full?'<button type="button" class="btn bad" id="tdel">Delete team</button>':'')+'</div>':'')+'</form>';
+      '<label for="ted">About<textarea id="ted" maxlength="2000"'+dis+'>'+esc(t.description)+'</textarea></label>'+(can?'<label for="tlogo">Logo (PNG, JPG, GIF or WebP; big photos are made smaller for you)<input id="tlogo" type="file" accept="image/png,image/jpeg,image/gif,image/webp"></label><button type="button" class="btn g sm" id="tstudio" style="margin-top:8px">'+ic("palette")+' Design a crest or use a country flag</button><div class="actions"><button class="btn" id="tsave">Save team</button>'+(full?'<button type="button" class="btn bad" id="tdel">Delete team</button>':'')+'</div>':'')+'</form>';
   var reload=function(){teamPage(id)};
   bindTeamPeople(t,id);
   if(!can)return;
   $("tef").onsubmit=function(e){e.preventDefault();api(api0("/teams/"+id),"PATCH",{name:val("ten"),shortName:val("tes"),city:val("tec"),venue:val("tev"),founded:intOrNull(val("tef2")),colors:val("tek"),description:val("ted")}).then(function(r){if(!r.ok){toast(r.data.error,true);return}toast("Team saved");reload()})};
   logoPicker("tlogo",api0("/teams/"+id+"/logo"),reload);
+  $("tstudio").onclick=function(){logoStudio(t.name,function(img){api(api0("/teams/"+id+"/logo"),"POST",{image:img}).then(function(r){if(!r.ok){toast(r.data.error,true);return}toast("Logo saved");reload()})})};
   if($("tdel"))$("tdel").onclick=function(){if(!armed($("tdel"),"Sure? Delete team"))return;api(api0("/teams/"+id),"DELETE",{}).then(function(r){if(!r.ok){toast(r.data.error,true);return}toast("Team deleted");go(app0("/teams"))})};
   $("pf").onsubmit=function(e){e.preventDefault();api(api0("/teams/"+id+"/players"),"POST",{name:val("npn"),number:intOrNull(val("npno")),position:val("npp")}).then(function(r){if(!r.ok){toast(r.data.error,true);return}reload()})};
   var patch=function(pid,d){api(api0("/players/"+pid),"PATCH",d).then(function(r){toast(r.ok?"Saved":r.data.error,!r.ok)})};
@@ -968,7 +975,7 @@ function brandingSec(){var o=ORG.org,color=safeColor(o.brandColor);
   count();$("btag").oninput=count;$("bdesc").oninput=count;
   $("bdf").onsubmit=function(e){e.preventDefault();var b=$("bdsave");busy(b,true,"Saving…");
     api(api0(""),"PATCH",{description:val("bdesc"),website:{tagline:val("btag")}}).then(function(r){busy(b,false);if(!r.ok){toast(r.data.error||"Couldn't save",true);return}toast("Description saved");ORG.org=r.data.org;o=ORG.org;loadMe()})};
-  var draw=function(){$("bwrap").innerHTML='<div class="agrid"><div class="card"><div class="gh">Logo</div><div class="ch">'+avatar(o,80)+'<div><label for="blogo" style="margin:0">Upload a logo (PNG, JPG, GIF or WebP; big photos are made smaller for you)<input id="blogo" type="file" accept="image/png,image/jpeg,image/gif,image/webp"></label>'+
+  var draw=function(){$("bwrap").innerHTML='<div class="agrid"><div class="card"><div class="gh">Logo</div><div class="ch">'+avatar(o,80)+'<div><label for="blogo" style="margin:0">Upload a logo (PNG, JPG, GIF or WebP; big photos are made smaller for you)<input id="blogo" type="file" accept="image/png,image/jpeg,image/gif,image/webp"></label><button type="button" class="btn g sm" id="bstudio" style="margin-top:8px">'+ic("palette")+' Design a crest</button>'+
       (o.logo?'<button type="button" class="btn g sm" id="blx" style="margin-top:8px">Remove logo</button>':'')+'</div></div></div>'+
     '<div class="card"><div class="gh">Brand colour</div><div class="sw" role="radiogroup" aria-label="Brand colour">'+BRAND_SW.map(function(c){return'<button type="button" role="radio" aria-checked="'+(color===c)+'" aria-label="'+c+'" class="'+(color===c?"on":"")+'" data-c="'+c+'" style="background:'+c+'"></button>'}).join("")+
       '<label style="margin:0 0 0 6px;display:flex;align-items:center;gap:6px">Custom <input id="bcol" type="color" value="'+color+'"></label></div>'+
@@ -978,6 +985,7 @@ function brandingSec(){var o=ORG.org,color=safeColor(o.brandColor);
     $("bcol").onchange=function(){color=this.value.toLowerCase();draw()};
     $("bsave").onclick=function(){busy(this,true,"Saving…");api(api0(""),"PATCH",{brandColor:color}).then(function(r){if(!r.ok){toast(r.data.error||"Couldn't save",true);draw();return}toast("Brand colour saved");reloadOrg("branding")})};
     logoPicker("blogo",api0("/logo"),function(){reloadOrg("branding")});
+    $("bstudio").onclick=function(){logoStudio(o.name,function(img){api(api0("/logo"),"POST",{image:img}).then(function(r){if(!r.ok){toast(r.data.error,true);return}toast("Logo saved");reloadOrg("branding")})})};
     if($("blx"))$("blx").onclick=function(){confirmBox("Remove the logo?","Your initial will be shown instead.",{ok:"Remove",danger:true}).then(function(ok){if(ok)api(api0("/logo"),"DELETE",{}).then(function(r){if(!r.ok){toast(r.data.error,true);return}toast("Logo removed");reloadOrg("branding")})})}};
   draw()}
 function settingsSec(){var o=ORG.org,slug=o.slug,owner=ORG.me.role==="owner";
@@ -1385,6 +1393,70 @@ function proofsCard(id){var box=document.createElement("div");box.id="proofbox";
   api("/api/report/"+id).then(function(r){if(!r.ok)return;var R=r.data,M=R.match;if(!R.proofs.length&&!R.checkin.home&&!R.checkin.away&&!R.deadline){return}
     box.innerHTML='<div class="card"><div class="gh">From the teams</div><p style="margin-top:0">'+checkins(R,M)+' '+decidedTag(M.decided)+'</p>'+(R.deadline?'<p class="note">Deadline for a result: '+esc(when(R.deadline))+'.</p>':'')+proofGallery(R,M)+'</div>';
     box.querySelectorAll("[data-pdel]").forEach(function(b){b.onclick=function(){api("/api/report/"+id+"/proof/"+b.dataset.pdel,"DELETE",{}).then(function(r){toast(r.ok?"Deleted":r.data.error,!r.ok);box.remove();proofsCard(id)})}})})}
+
+// ---------- logo studio: an original crest, or a country flag for national teams ----------
+// Everything here is drawn by us (crests) or public-domain flags (MIT-licensed flag-icons files), so it's free to use.
+// The result is a PNG uploaded like any logo.
+var CREST={shapes:{shield:"Shield",round:"Round",hexagon:"Hexagon",diamond:"Diamond",square:"Square"},
+  patterns:{plain:"Plain",stripes:"Stripes",hoops:"Hoops",halves:"Halves",sash:"Sash",chevron:"Chevron",quarters:"Quarters"},
+  icons:{ball:"Ball",star:"Star",crown:"Crown",bolt:"Lightning",flame:"Flame",none:"No icon"},
+  colors:["#0b1f4d","#c8102e","#f5c400","#13904a","#2563eb","#ffffff","#111111","#7c3aed","#ea580c","#0ea5e9","#db2777","#8b5e34"]};
+var FLAGS=null;
+function crestPath(x,shape,s){x.beginPath();var m=s*.06,w=s-2*m;
+  if(shape==="round"){x.arc(s/2,s/2,w/2,0,Math.PI*2)}
+  else if(shape==="hexagon"){for(var i=0;i<6;i++){var a=Math.PI/3*i-Math.PI/2;x[i?"lineTo":"moveTo"](s/2+w/2*Math.cos(a),s/2+w/2*Math.sin(a))}x.closePath()}
+  else if(shape==="diamond"){x.moveTo(s/2,m);x.lineTo(s-m,s/2);x.lineTo(s/2,s-m);x.lineTo(m,s/2);x.closePath()}
+  else if(shape==="square"){var r=s*.12;x.moveTo(m+r,m);x.arcTo(s-m,m,s-m,s-m,r);x.arcTo(s-m,s-m,m,s-m,r);x.arcTo(m,s-m,m,m,r);x.arcTo(m,m,s-m,m,r);x.closePath()}
+  else{x.moveTo(m,m);x.lineTo(s-m,m);x.lineTo(s-m,s*.5);x.bezierCurveTo(s-m,s*.78,s*.68,s*.9,s/2,s-m);x.bezierCurveTo(s*.32,s*.9,m,s*.78,m,s*.5);x.closePath()}}
+function crestIcon(x,icon,cx,cy,r,col){x.save();x.fillStyle=col;x.strokeStyle=col;x.lineJoin="round";x.beginPath();
+  if(icon==="star"){for(var i=0;i<10;i++){var a=Math.PI/5*i-Math.PI/2,rr=i%2?r*.45:r;x[i?"lineTo":"moveTo"](cx+rr*Math.cos(a),cy+rr*Math.sin(a))}x.closePath();x.fill()}
+  else if(icon==="crown"){x.moveTo(cx-r,cy+r*.6);x.lineTo(cx-r,cy-r*.4);x.lineTo(cx-r*.5,cy+r*.05);x.lineTo(cx,cy-r*.75);x.lineTo(cx+r*.5,cy+r*.05);x.lineTo(cx+r,cy-r*.4);x.lineTo(cx+r,cy+r*.6);x.closePath();x.fill()}
+  else if(icon==="bolt"){x.moveTo(cx+r*.15,cy-r);x.lineTo(cx-r*.6,cy+r*.12);x.lineTo(cx-r*.05,cy+r*.12);x.lineTo(cx-r*.2,cy+r);x.lineTo(cx+r*.6,cy-r*.15);x.lineTo(cx+r*.05,cy-r*.15);x.closePath();x.fill()}
+  else if(icon==="flame"){x.moveTo(cx,cy-r);x.bezierCurveTo(cx+r*.9,cy-r*.2,cx+r*.8,cy+r,cx,cy+r);x.bezierCurveTo(cx-r*.8,cy+r,cx-r*.9,cy-r*.1,cx-r*.25,cy-r*.45);x.bezierCurveTo(cx-r*.2,cy-r*.05,cx,cy,cx,cy-r);x.fill()}
+  else if(icon==="ball"){x.arc(cx,cy,r,0,Math.PI*2);x.lineWidth=r*.12;x.stroke();x.beginPath();for(var j=0;j<5;j++){var b=Math.PI*2/5*j-Math.PI/2;x[j?"lineTo":"moveTo"](cx+r*.42*Math.cos(b),cy+r*.42*Math.sin(b))}x.closePath();x.fill();
+    for(var k=0;k<5;k++){var c=Math.PI*2/5*k-Math.PI/2;x.beginPath();x.moveTo(cx+r*.42*Math.cos(c),cy+r*.42*Math.sin(c));x.lineTo(cx+r*Math.cos(c),cy+r*Math.sin(c));x.stroke()}}
+  x.restore()}
+function drawCrest(cv,o){var s=cv.width,x=cv.getContext("2d");x.clearRect(0,0,s,s);x.save();crestPath(x,o.shape,s);x.clip();x.fillStyle=o.c1;x.fillRect(0,0,s,s);x.fillStyle=o.c2;
+  var p=o.pattern,n;if(p==="stripes"){n=s/7;for(var i=1;i<7;i+=2)x.fillRect(i*n,0,n,s)}else if(p==="hoops"){n=s/7;for(var j=1;j<7;j+=2)x.fillRect(0,j*n,s,n)}
+  else if(p==="halves")x.fillRect(s/2,0,s/2,s);else if(p==="quarters"){x.fillRect(s/2,0,s/2,s/2);x.fillRect(0,s/2,s/2,s/2)}
+  else if(p==="sash"){x.beginPath();x.moveTo(0,s*.18);x.lineTo(s*.18,0);x.lineTo(s,s*.82);x.lineTo(s*.82,s);x.closePath();x.fill()}
+  else if(p==="chevron"){x.beginPath();x.moveTo(0,s*.3);x.lineTo(s/2,s*.62);x.lineTo(s,s*.3);x.lineTo(s,s*.48);x.lineTo(s/2,s*.8);x.lineTo(0,s*.48);x.closePath();x.fill()}
+  x.restore();x.save();crestPath(x,o.shape,s);x.lineWidth=s*.045;x.strokeStyle=o.c3;x.stroke();x.restore();
+  var t=(o.text||"").trim().toUpperCase().slice(0,4),hasIcon=o.icon!=="none";
+  if(hasIcon)crestIcon(x,o.icon,s/2,t?s*.4:s*.5,s*(t?.17:.24),o.c3);
+  if(t){x.save();x.fillStyle=o.c3;x.textAlign="center";x.textBaseline="middle";var fs=s*(t.length>3?.17:.21);x.font="800 "+fs+"px 'Barlow Condensed','Arial Narrow',sans-serif";
+    x.shadowColor="rgba(0,0,0,.35)";x.shadowBlur=s*.02;x.fillText(t,s/2,hasIcon?s*.7:s*.52);x.restore()}}
+function drawFlag(cv,code,round,done){var img=new Image();img.onload=function(){var s=cv.width,x=cv.getContext("2d");x.clearRect(0,0,s,s);x.save();x.beginPath();
+    if(round)x.arc(s/2,s/2,s/2-s*.03,0,Math.PI*2);else{var r=s*.1;x.moveTo(r,0);x.arcTo(s,0,s,s,r);x.arcTo(s,s,0,s,r);x.arcTo(0,s,0,0,r);x.arcTo(0,0,s,0,r)}x.clip();x.drawImage(img,0,0,s,s);x.restore();
+    x.beginPath();if(round)x.arc(s/2,s/2,s/2-s*.03,0,Math.PI*2);else x.rect(s*.01,s*.01,s*.98,s*.98);x.lineWidth=s*.02;x.strokeStyle="rgba(0,0,0,.25)";x.stroke();if(done)done()};
+  img.onerror=function(){toast("That flag couldn't be loaded",true)};img.src="/flags/"+code+".svg"}
+function initials(n){var w=String(n||"").replace(/[^A-Za-z0-9 ]/g," ").trim().split(/\s+/).filter(Boolean);return(w.length>1?w.slice(0,3).map(function(x){return x[0]}).join(""):(w[0]||"FC").slice(0,3)).toUpperCase()}
+function logoStudio(name,onSave){var o={shape:"shield",pattern:"stripes",icon:"ball",c1:"#0b1f4d",c2:"#2563eb",c3:"#ffffff",text:initials(name)},mode="crest",flag=null,round=false;
+  var d=document.createElement("div");d.className="modal";
+  var sw=function(id,val){return'<div class="sw" data-sw="'+id+'">'+CREST.colors.map(function(c){return'<button type="button" aria-label="'+c+'" class="'+(c===val?"on":"")+'" data-c="'+c+'" style="background:'+c+'"></button>'}).join("")+'</div>'};
+  d.innerHTML='<div class="mbox studio" role="dialog" aria-modal="true" aria-labelledby="stt"><h2 id="stt">Team logo</h2><div class="chips"><button type="button" class="chip on" data-mode="crest">Design a crest</button><button type="button" class="chip" data-mode="flag">Country flag (national teams)</button></div>'+
+    '<div class="stgrid"><div class="stprev"><canvas id="stc" width="512" height="512"></canvas><p class="note">Original designs and public-domain flags: free to use. Real club badges belong to the clubs, so they aren’t offered here.</p></div><div id="stctl"></div></div>'+
+    '<div class="actions"><button type="button" class="btn" id="stok">Use this logo</button><button type="button" class="btn g" id="stno">Cancel</button></div></div>';
+  document.body.appendChild(d);var cv=$("stc");
+  var close=function(){document.removeEventListener("keydown",esc_);d.remove()},esc_=function(e){if(e.key==="Escape")close()};document.addEventListener("keydown",esc_);
+  var crestCtl=function(){$("stctl").innerHTML='<label for="sttx">Letters (up to 4)<input id="sttx" maxlength="4" value="'+esc(o.text)+'"></label>'+
+      '<div class="row"><label for="stsh">Shape<select id="stsh">'+opts(CREST.shapes,o.shape)+'</select></label><label for="stpt">Pattern<select id="stpt">'+opts(CREST.patterns,o.pattern)+'</select></label></div>'+
+      '<label for="stic">Icon<select id="stic">'+opts(CREST.icons,o.icon)+'</select></label>'+
+      '<div class="note" style="margin-top:8px">Main colour</div>'+sw("c1",o.c1)+'<div class="note" style="margin-top:8px">Second colour</div>'+sw("c2",o.c2)+'<div class="note" style="margin-top:8px">Letters and border</div>'+sw("c3",o.c3);
+    $("sttx").oninput=function(){o.text=this.value;drawCrest(cv,o)};["stsh","stpt","stic"].forEach(function(id){$(id).onchange=function(){o[{stsh:"shape",stpt:"pattern",stic:"icon"}[id]]=this.value;drawCrest(cv,o)}});
+    d.querySelectorAll("[data-sw] [data-c]").forEach(function(b){b.onclick=function(){var k=b.parentNode.dataset.sw;o[k]=b.dataset.c;b.parentNode.querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});drawCrest(cv,o)}});
+    drawCrest(cv,o)};
+  var flagCtl=function(){$("stctl").innerHTML='<input id="stq" type="search" placeholder="Search a country" aria-label="Search a country"><label class="toggle" style="padding:8px 0"><span>Round</span><input type="checkbox" id="strd"'+(round?" checked":"")+'></label><div class="flist" id="stfl">'+LOADING+'</div>';
+    var list=function(){var q=val("stq").trim().toLowerCase(),rows=FLAGS.filter(function(f){return!q||f.name.toLowerCase().indexOf(q)>=0});
+      $("stfl").innerHTML=rows.slice(0,120).map(function(f){return'<button type="button" class="'+(f.code===flag?"on":"")+'" data-flag="'+esc(f.code)+'"><img src="/flags/'+esc(f.code)+'.svg" alt="" loading="lazy"><span>'+esc(f.name)+'</span></button>'}).join("")||'<p class="note">No country found.</p>';
+      $("stfl").querySelectorAll("[data-flag]").forEach(function(b){b.onclick=function(){flag=b.dataset.flag;$("stfl").querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});drawFlag(cv,flag,round)}})};
+    $("strd").onchange=function(){round=this.checked;if(flag)drawFlag(cv,flag,round)};$("stq").oninput=list;
+    var ready=function(){list();if(flag)drawFlag(cv,flag,round);else{cv.getContext("2d").clearRect(0,0,512,512)}};
+    if(FLAGS)ready();else api("/flags/countries.json").then(function(r){FLAGS=r.ok?r.data:[];ready()})};
+  d.querySelectorAll("[data-mode]").forEach(function(b){b.onclick=function(){mode=b.dataset.mode;d.querySelectorAll("[data-mode]").forEach(function(x){x.classList.toggle("on",x===b)});mode==="crest"?crestCtl():flagCtl()}});
+  $("stno").onclick=close;d.onclick=function(e){if(e.target===d)close()};
+  $("stok").onclick=function(){if(mode==="flag"&&!flag){toast("Choose a country",true);return}var out=function(){onSave(cv.toDataURL("image/png"));close()};if(mode==="flag")drawFlag(cv,flag,round,out);else out()};
+  (document.fonts&&document.fonts.load?document.fonts.load("800 40px 'Barlow Condensed'"):Promise.resolve()).then(crestCtl,crestCtl)}
 
 // ---------- accepting an invitation ----------
 function inviteView(token){document.title="Invitation · Competition Manager";main('<div class="card note auth">Checking your invitation…</div>');

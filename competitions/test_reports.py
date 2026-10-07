@@ -90,3 +90,27 @@ class ReportsTest(Helpers, TestCase):
         self.assertEqual(Match.objects.get(id=self.m.id).status, "scheduled", "not past the deadline")
         self.root.call("patch", "/api/admin/settings", {"section": "proleague", "changes": {"walkovers": False}})
         self.assertEqual(self.overdue().status, "scheduled", "walkovers switched off")
+
+    def test_walkovers_are_settled_when_anyone_opens_the_site(self):
+        Match.objects.filter(id=self.m.id).update(kickoff=timezone.now() - timedelta(hours=25), home_checkin=timezone.now())
+        reports._last["t"] = 0
+        Client().get("/api/auth/me")                     # a visitor, not even logged in
+        m = Match.objects.get(id=self.m.id)
+        self.assertEqual((m.status, m.decided, m.home_score, m.away_score), ("finished", "walkover", 3, 0))
+
+
+class FlagsTest(TestCase):
+    def test_flags_are_served_safely(self):
+        r = Client().get("/flags/gh.svg")
+        self.assertEqual((r.status_code, r["Content-Type"]), (200, "image/svg+xml"))
+        self.assertIn("sandbox", r["Content-Security-Policy"])
+        self.assertEqual(Client().get("/flags/gb-eng.svg").status_code, 200, "England")
+        countries = Client().get("/flags/countries.json").json()
+        self.assertIn({"code": "gh", "name": "Ghana"}, countries)
+        self.assertGreater(len(countries), 250)
+        for bad in ("../settings.py", "GH.svg", "gh.png", "x.js", "zz.svg"):
+            self.assertEqual(Client().get(f"/flags/{bad}").status_code, 404, bad)
+        import pathlib
+        import re
+        for f in pathlib.Path("public/flags").glob("*.svg"):
+            self.assertIsNone(re.search(rb"<script|\son\w+\s*=|foreignObject|javascript:", f.read_bytes()), f.name)

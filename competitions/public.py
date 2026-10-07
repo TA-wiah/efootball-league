@@ -44,6 +44,8 @@ def page(request, template, ctx, *, index=True, private=False, banner=None):
     nonce = secrets.token_urlsafe(16)
     base = base_url(request)
     from .rankings import settings_ as ranking_settings
+    from .reports import settle_overdue
+    settle_overdue()
     ctx.setdefault("rankings_on", ranking_settings()["enabled"])
     ctx.update(nonce=nonce, base=base, url=base + request.path, index=index and not private, private_preview=private if banner is None else banner,
                app_url="/app")

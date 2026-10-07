@@ -217,6 +217,8 @@ def join(user, inv):
 # ---------- accounts ----------
 @endpoint("GET")
 def me(request, user, ip):
+    from competitions.reports import settle_overdue
+    settle_overdue()                                  # quick when there's nothing due; runs at most every 5 minutes
     orgs = []
     if user:
         for m in Membership.objects.select_related("org").filter(user=user).order_by("org__name"):
