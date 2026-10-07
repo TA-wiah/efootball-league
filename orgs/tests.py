@@ -375,6 +375,46 @@ class PortalTest(Helpers, TestCase):
         # an admin can invite into any team, including team managers
         self.assertEqual(boss.call("post", f"/api/orgs/{slug}/teams/{tigers}/invitations", {"role": "team_manager"}).status_code, 200)
 
+    def test_who_can_invite_which_roles(self):
+        boss = self.signup("boss")
+        slug = self.new_org(boss)
+        expect = {"admin": ["organizer", "team_manager", "coach", "scorekeeper", "editor", "moderator", "player", "viewer"],
+                  "organizer": ["team_manager", "coach", "scorekeeper", "editor", "moderator", "player", "viewer"]}
+        for role in ["admin", "organizer", "team_manager", "coach", "scorekeeper", "editor", "moderator", "player", "viewer"]:
+            who = self.signup("u_" + role)
+            self.invite_and_join(boss, slug, who, role)
+            self.assertEqual(Membership.objects.get(org__slug=slug, user__username="u_" + role).role, role, "joins with the invited role")
+            allowed = expect.get(role, [])
+            for target in ["owner", "admin", "organizer", "team_manager", "player", "viewer"]:
+                r = who.call("post", f"/api/orgs/{slug}/invitations", {"role": target})
+                self.assertEqual(r.status_code == 200, target in allowed, (role, target, r.status_code))
+
+    def test_invite_into_a_team_from_members_page_and_existing_members(self):
+        boss, ama = self.signup("boss"), self.signup("ama7")
+        slug = self.new_org(boss)
+        lions = boss.call("post", f"/api/orgs/{slug}/teams", {"name": "Lions"}).json()["team"]["id"]
+        tigers = boss.call("post", f"/api/orgs/{slug}/teams", {"name": "Tigers"}).json()["team"]["id"]
+        url = f"/api/orgs/{slug}/invitations"
+        self.assertEqual(boss.call("post", url, {"role": "scorekeeper", "teamId": lions}).status_code, 400, "not a team role")
+        self.assertEqual(boss.call("post", url, {"role": "player", "teamId": 99999}).status_code, 404)
+        link = boss.call("post", url, {"role": "team_manager", "teamId": lions}).json()["link"]
+        token = link.rsplit("/", 1)[1]
+        self.assertEqual(ama.get(f"/api/invitations/{token}").json()["teams"], ["Lions"])
+        self.assertEqual(ama.call("post", f"/api/invitations/{token}/accept").status_code, 200)
+        m = Membership.objects.get(org__slug=slug, user__username="ama7")
+        self.assertEqual((m.role, list(m.teams.values_list("id", flat=True))), ("team_manager", [lions]))
+        # already a member: an org-wide invitation is refused, a team invitation adds the team (role never goes down)
+        self.assertEqual(boss.call("post", url, {"role": "player", "email": "ama7@example.com"}).status_code, 409)
+        r = boss.call("post", f"/api/orgs/{slug}/teams/{tigers}/invitations", {"role": "player", "email": "ama7@example.com"})
+        self.assertEqual(r.status_code, 200, r.json())
+        mine = ama.get("/api/me/invitations").json()["invitations"]
+        self.assertEqual([i["teams"] for i in mine], [["Tigers"]], "shows up for an existing member")
+        self.assertEqual(ama.call("post", f"/api/me/invitations/{mine[0]['id']}/accept").status_code, 200)
+        m.refresh_from_db()
+        self.assertEqual((m.role, sorted(m.teams.values_list("id", flat=True))), ("team_manager", sorted([lions, tigers])))
+        again = boss.call("post", f"/api/orgs/{slug}/teams/{tigers}/invitations", {"role": "player"}).json()["link"].rsplit("/", 1)[1]
+        self.assertEqual(ama.call("post", f"/api/invitations/{again}/accept").status_code, 409, "already in that team")
+
     def test_custom_website_pages(self):
         boss, viewer = self.signup("boss"), self.signup("viewer1")
         slug = self.new_org(boss)
