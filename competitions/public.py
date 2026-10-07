@@ -43,6 +43,8 @@ def page(request, template, ctx, *, index=True, private=False, banner=None):
     """`private`: never cached or indexed. `banner`: show the members-only preview notice (defaults to `private`)."""
     nonce = secrets.token_urlsafe(16)
     base = base_url(request)
+    from .rankings import settings_ as ranking_settings
+    ctx.setdefault("rankings_on", ranking_settings()["enabled"])
     ctx.update(nonce=nonce, base=base, url=base + request.path, index=index and not private, private_preview=private if banner is None else banner,
                app_url="/app")
     resp = render(request, f"public/{template}", ctx)
@@ -240,7 +242,8 @@ def team(request, slug):
     players = list(t.players.filter(active=True).order_by("number", "name"))
     order = ["GK", "DF", "MF", "FW", ""]
     squad = [(POS_L[p] if p else "Squad", [pl for pl in players if pl.position == p]) for p in order]
-    ctx = {"t": team_view(t, {t.id}), "team": t, "competitions": public_comps if not member else
+    from .rankings import team_rank
+    ctx = {"t": team_view(t, {t.id}), "team": t, "rank": team_rank(t.id), "competitions": public_comps if not member else
            list(Competition.objects.filter(id__in=comp_ids)), "upcoming": [match_view(x, linkable) for x in ms if x.status in ("scheduled", "live", "postponed")][:8],
            "recent": [match_view(x, linkable) for x in reversed(finished)][:8], "form": form, "squad": [s for s in squad if s[1]],
            "title": t.name, "description": t.description[:180] or f"{t.name}: fixtures, results and squad.", "logo": logo("team", t)}
@@ -402,3 +405,33 @@ def sitemap(request):
     body = "".join(f"<url><loc>{escape(base + u)}</loc>{f'<lastmod>{d.date().isoformat()}</lastmod>' if d else ''}</url>" for u, d in urls)
     return HttpResponse(f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{body}</urlset>',
                         content_type="application/xml")
+
+
+
+def rankings_page(request, tab=""):
+    """/rankings (teams) and /rankings/players, across every organization. Super admins can preview while it's off."""
+    from .rankings import compute, settings_
+    cfg = settings_()
+    user = session_user(request)
+    if not cfg["enabled"] and not (user and user.is_superuser):
+        raise Http404
+    if tab not in ("", "players"):
+        raise Http404
+    data = compute()
+    country = (request.GET.get("country") or "").strip()[:60]
+    teams = [r for r in data["teams"] if r["played"] >= cfg["min_matches"]]
+    countries = sorted({r["team"].org.country for r in teams if r["team"].org.country})
+    rows = []
+    for pos, r in enumerate(teams, 1):
+        if country and r["team"].org.country.lower() != country.lower():
+            continue
+        rows.append({**r, "position": pos, "rating": round(r["rating"]), "t": team_view(r["team"], public_team_ids([r["team"].id])),
+                     "org": r["team"].org, "gd": r["gf"] - r["ga"]})
+    players = []
+    for i, p in enumerate(data["players"][:100], 1):
+        team = p["team"]
+        players.append({**p, "position": i, "t": team_view(team, set()) if team else None, "org": team.org if team else None})
+    ctx = {"tab": tab, "rows": rows[:200], "players": players, "countries": countries, "country": country, "min_matches": cfg["min_matches"],
+           "matches": data["matches"], "preview": not cfg["enabled"], "nav": "rankings",
+           "title": "Player rankings" if tab else "Team rankings", "description": "The best teams and players across every league and tournament on the platform."}
+    return page(request, "rankings.html", ctx, index=cfg["enabled"], private=not cfg["enabled"], banner=False)

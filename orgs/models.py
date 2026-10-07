@@ -30,6 +30,7 @@ class Organization(models.Model):
     logo_version = models.PositiveIntegerField(default=0)
     website = models.JSONField(default=dict, blank=True)              # public website settings, see WEBSITE_DEFAULTS
     permissions = models.JSONField(default=dict, blank=True)          # owner's overrides: {permission: [roles]}
+    in_rankings = models.BooleanField(default=True)                   # include our teams in the platform rankings
 
     def __str__(self):
         return self.name
