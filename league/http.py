@@ -183,8 +183,9 @@ def flag_file(request, name):
                                  "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox"})
 
 
-def serve_page(request, path):
-    """Serve an HTML file with a fresh CSP nonce on its inline scripts."""
+def serve_page(request, path, head=None):
+    """Serve an HTML file with a fresh CSP nonce on its inline scripts. `head`: replaces its <title> and description
+    (the share tags for this address)."""
     if request.method != "GET":
         return not_found(request)
     if path not in _pages or settings.DEBUG:
@@ -192,7 +193,10 @@ def serve_page(request, path):
     nonce = secrets.token_urlsafe(16)
     csp = (f"default-src 'self'; script-src 'nonce-{nonce}'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; "
            "connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
-    return HttpResponse(_pages[path].replace("<script>", f'<script nonce="{nonce}">'), content_type="text/html; charset=utf-8",
+    html = _pages[path]
+    if head:
+        html = re.sub(r'<title>.*?</title>\s*<meta name="description"[^>]*>', lambda _: head, html, count=1, flags=re.S)
+    return HttpResponse(html.replace("<script>", f'<script nonce="{nonce}">'), content_type="text/html; charset=utf-8",
                         headers={"Content-Security-Policy": csp, "Cache-Control": "no-store"})
 
 

@@ -1,17 +1,17 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>{{ title }} · Competition Manager</title>
+<title>{% if title %}{{ title }} · {% endif %}{{ site_name }}</title>
 <meta name="description" content="{{ description }}">
 {% if not index %}<meta name="robots" content="noindex">{% endif %}
 <meta name="theme-color" content="#07132b">
 <link rel="canonical" href="{{ url }}">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="Competition Manager">
+<meta property="og:site_name" content="{{ site_name }}">
 <meta property="og:title" content="{{ title }}">
 <meta property="og:description" content="{{ description }}">
 <meta property="og:url" content="{{ url }}">
-{% if share_image or logo %}<meta property="og:image" content="{{ base }}{% firstof share_image logo %}"><meta property="og:image:alt" content="{{ title }}"><meta name="twitter:image" content="{{ base }}{% firstof share_image logo %}">{% endif %}
+{% if share %}<meta property="og:image" content="{{ base }}{{ share }}"><meta property="og:image:alt" content="{{ title|default:site_name }}"><meta name="twitter:image" content="{{ base }}{{ share }}">{% endif %}
 <meta name="twitter:title" content="{{ title }}"><meta name="twitter:description" content="{{ description }}">
 <meta name="twitter:card" content="summary">
 <link rel="stylesheet" href="/fonts/fonts.css">
@@ -218,7 +218,7 @@ th{font-family:var(--cond);font-size:13px}
 .filters input:focus,.filters select:focus{border-color:var(--gold)}@media(max-width:720px){.brand .bt{display:none}}
 </style></head><body>
 <header class="top"><div class="top-in">
-  <a class="brand" href="/" aria-label="Competition Manager home"><span class="mark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 13v3M8 20h8M9.5 20l.5-4h4l.5 4"/></svg></span><span class="bt">Competition Manager</span></a>
+  <a class="brand" href="/" aria-label="{{ site_name }} home"><span class="mark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 13v3M8 20h8M9.5 20l.5-4h4l.5 4"/></svg></span><span class="bt">Competition Manager</span></a>
   <nav class="nav" aria-label="Main">
     <a href="/competitions"{% if nav == "competitions" %} class="on"{% endif %}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M12 13v3M8 20h8"/></svg><span class="long">Competitions</span></a>
     {% if rankings_on %}<a href="/rankings"{% if nav == "rankings" %} class="on"{% endif %}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 21V11M12 21V5M16 21v-7M4 21h16"/></svg><span class="long">Rankings</span></a>{% endif %}
@@ -231,10 +231,10 @@ th{font-family:var(--cond);font-size:13px}
 {% block content %}{% endblock %}
 </main>
 <footer><div class="foot">
-  <div class="about"><b>Competition Manager</b>Leagues, cups and tournaments with live tables, fixtures, results and match pages anyone can follow.</div>
+  <div class="about"><b>{{ site_name }}</b>{{ site_description }}</div>
   <div><b>Explore</b><a href="/competitions">Competitions</a><a href="/search">Search</a></div>
   <div><b>Organizers</b><a href="/app">Log in</a></div>
-  <div class="copy">© Competition Manager · Tables and results are published by each competition's organizers.</div>
+  <div class="copy">© {{ site_name }} · Tables and results are published by each competition's organizers.</div>
 </div></footer>
 <div class="toast" id="toast" role="status"></div>
 <script nonce="{{ nonce }}">

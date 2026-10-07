@@ -125,6 +125,38 @@ class PublicPagesTest(Helpers, TestCase):
             self.assertIn('property="og:image" content="http://testserver/media/org/', html, url)
         self.assertIn('og:description" content="We play every Sunday."', anon.get(f"/org/{self.slug}").content.decode())
 
+    def test_share_previews_everywhere(self):
+        from superadmin import store
+        png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+        anon = Client()
+        store.update("site", {"name": "Ghana eLeague", "description": "Every eFootball league in Ghana."})
+        home = anon.get("/competitions").content.decode()
+        self.assertIn('og:site_name" content="Ghana eLeague"', home)
+        self.assertNotIn("og:image", home, "no site logo yet")
+        # only super admins can set the site logo; then every page without a logo uses it
+        self.assertEqual(self.owner.call("post", "/api/admin/site-logo", {"image": png}).status_code, 403)
+        store.set_site_logo(b"\x89PNG\r\n\x1a\n" + b"0" * 20, "image/png")
+        self.assertIn('og:image" content="http://testserver/media/site/logo?v=1"', anon.get("/competitions").content.decode())
+        self.assertEqual(anon.get("/media/site/logo").status_code, 200)
+        # the app and invitation links carry share tags too
+        app = anon.get("/app").content.decode()
+        self.assertIn("<title>Ghana eLeague</title>", app)
+        self.assertIn('og:description" content="Every eFootball league in Ghana."', app)
+        lions = self.owner.call("post", self.base + "/teams", {"name": "Lions"}).json()["team"]["id"]
+        link = self.owner.call("post", f"{self.base}/teams/{lions}/invitations", {"role": "player"}).json()["link"]
+        inv = anon.get("/invite/" + link.rsplit("/", 1)[1]).content.decode()
+        self.assertIn('og:title" content="Join Kasoa Community League (Lions)"', inv)
+        self.assertIn("boss invited you to join Kasoa Community League as Player on Ghana eLeague.", inv)
+        self.assertIn("media/site/logo", inv, "the organization has no logo yet")
+        self.owner.call("post", f"{self.base}/logo", {"image": png})
+        self.assertIn("/media/org/", anon.get("/invite/" + link.rsplit("/", 1)[1]).content.decode())
+        self.assertIn("<title>Ghana eLeague</title>", anon.get("/invite/not-a-real-token").content.decode())
+        # a team without its own logo shares its organization's
+        team = __import__("competitions.models", fromlist=["Team"]).Team.objects.get(name="Kasoa Stars")
+        self.assertIn('og:image" content="http://testserver/media/org/', anon.get(f"/team/{team.slug}").content.decode())
+        self.owner.call("post", f"{self.base}/teams/{team.id}/logo", {"image": png})
+        self.assertIn('og:image" content="http://testserver/media/team/', anon.get(f"/team/{team.slug}").content.decode())
+
     def test_import_original_league_into_existing_competition(self):
         import json
         from django.core.management import call_command

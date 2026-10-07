@@ -746,6 +746,8 @@ def platform_settings(request, user, ip):
         section, changes = b.get("section"), b.get("changes")
         if section not in store.DEFAULTS or not isinstance(changes, dict):
             raise ApiError(400, "Unknown settings section.")
+        if section == "site" and "description" in changes and len(str(changes["description"]).strip()) > 300:
+            raise ApiError(400, "Keep the description under 300 characters (share previews cut longer ones).")
         if section == "site" and "base_url" in changes:
             url = str(changes["base_url"] or "").strip().rstrip("/")
             if url and not re.fullmatch(r"https?://[A-Za-z0-9.-]+\.[A-Za-z]{2,}(:\d{1,5})?", url):
@@ -774,10 +776,35 @@ def platform_settings(request, user, ip):
     pay = paynova.config()
     from sms import providers as smsp
     return {"site": store.masked("site"), "email": store.masked("email"), "payments": store.masked("payments"), "sms": store.masked("sms"),
-            "rankings": store.masked("rankings"), "proleague": store.masked("proleague"),
+            "rankings": store.masked("rankings"), "proleague": store.masked("proleague"), "siteLogo": store.site_logo_url(),
             "smsStatus": {"ready": smsp.ready(), "providers": smsp.PROVIDERS},
             "paymentStatus": {"ready": paynova.ready(pay), "mode": paynova.mode(pay["secret_key"]) or None, "source": pay["source"] or None},
             "emailStatus": {"ready": emailer.ready(cfg), "provider": cfg["provider"] or None, "source": cfg["source"]}}
+
+
+@admin("POST", "DELETE")
+def site_logo(request, user, ip):
+    if request.method == "DELETE":
+        store.set_site_logo()
+    else:
+        try:
+            raw, ctype = engine.decode_logo(body(request, 400_000).get("image"))
+        except ValueError as e:
+            raise ApiError(400, str(e)) from None
+        store.set_site_logo(raw, ctype)
+    audit(user.username, "changed the site logo", ip, resource="settings:site")
+    return {"ok": True, "logo": store.site_logo_url()}
+
+
+def site_logo_file(request):
+    import base64
+    from django.http import HttpResponse
+    v = store.site_logo()
+    if not v:
+        return HttpResponse(status=404)
+    return HttpResponse(base64.b64decode(v["data"]), content_type=v["type"],
+                        headers={"Cache-Control": "public, max-age=86400", "Content-Disposition": "inline",
+                                 "Content-Security-Policy": "default-src 'none'; sandbox", "X-Content-Type-Options": "nosniff"})
 
 
 def check_proleague_settings(c):

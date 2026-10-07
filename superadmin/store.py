@@ -5,7 +5,8 @@ from .models import PlatformSetting
 
 DEFAULTS = {
     "site": {"name": "Competition Manager", "support_email": "", "allow_signups": True, "require_org_approval": False,
-             "max_orgs_per_user": 25, "notice": "", "base_url": ""},
+             "max_orgs_per_user": 25, "notice": "", "base_url": "",
+             "description": "Create and run leagues and tournaments: teams, fixtures, results, standings and your staff, in one place."},
     "email": {"provider": "", "host": "", "port": 587, "user": "", "password": "", "from": "", "api_key": "", "secure": ""},
     # PayNova: the platform's payment account. Organizations invoice through it; the platform can keep a fee.
     "payments": {"enabled": False, "secret_key": "", "currency": "GHS", "wallet_id": "", "fee_enabled": False, "fee_percent": "0",
@@ -73,3 +74,24 @@ def update(section, changes):
 
 def site():
     return get("site")
+
+
+# The site logo: shown in share previews (WhatsApp, Facebook, X…) for pages without a logo of their own.
+def site_logo():
+    try:
+        row = PlatformSetting.objects.filter(key="site_logo").first()
+    except DatabaseError:
+        return None
+    return row.value if row and row.value.get("data") else None
+
+
+def site_logo_url():
+    v = site_logo()
+    return f"/media/site/logo?v={v['v']}" if v else None
+
+
+def set_site_logo(raw=None, ctype=""):
+    import base64
+    old = site_logo() or {}
+    value = {"data": base64.b64encode(raw).decode(), "type": ctype, "v": old.get("v", 0) + 1} if raw else {}
+    PlatformSetting.objects.update_or_create(key="site_logo", defaults={"value": value})
