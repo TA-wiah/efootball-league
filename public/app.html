@@ -176,6 +176,9 @@ label.toggle small{display:block;color:var(--soft);font-weight:500}label.toggle 
 .mbox.studio{max-width:780px}.stgrid{display:grid;grid-template-columns:260px 1fr;gap:18px;align-items:start;margin-top:10px}@media(max-width:640px){.stgrid{grid-template-columns:1fr}}
 .stprev canvas{width:100%;max-width:260px;aspect-ratio:1;display:block;margin:0 auto;background:repeating-conic-gradient(rgba(255,255,255,.05) 0 25%,transparent 0 50%) 0 0/24px 24px;border-radius:12px}
 .stprev .note{font-size:12px}.sw [data-c]{width:30px;height:30px}
+.kits{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin:6px 0 10px;max-height:150px;overflow-y:auto;padding-right:4px}
+.kits button{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card2);color:var(--tx);font:inherit;font-size:12px;cursor:pointer;text-align:left}
+.kits button:hover{border-color:var(--gold)}.kits i{width:22px;height:22px;border-radius:6px;border:2px solid;flex:none}
 .flist{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;max-height:320px;overflow-y:auto;margin-top:8px;padding-right:4px}
 .flist button{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card2);color:var(--tx);font:inherit;font-size:13px;cursor:pointer;text-align:left}
 .flist button.on{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}.flist img{width:26px;height:26px;border-radius:5px;flex:none}
@@ -1405,7 +1408,13 @@ function proofsCard(id){var box=document.createElement("div");box.id="proofbox";
 var CREST={shapes:{shield:"Shield",round:"Round",hexagon:"Hexagon",diamond:"Diamond",square:"Square"},
   patterns:{plain:"Plain",stripes:"Stripes",hoops:"Hoops",halves:"Halves",sash:"Sash",chevron:"Chevron",quarters:"Quarters"},
   icons:{ball:"Ball",star:"Star",crown:"Crown",bolt:"Lightning",flame:"Flame",none:"No icon"},
-  colors:["#0b1f4d","#c8102e","#f5c400","#13904a","#2563eb","#ffffff","#111111","#7c3aed","#ea580c","#0ea5e9","#db2777","#8b5e34"]};
+  colors:["#0b1f4d","#c8102e","#f5c400","#13904a","#2563eb","#ffffff","#111111","#7c3aed","#ea580c","#0ea5e9","#db2777","#8b5e34","#a50044","#6cabdd","#7a263a","#d4af37"],
+  // classic football colour combinations (colours only: no club names or badges, which belong to the clubs)
+  kits:[["Blue & garnet stripes","stripes","#a50044","#0b1f4d","#f5c400"],["All white & gold","plain","#ffffff","#ffffff","#d4af37"],["Sky blue & navy","plain","#6cabdd","#6cabdd","#0b1f4d"],
+    ["Red & white","halves","#c8102e","#ffffff","#f5c400"],["Black & white stripes","stripes","#ffffff","#111111","#d4af37"],["Claret & blue","halves","#7a263a","#6cabdd","#ffffff"],
+    ["Yellow & black","hoops","#f5c400","#111111","#111111"],["Red & black stripes","stripes","#c8102e","#111111","#ffffff"],["Navy & white sash","sash","#0b1f4d","#ffffff","#d4af37"],
+    ["Green & white hoops","hoops","#13904a","#ffffff","#ffffff"],["Orange & white","chevron","#ea580c","#ffffff","#111111"],["Blue & white stripes","stripes","#2563eb","#ffffff","#0b1f4d"],
+    ["Red & gold","quarters","#c8102e","#f5c400","#ffffff"],["Purple & white","plain","#7c3aed","#7c3aed","#ffffff"]]};
 var FLAGS=null;
 function crestPath(x,shape,s){x.beginPath();var m=s*.06,w=s-2*m;
   if(shape==="round"){x.arc(s/2,s/2,w/2,0,Math.PI*2)}
@@ -1444,11 +1453,14 @@ function logoStudio(name,onSave){var o={shape:"shield",pattern:"stripes",icon:"b
     '<div class="actions"><button type="button" class="btn" id="stok">Use this logo</button><button type="button" class="btn g" id="stno">Cancel</button></div></div>';
   document.body.appendChild(d);var cv=$("stc");
   var close=function(){document.removeEventListener("keydown",esc_);d.remove()},esc_=function(e){if(e.key==="Escape")close()};document.addEventListener("keydown",esc_);
-  var crestCtl=function(){$("stctl").innerHTML='<label for="sttx">Letters (up to 4)<input id="sttx" maxlength="4" value="'+esc(o.text)+'"></label>'+
+  var crestCtl=function(){$("stctl").innerHTML='<div class="note">Club colours (one click, then change anything)</div><div class="kits">'+CREST.kits.map(function(k,i){
+        return'<button type="button" data-kit="'+i+'" title="'+esc(k[0])+'"><i style="background:linear-gradient(135deg,'+k[2]+' 50%,'+k[3]+' 50%);border-color:'+k[4]+'"></i><span>'+esc(k[0])+'</span></button>'}).join("")+'</div>'+
+      '<label for="sttx">Letters (up to 4)<input id="sttx" maxlength="4" value="'+esc(o.text)+'"></label>'+
       '<div class="row"><label for="stsh">Shape<select id="stsh">'+opts(CREST.shapes,o.shape)+'</select></label><label for="stpt">Pattern<select id="stpt">'+opts(CREST.patterns,o.pattern)+'</select></label></div>'+
       '<label for="stic">Icon<select id="stic">'+opts(CREST.icons,o.icon)+'</select></label>'+
       '<div class="note" style="margin-top:8px">Main colour</div>'+sw("c1",o.c1)+'<div class="note" style="margin-top:8px">Second colour</div>'+sw("c2",o.c2)+'<div class="note" style="margin-top:8px">Letters and border</div>'+sw("c3",o.c3);
     $("sttx").oninput=function(){o.text=this.value;drawCrest(cv,o)};["stsh","stpt","stic"].forEach(function(id){$(id).onchange=function(){o[{stsh:"shape",stpt:"pattern",stic:"icon"}[id]]=this.value;drawCrest(cv,o)}});
+    d.querySelectorAll("[data-kit]").forEach(function(b){b.onclick=function(){var k=CREST.kits[+b.dataset.kit];o.pattern=k[1];o.c1=k[2];o.c2=k[3];o.c3=k[4];crestCtl()}});
     d.querySelectorAll("[data-sw] [data-c]").forEach(function(b){b.onclick=function(){var k=b.parentNode.dataset.sw;o[k]=b.dataset.c;b.parentNode.querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});drawCrest(cv,o)}});
     drawCrest(cv,o)};
   var flagCtl=function(){$("stctl").innerHTML='<input id="stq" type="search" placeholder="Search a country" aria-label="Search a country"><label class="toggle" style="padding:8px 0"><span>Round</span><input type="checkbox" id="strd"'+(round?" checked":"")+'></label><div class="flist" id="stfl">'+LOADING+'</div>';
