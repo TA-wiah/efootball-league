@@ -346,6 +346,7 @@ function U(inner,o){o=o||{};var L=function(h,label,on){return'<a href="'+h+'" da
     side='<div class="oside">'+avatar(g,40)+'<div><b title="'+esc(g.name)+'">'+esc(g.name)+'</b>'+pill(ORG.me.role,ORG.me.roleLabel)+'</div></div>'+
       OGROUPS.map(function(grp){var items=SECTIONS.filter(function(s){return s[2]===grp&&(!s[3]||has(s[3]))});if(!items.length)return"";
         return'<div class="ag open"><div class="agh-static">'+esc(grp)+'</div><div class="agi">'+items.map(function(s){
+          if(s[0]==="mymatches")return'<a href="/app/matches" data-nav>'+ic(s[4])+' '+esc(s[1])+'</a>';
           if(s[0]==="preview")return'<a href="/org/'+esc(g.slug)+'" target="_blank" rel="noopener">'+ic(s[4])+' '+esc(s[1])+' ↗</a>';
           return L(s[0]==="newcomp"?app0("/competitions?new=1"):app0(s[0]==="overview"?"":"/"+s[0]),ic(s[4])+' '+esc(s[1]),s[0]===o.section)}).join("")+'</div></div>'}).join("")+
       '<div class="asb-f"><a href="'+mineUrl()+'" data-nav>← All organizations</a><a href="/app/matches" data-nav>My matches</a><a href="/app/profile" data-nav>My profile</a><a href="/app/support" data-nav>Help &amp; support</a>'+(ME.superAdmin?'<a href="/admin" data-nav>Admin panel</a>':'')+'</div>'}
@@ -482,15 +483,15 @@ function wzFinish(){var d=WZ.d,b=$("wzn");busy(b,true,"Creating…");
 
 // ---------- one organization ----------
 var OGROUPS=["Overview","Competition management","People","Payments","Organization","Public website"];
-var SECTIONS=[["overview","Dashboard","Overview",0,"home"],["activity","Activity","Overview",0,"pulse"],["notifications","Notifications","Overview",0,"bell"],
+var SECTIONS=[["overview","Dashboard","Overview",0,"home"],["mymatches","My matches","Overview","plays","cal"],["activity","Activity","Overview",0,"pulse"],["notifications","Notifications","Overview",0,"bell"],
   ["competitions","Competitions","Competition management",0,"trophy"],["newcomp","Create competition","Competition management","competitions.manage","plus"],["fixtures","Fixtures","Competition management",0,"cal"],
   ["results","Results","Competition management",0,"check"],["tables","Standings","Competition management",0,"list"],["brackets","Brackets","Competition management",0,"bracket"],
-  ["teams","Teams","People",0,"shield"],["players","Players","People",0,"user"],["coaches","Coaches","People",0,"whistle"],["staff","Staff","People",0,"badge"],["members","Members","People",0,"users"],["invitations","Invitations","People","members.invite","mail"],["messages","Messages (SMS)","People","messages.send","megaphone"],
+  ["teams","Teams","People",0,"shield"],["players","Players","People",0,"user"],["coaches","Coaches","People","staff","whistle"],["staff","Staff","People","staff","badge"],["members","Members","People",0,"users"],["invitations","Invitations","People","members.invite","mail"],["messages","Messages (SMS)","People","messages.send","megaphone"],
   ["payments","Balance & payouts","Payments","payments.manage","wallet"],["invoices","Invoices","Payments","payments.manage","file"],
-  ["profile","Organization profile","Organization",0,"building"],["branding","Branding","Organization","org.settings","palette"],["settings","Organization settings","Organization",0,"sliders"],["roles","Roles & permissions","Organization",0,"key"],["access","Team access","Organization",0,"lock"],
+  ["profile","Organization profile","Organization","staff","building"],["branding","Branding","Organization","org.settings","palette"],["settings","Organization settings","Organization",0,"sliders"],["roles","Roles & permissions","Organization",0,"key"],["access","Team access","Organization","staff","lock"],
   ["site","Public site","Public website",0,"globe"],["website","Website settings","Public website","org.settings","sliders"],["pages","Pages","Public website","org.settings","file"],["announcements","Announcements","Public website",0,"megaphone"],["link","Public link","Public website",0,"link"],["preview","Preview website","Public website",0,"eye"]];
 var ORG=null;
-function has(p){return ORG&&ORG.me.perms.indexOf(p)>=0}
+function has(p){if(p==="staff")return!!ORG&&ORG.me.role!=="player"&&ORG.me.role!=="viewer";if(p==="plays")return!!ORG&&(ORG.me.teams||[]).length>0;return ORG&&ORG.me.perms.indexOf(p)>=0}
 function api0(path){return"/api/orgs/"+ORG.org.slug+path}
 function app0(path){return"/app/org/"+ORG.org.slug+(path||"")}
 var LOADING='<div class="card note" aria-busy="true">Loading…</div>';
@@ -822,7 +823,9 @@ function teamsSec(rest){if(rest)return teamPage(+rest);
   api(api0("/teams")).then(function(r){if(!r.ok)return fail(r);var ts=r.data.teams;
     $("sec").innerHTML='<div class="card"><div class="gh">TEAMS · '+ts.length+'</div>'+(has("teams.manage")?'<form id="tf" class="row" novalidate style="align-items:end;margin-bottom:12px"><label for="tn" style="margin:0">New team name<input id="tn" maxlength="80" placeholder="e.g. Kasoa Stars"></label><div><button class="btn" id="tadd">'+ic("plus")+' Add team</button></div></form>':'')+
       (ts.length?'<div class="grid">'+ts.map(function(t){return'<a class="oc" href="'+app0("/teams/"+t.id)+'" data-nav><span class="ch">'+crest(t,36)+'<b style="margin:0">'+esc(t.name)+'</b>'+(ORG.me.teams.indexOf(t.id)>=0?' <span class="pill owner">Your team</span>':'')+'</span><small style="display:block;margin-top:8px">'+esc([t.city,t.venue].filter(Boolean).join(" · ")||"No details yet")+'</small><small>'+t.playerCount+' player'+(t.playerCount===1?"":"s")+'</small></a>'}).join("")+'</div>'
-        :'<p class="note">No teams yet. Add the clubs or sides that will play in your competitions.</p>')+'</div>';
+        :(r.data.guests&&r.data.guests.length?'':'<p class="note">No teams yet. Add the clubs or sides that will play in your competitions.</p>'))+'</div>'+
+      (r.data.guests&&r.data.guests.length?'<div class="card"><div class="gh">Teams from other organizations · '+r.data.guests.length+'</div><p class="note" style="margin-top:0">They play in your competitions; their own organizations manage their details and squads.</p><div class="grid">'+
+        r.data.guests.map(function(t){return'<a class="oc" href="/team/'+esc(t.slug)+'" target="_blank" rel="noopener"><span class="ch">'+crest(t,36)+'<b style="margin:0">'+esc(t.name)+'</b></span><small style="display:block;margin-top:8px">'+esc(t.org.name)+' ↗</small></a>'}).join("")+'</div></div>':'');
     if($("tf"))$("tf").onsubmit=function(e){e.preventDefault();var b=$("tadd");busy(b,true);api(api0("/teams"),"POST",{name:val("tn")}).then(function(r){busy(b,false);if(!r.ok){toast(r.data.error,true);return}toast("Team added");teamsSec()})};
     if(new URLSearchParams(location.search).get("new")&&$("tn"))$("tn").focus()})}
 function teamPage(id){api(api0("/teams/"+id)).then(function(r){if(!r.ok)return fail(r);var t=r.data.team,full=has("teams.manage"),can=full||(has("teams.manage_assigned")&&ORG.me.teams.indexOf(id)>=0);
@@ -1341,9 +1344,9 @@ function proCard(){var box=$("prolg");if(!box)return;var q=new URLSearchParams(l
   if(back){history.replaceState(null,"",location.pathname);api(api0("/proleague/"+back+"/check"),"POST",{}).then(function(r){if(r.ok&&r.data.confirmed)toast("Payment received: your place is confirmed");load()})}else load()}
 
 // ---------- match reports by the teams: check-in, screenshots, walkovers ----------
-// Screenshots stay readable: shrunk to at most 1600 px and about 1.4 MB before they're sent.
+// Screenshots stay readable: shrunk to at most 1600 px and about 740 KB before they're sent.
 function shrinkShot(file,cb){if(!/^image\/(png|jpeg|gif|webp)$/.test(file.type)){toast("Use PNG, JPG, GIF or WebP screenshots",true);return}
-  var LIMIT=1400*1024,rd=new FileReader();rd.onerror=function(){toast("Couldn't read that image",true)};
+  var LIMIT=740*1024,rd=new FileReader();rd.onerror=function(){toast("Couldn't read that image",true)};
   rd.onload=function(){var src=rd.result;if(file.size<=LIMIT)return cb(src);var img=new Image();img.onerror=function(){toast("That image file is damaged",true)};
     img.onload=function(){var out=null;[1600,1280,1024].some(function(max){var k=Math.min(1,max/Math.max(img.width,img.height)),c=document.createElement("canvas");
         c.width=Math.max(1,Math.round(img.width*k));c.height=Math.max(1,Math.round(img.height*k));c.getContext("2d").drawImage(img,0,0,c.width,c.height);

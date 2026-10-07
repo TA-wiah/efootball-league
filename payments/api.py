@@ -153,6 +153,8 @@ def sync(org=None, force=False, base=""):
             remote[f"ref:{inv.reference}"] = paynova.verify(inv.reference, cfg)
     changed, paid = 0, []
     with transaction.atomic():
+        locked = {i.pk: i for i in Invoice.objects.select_for_update().select_related("org").filter(pk__in=[x.pk for x in todo])}
+        todo = [locked[x.pk] for x in todo if x.pk in locked]
         for inv in todo:
             inv.checked_at = now
             r = remote.get(inv.code) if inv.code else remote.get(f"ref:{inv.reference}")
@@ -398,7 +400,7 @@ def org_payouts(request, user, ip, slug):
         raise ApiError(400, "Say what the payout is for, e.g. “Champion prize”.")
     comp = Competition.objects.filter(org=org, slug=str(b.get("competition") or "")).first() if b.get("competition") else None
     with transaction.atomic():
-        list(Payout.objects.select_for_update().filter(org=org))                 # one payout request at a time per organization
+        type(org).objects.select_for_update().get(pk=org.pk)                    # one payout request at a time per organization
         row = balances(org).get(currency)
         available = row["available"] if row else D0
         if amount > available:

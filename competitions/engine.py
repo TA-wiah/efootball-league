@@ -241,7 +241,7 @@ def scorers(events):
 # ---------- logos ----------
 SIGNATURES = [(b"\x89PNG\r\n\x1a\n", "image/png"), (b"\xff\xd8\xff", "image/jpeg"), (b"GIF87a", "image/gif"), (b"GIF89a", "image/gif")]
 MAX_LOGO = 256 * 1024
-MAX_PROOF = 1536 * 1024          # screenshots: the browser shrinks big ones first
+MAX_PROOF = 760 * 1024           # screenshots: the browser shrinks big ones first (the whole request must stay under 1.1 MB)
 
 
 def decode_image(data_url, limit):
