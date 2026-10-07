@@ -14,7 +14,8 @@ def _send(to, subject, title, lines, link, button):
     if not to or not emailer.ready():
         return False
     site = store.site()["name"]
-    txt, html = emailer.body(title, lines, link or settings.APP_URL or "", button, f"Sent by {site}.")
+    from league.http import site_url
+    txt, html = emailer.body(title, lines, link or site_url(), button, f"Sent by {site}.")
     try:
         emailer.send(to, subject, txt, html)
         return True

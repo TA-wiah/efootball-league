@@ -90,15 +90,25 @@ class Command(BaseCommand):
         if not groups:
             raise CommandError("The original league has no groups.")
         cfg, ui = s.get("cfg") or {}, s.get("ui") or {}
-        name = name or (ui.get("t") or "League").title()
-        fields = dict(kind="championship", format="groups_knockout" if len(groups) > 1 else "league", status="active",
-                      description=description if description is not None else ui.get("s", "").title(),
-                      qualifiers_per_group=3 if cfg.get("a") == 3 else 2, tiebreakers=["points", "goal_difference", "goals_for"])
+        meta = s.get("competition") or {}                   # details saved with the copy (name, description, season…)
+        name = name or meta.get("name") or (ui.get("t") or "League").title()
+        fields = dict(kind=meta.get("kind") or "championship", format="groups_knockout" if len(groups) > 1 else "league", status="active",
+                      description=description if description is not None else (meta.get("description") or ui.get("s", "").title()),
+                      qualifiers_per_group=meta.get("qualifiersPerGroup") or (3 if cfg.get("a") == 3 else 2),
+                      tiebreakers=["points", "goal_difference", "goals_for"])
+        for k, attr in (("pointsWin", "points_win"), ("pointsDraw", "points_draw"), ("pointsLoss", "points_loss"), ("legs", "legs")):
+            if isinstance(meta.get(k), int):
+                fields[attr] = meta[k]
+        season = season or meta.get("season") or ""
         with transaction.atomic():
             if into:
                 c = o.competitions.filter(slug=into).first()
-                if not c:
-                    raise CommandError(f"{o.name} has no competition with the address {into!r}.")
+                if not c:                                   # not there yet: create it with that address
+                    if Competition.objects.filter(slug=into).exists():
+                        raise CommandError(f"The address {into!r} is used by another organization's competition. Choose another with --into.")
+                    c = Competition.objects.create(org=o, name=name, slug=into, season=season,
+                                                   visibility=meta.get("visibility") or "public", **fields)
+                    self.stdout.write(f"Created the competition “{c.name}” ({into}) in {o.name}.")
                 if c.entries.exists() or c.matches.exists():
                     raise CommandError(f"{c.name} already has teams or matches; nothing was changed.")
                 for k, v in fields.items():
@@ -107,7 +117,14 @@ class Command(BaseCommand):
                     c.season = season
                 c.save()
             else:
-                c = Competition.objects.create(org=o, name=name, slug=engine.unique_slug(Competition, name, "competition"), season=season, **fields)
+                c = Competition.objects.create(org=o, name=name, slug=engine.unique_slug(Competition, name, "competition"), season=season,
+                                               visibility=meta.get("visibility") or "public", **fields)
+            om = s.get("organization") or {}                 # fill in the organization's text if it has none yet
+            if om.get("description") and not o.description:
+                o.description = om["description"][:2000]
+            if om.get("tagline") and not o.site().get("tagline"):
+                o.website = {**o.site(), "tagline": om["tagline"][:160]}
+            o.save(update_fields=["description", "website"])
             made = results = events = 0
             for g, names in groups.items():
                 entries = []

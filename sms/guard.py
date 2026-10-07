@@ -40,10 +40,12 @@ URL_RE = re.compile(r"\b((?:https?://|www\.)[^\s<>\"']+|[a-z0-9-]+(?:\.[a-z0-9-]
 
 
 def allowed_hosts():
-    """PayNova, and this platform's own addresses (APP_URL and the allowed host names)."""
+    """PayNova, and this platform's own addresses (the site address, APP_URL and the allowed host names)."""
+    from league.http import site_url
     hosts = set(ALWAYS_ALLOWED)
-    if settings.APP_URL:
-        hosts.add((urlparse(settings.APP_URL).hostname or "").lower())
+    for url in (site_url(), settings.APP_URL):
+        if url:
+            hosts.add((urlparse(url).hostname or "").lower())
     for h in settings.ALLOWED_HOSTS:
         h = h.lower().lstrip(".")
         if h and h != "*" and "*" not in h:
@@ -55,7 +57,8 @@ def problems(text, running_host=""):
     """Why this text must not be sent (empty when it's fine). `running_host` is this site's address when APP_URL isn't set."""
     found = [reason for reason, rule in RULES if rule.search(text)]
     ok_hosts = allowed_hosts()
-    if running_host and not settings.APP_URL:
+    from league.http import site_url
+    if running_host and not site_url():
         ok_hosts.add(running_host.split(":")[0].lower())
     for raw in URL_RE.findall(text):
         url = raw if raw.lower().startswith("http") else "http://" + raw

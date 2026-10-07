@@ -6,7 +6,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
-from league.http import ApiError, body, endpoint, ms, text
+from league.http import ApiError, body, endpoint, ms, site_url, text
 from league.logic import audit, hit
 from orgs.api import access, log
 from orgs.models import Membership, Organization
@@ -154,7 +154,7 @@ def org_sms(request, user, ip, slug):
 
 
 def base_of(request):
-    return settings.APP_URL or f"{request.scheme}://{request.get_host()}"
+    return site_url(request)
 
 
 @endpoint("POST", login_required=True)
@@ -203,7 +203,7 @@ def org_sms_buy(request, user, ip, slug):
         raise ApiError(429, "You already have 5 open credit requests. Finish or cancel one first.")
     p = SmsPurchase.objects.create(org=org, credits=n, amount=amount, currency=currency, method=method, requested_by=user)
     if method == "paynova":
-        base = settings.APP_URL or f"{request.scheme}://{request.get_host()}"
+        base = site_url(request)
         back = f"{base}/app/org/{org.slug}/messages?purchase={p.id}"
         try:
             pay = paynova.initialize_payment(amount, currency, f"{n:,} SMS credits for {org.name}", success_url=back, cancel_url=back,
@@ -300,7 +300,7 @@ def admin_sms_test(request, user, ip):
     if not to:
         raise ApiError(400, "Enter the phone number to send the test to.")
     try:
-        providers.send([to], f"{settings.APP_URL or 'Competition Manager'}: SMS works.")
+        providers.send([to], f"{site_url(request)}: SMS works.")
     except providers.SmsError as e:
         raise ApiError(502, str(e)) from None
     audit(user.username, "sent a test SMS", ip, resource="settings:sms")

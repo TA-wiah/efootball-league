@@ -126,8 +126,23 @@ def endpoint(*methods, login_required=False):
     return wrap
 
 
+def site_url(request=None):
+    """The address every link points to (emails, texts, receipts, invitations, share links): the super admin's
+    "Site address" setting, else the APP_URL environment variable, else the address this request came in on."""
+    try:
+        from superadmin import store
+        url = (store.site().get("base_url") or "").rstrip("/")
+    except Exception:                       # settings table not ready (first start)
+        url = ""
+    if url:
+        return url
+    if settings.APP_URL:
+        return settings.APP_URL
+    return request.build_absolute_uri("/").rstrip("/") if request is not None else ""
+
+
 def base_url(request):
-    return settings.APP_URL or request.build_absolute_uri("/").rstrip("/")
+    return site_url(request)
 
 
 _pages = {}

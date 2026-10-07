@@ -150,3 +150,18 @@ class SuperAdminTest(Helpers, TestCase):
         with mock.patch.dict(os.environ, {"ADMIN_USER": "chief", "ADMIN_PASSWORD": PW}):
             call_command("ensure_admin", stdout=open(os.devnull, "w"))
         self.assertTrue(Admin.objects.get(username="chief").is_superuser)
+
+
+class SiteAddressTest(Helpers, TestCase):
+    def test_links_use_the_site_address(self):
+        root = self.signup("root")
+        Admin.objects.filter(username="root").update(is_superuser=True, is_staff=True)
+        for bad in ("example.com", "https://example.com/app", "ftp://example.com", "javascript:alert(1)"):
+            self.assertEqual(root.call("patch", "/api/admin/settings", {"section": "site", "changes": {"base_url": bad}}).status_code, 400, bad)
+        self.assertEqual(root.call("patch", "/api/admin/settings", {"section": "site", "changes": {"base_url": "https://league.example.com/"}}).status_code, 200)
+        boss = self.signup("boss")
+        slug = self.new_org(boss)
+        link = boss.call("post", f"/api/orgs/{slug}/invitations", {"role": "viewer"}).json()["link"]
+        self.assertTrue(link.startswith("https://league.example.com/invite/"), link)
+        page = Client().get(f"/org/{slug}").content.decode()
+        self.assertIn('rel="canonical" href="https://league.example.com/org/', page)

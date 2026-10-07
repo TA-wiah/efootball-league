@@ -12,7 +12,7 @@ from django.db.models import Count, Q, Sum
 from django.utils import timezone
 
 from competitions.models import Competition, Team
-from league.http import ApiError, body, endpoint, ms, text
+from league.http import ApiError, body, endpoint, ms, site_url, text
 from league.logic import EMAIL_RE, audit, hit
 from orgs.api import access, log
 from superadmin.api import admin
@@ -166,13 +166,12 @@ def sync(org=None, force=False, base=""):
             inv.save()
     from django.conf import settings
     for inv in paid:                                  # emails after the payments are safely recorded
-        notify.invoice_paid(inv, base or settings.APP_URL)
+        notify.invoice_paid(inv, base or site_url())
     return changed
 
 
 def base_of(request):
-    from django.conf import settings
-    return settings.APP_URL or (f"{request.scheme}://{request.get_host()}" if request else "")
+    return site_url(request)
 
 
 def overview(org, base=""):
