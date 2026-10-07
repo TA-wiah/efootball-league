@@ -154,3 +154,16 @@ class PublicPagesTest(Helpers, TestCase):
         page = anon.get(f"/competition/{self.cs}")
         self.assertIn('href="/fonts/fonts.css"', page.content.decode())
         self.assertNotIn("googleapis", page.content.decode() + page["Content-Security-Policy"])
+
+    def test_import_from_the_saved_copy_when_the_database_has_no_league(self):
+        from django.core.management import call_command
+        from league.models import League
+        League.objects.all().delete()                                   # like production: no original league
+        cs = self.owner.call("post", self.base + "/competitions", {"name": "Robotics Championship", "visibility": "public"}).json()["competition"]["slug"]
+        out = __import__("io").StringIO()
+        call_command("import_league", self.slug, into=cs, stdout=out)
+        self.assertIn("saved copy", out.getvalue())
+        c = __import__("competitions.models", fromlist=["Competition"]).Competition.objects.get(slug=cs)
+        names = sorted(e.team.name for e in c.entries.select_related("team"))
+        self.assertEqual((len(names), c.matches.count()), (8, 24))
+        self.assertIn("Philiss", names)

@@ -3,12 +3,17 @@
     python manage.py import_league kasoa-community-league
     python manage.py import_league kasoa-community-league --name "Champions League" --season 2026
     python manage.py import_league robotics-league --into robotics-championship   (fill an existing, empty competition)
+    python manage.py import_league apass-squad --into robotics-championship --file competitions/data/original_league.json
+
+Where the league comes from: --file if given; otherwise this database's original league; otherwise the copy saved in
+competitions/data/original_league.json (exported from the computer where the league was run).
 
 Copies: groups and teams, the group-stage fixtures in the same order the old page used, their results, and the goals /
 assists logged in match details. Knockout rounds aren't copied: draw them again in the new competition once the
 group stage is complete. The original league page keeps working and isn't changed.
 """
 import json
+from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
@@ -39,6 +44,32 @@ def legacy_fixtures(n):
     return rounds + [[[q[1], q[0]] for q in ms] for ms in rounds]
 
 
+SAVED = Path(__file__).resolve().parents[2] / "data" / "original_league.json"
+
+
+def load_league(file, out):
+    if file:
+        path = Path(file)
+        if not path.is_file():
+            raise CommandError(f"No file at {file}.")
+    else:
+        row = League.objects.filter(pk=1).first()
+        data = json.loads(row.data) if row else {}
+        if data.get("g"):
+            return data
+        path = SAVED
+        if not path.is_file():
+            raise CommandError("There is no original league in this database, and no saved copy. Use --file.")
+        out.write(f"This database has no original league, so the saved copy is used: {path.name}")
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except ValueError:
+        raise CommandError(f"{path} isn't a valid league file.") from None
+    if not isinstance(data, dict) or not isinstance(data.get("g"), dict):
+        raise CommandError(f"{path} doesn't contain a league (no groups).")
+    return data
+
+
 class Command(BaseCommand):
     help = "Copy the original league (/) into an organization as a competition."
 
@@ -48,15 +79,13 @@ class Command(BaseCommand):
         parser.add_argument("--season", default="")
         parser.add_argument("--into", default=None, help="an existing competition (slug) in that organization with no teams yet")
         parser.add_argument("--description", default=None)
+        parser.add_argument("--file", default=None, help="a saved copy of the original league (JSON)")
 
-    def handle(self, org, name, season, into=None, description=None, **options):
+    def handle(self, org, name, season, into=None, description=None, file=None, **options):
         o = Organization.objects.filter(slug=org).first()
         if not o:
             raise CommandError(f"No organization with the address {org!r}.")
-        row = League.objects.filter(pk=1).first()
-        if not row:
-            raise CommandError("There is no original league to import.")
-        s = json.loads(row.data)
+        s = load_league(file, self.stdout)
         groups = s.get("g") or {}
         if not groups:
             raise CommandError("The original league has no groups.")

@@ -63,7 +63,7 @@ def fee_settings(cfg=None):
 def need_ready():
     cfg = paynova.config()
     if not paynova.ready(cfg):
-        raise ApiError(400, "Payments aren't switched on for this platform yet. Ask the platform super admin to connect PayNova.")
+        raise ApiError(400, "Online payments aren't available yet. Please contact the platform administrator to turn them on.")
     return cfg
 
 
@@ -230,7 +230,7 @@ def text_pay_link(inv, user):
     if not inv.customer_phone or not inv.pay_url:
         return ""
     if not providers.ready():
-        return "" if inv.customer_email else "Not texted: SMS isn't set up. Copy the pay link and send it yourself."
+        return "" if inv.customer_email else "Not texted: text messages aren't available yet. Copy the pay link and send it yourself."
     body_text = (f"Hi {inv.customer_name.split()[0]}, {inv.org.name} sent you a bill of {inv.currency} {inv.amount:.2f} for "
                  f"{inv.description}. Pay securely here: {inv.pay_url}")
     try:

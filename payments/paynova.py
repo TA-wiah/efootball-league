@@ -46,7 +46,7 @@ def call(method, path, data=None, cfg=None, timeout=20):
     cfg = cfg or config()
     key = cfg.get("secret_key", "")
     if not mode(key):
-        raise PayNovaError("Payments aren't set up yet. A platform super admin needs to add the PayNova secret key.")
+        raise PayNovaError("Online payments aren't available yet. Please contact the platform administrator to turn them on.")
     req = urllib.request.Request(API + path, method=method, data=json.dumps(data).encode() if data is not None else None,
                                  headers={"X-API-Key": key, "Content-Type": "application/json", "Accept": "application/json",
                                           "User-Agent": "CompetitionManager/1.0"})
