@@ -5,7 +5,7 @@ from .models import PlatformSetting
 
 DEFAULTS = {
     "site": {"name": "Competition Manager", "support_email": "", "allow_signups": True, "require_org_approval": False,
-             "max_orgs_per_user": 25, "notice": ""},
+             "max_orgs_per_user": 25, "notice": "", "base_url": ""},
     "email": {"provider": "", "host": "", "port": 587, "user": "", "password": "", "from": "", "api_key": "", "secure": ""},
     # PayNova: the platform's payment account. Organizations invoice through it; the platform can keep a fee.
     "payments": {"enabled": False, "secret_key": "", "currency": "GHS", "wallet_id": "", "fee_enabled": False, "fee_percent": "0",

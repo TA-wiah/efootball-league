@@ -17,7 +17,7 @@ from django.utils import timezone
 
 from . import emailer
 from .http import (ApiError, base_url, body, check_login, csrf_failure, ip_of, ms, not_found, serve_page,  # noqa: F401
-                   server_error, session_user, start_session, text)
+                   server_error, session_user, site_url, start_session, text)
 from .logic import (EMAIL_RE, SLOT_RE, USER_RE, audit, deal_groups, force_save, hit, password_problem,
                     read_state, record_draw, save_if_current, seed, shuffle, valid_state)
 from .models import Admin, Audit, Draw, Token
@@ -123,7 +123,7 @@ def me_view(request, me, ip):
     csrf = get_token(request)
     if me:
         return {"admin": True, "user": pub(me), "csrf": csrf, "smtp": emailer.ready()}
-    return {"admin": False, "resetEnabled": emailer.ready() and bool(settings.APP_URL), "csrf": csrf}
+    return {"admin": False, "resetEnabled": emailer.ready(), "csrf": csrf}
 
 
 @api("POST")
@@ -179,13 +179,13 @@ def forgot(request, me, ip):
     b = body(request)
     ident = text(b, "user", 254)
     answer = {"ok": True, "message": "If that account has an email address, a reset link is on its way."}
-    if not emailer.ready() or not settings.APP_URL:
+    if not emailer.ready():
         raise ApiError(400, "Password reset by email is not set up. Ask the owner to help.")
     if hit("forgot:" + ip, 5, 3600):
         return answer
     a = Admin.objects.filter(Q(username__iexact=ident) | Q(email__iexact=ident)).first() if ident else None
     if a and a.email and a.has_usable_password() and not hit(f"forgot:{a.id}", 3, 3600):
-        link = f"{settings.APP_URL}{settings.LEAGUE_PATH}#reset={new_token(a, 'reset', timedelta(hours=1))}"
+        link = f"{site_url(request)}{settings.LEAGUE_PATH}#reset={new_token(a, 'reset', timedelta(hours=1))}"
         txt, html = emailer.body("Reset your password", [f"Hi {a.username},", "Someone (hopefully you) asked to reset your admin password. The link works once and expires in 1 hour."],
                                  link, "Choose a new password", "If you didn't ask for this you can ignore this email; your password stays the same.")
         audit(a.username, "reset email requested", ip)

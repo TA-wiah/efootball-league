@@ -167,3 +167,18 @@ class PublicPagesTest(Helpers, TestCase):
         names = sorted(e.team.name for e in c.entries.select_related("team"))
         self.assertEqual((len(names), c.matches.count()), (8, 24))
         self.assertIn("Philiss", names)
+
+    def test_import_creates_the_competition_when_it_does_not_exist(self):
+        from django.core.management import call_command
+        from competitions.models import Competition
+        from league.models import League
+        League.objects.all().delete()
+        out = __import__("io").StringIO()
+        call_command("import_league", self.slug, into="robotics-championship", stdout=out)
+        self.assertIn("Created the competition", out.getvalue())
+        c = Competition.objects.get(slug="robotics-championship")
+        self.assertEqual((c.name, c.org.slug, c.format, c.qualifiers_per_group, c.visibility), ("Robotics Championship", self.slug, "groups_knockout", 2, "public"))
+        groups = {g: sorted(e.team.name for e in c.entries.select_related("team") if e.group == g) for g in "AB"}
+        self.assertEqual(groups["A"], sorted(["Philiss", "Kai_Heinz07", "Mz man", "xxbeta"]))
+        self.assertEqual(groups["B"], sorted(["Junior_billyhill", "Atalynix", "Rockyjnr_xX", "OSTEENRBA"]))
+        self.assertTrue(c.description.startswith("The Robotics Championship"))

@@ -21,7 +21,7 @@ from competitions import engine
 from competitions.api import comp_json, table_payload
 from competitions.models import Announcement, Competition, Entry, Match, MatchEvent, Player, Team
 from league import emailer
-from league.http import ApiError, body, endpoint, ms, text
+from league.http import ApiError, body, endpoint, ms, site_url, text
 from league.logic import EMAIL_RE, audit
 from league.models import Audit
 from orgs.models import Invitation, Membership, Organization, OrgEvent
@@ -168,7 +168,7 @@ def health():
             "migrationsPending": pending, "email": {"ready": emailer.ready(cfg), "provider": cfg["provider"] or None, "source": cfg["source"]},
             "failedLogins24h": Audit.objects.filter(ts__gte=day, action="failed login").count(),
             "blockedAdminAttempts24h": Audit.objects.filter(ts__gte=day, resource="admin", status="denied").count(),
-            "secretKeyFromEnv": bool(__import__("os").environ.get("SECRET_KEY")), "appUrl": settings.APP_URL or None}
+            "secretKeyFromEnv": bool(__import__("os").environ.get("SECRET_KEY")), "appUrl": site_url() or None}
 
 
 # ---------- dashboard ----------
@@ -746,6 +746,11 @@ def platform_settings(request, user, ip):
         section, changes = b.get("section"), b.get("changes")
         if section not in store.DEFAULTS or not isinstance(changes, dict):
             raise ApiError(400, "Unknown settings section.")
+        if section == "site" and "base_url" in changes:
+            url = str(changes["base_url"] or "").strip().rstrip("/")
+            if url and not re.fullmatch(r"https?://[A-Za-z0-9.-]+\.[A-Za-z]{2,}(:\d{1,5})?", url):
+                raise ApiError(400, "The site address is just the start of your web address, like https://example.com (no path).")
+            changes["base_url"] = url
         if section == "payments":
             check_payment_settings(changes)
         if section == "sms":
@@ -821,7 +826,7 @@ def test_email(request, user, ip):
     if not to or not EMAIL_RE.fullmatch(to):
         raise ApiError(400, "Enter the address to send the test to.")
     txt, html = emailer.body("Email works ✔", [f"Hi {user.username},", "Your platform email settings are working."],
-                             settings.APP_URL or "https://example.com", "Open the platform", "Sent from the super admin settings.")
+                             site_url(request), "Open the platform", "Sent from the super admin settings.")
     try:
         emailer.send(to, f"{store.site()['name']}: test email", txt, html)
     except emailer.MailError as e:
@@ -841,7 +846,7 @@ def system(request, user, ip):
         pass
     return {"health": health(), "matrix": matrix(),
             "superAdmins": [user_row(u) for u in User.objects.filter(is_superuser=True).order_by("username")],
-            "config": {"APP_URL": settings.APP_URL or "(not set)", "TIME_ZONE": settings.TIME_ZONE, "HOME_PAGE": settings.HOME_PAGE,
+            "config": {"Site address (used in links)": site_url(request), "APP_URL": settings.APP_URL or "(not set)", "TIME_ZONE": settings.TIME_ZONE, "HOME_PAGE": settings.HOME_PAGE,
                        "DEBUG": settings.DEBUG, "TRUST_PROXY": settings.TRUST_PROXY, "Secure cookies": settings.SECURE,
                        "Database": connection.vendor + (" (DATABASE_URL)" if __import__("os").environ.get("DATABASE_URL") else " (local file)"),
                        "Allowed hosts": ", ".join(settings.ALLOWED_HOSTS), "Python": py_platform.python_version(), "Django": django.get_version()},
@@ -890,7 +895,7 @@ def ticket_detail(request, user, ip, tid):
     t.save()
     audit(user.username, "updated a support ticket", ip, resource=f"ticket:{t.id}", old=old, new={"status": t.status})
     if "reply" in b and t.reply and t.user and t.user.email and emailer.ready():
-        txt, html = emailer.body(f"Re: {t.subject}", [f"Hi {t.user.username},", t.reply], (settings.APP_URL or "") + "/app/support",
+        txt, html = emailer.body(f"Re: {t.subject}", [f"Hi {t.user.username},", t.reply], site_url(request) + "/app/support",
                                  "View your requests", "Reply from the platform team.")
         try:
             emailer.send(t.user.email, f"Re: {t.subject}", txt, html)

@@ -2,13 +2,13 @@
  "g": {
   "A": [
    "Philiss",
-   "Atalynix",
+   "Kai_Heinz07",
    "Mz man",
    "xxbeta"
   ],
   "B": [
    "Junior_billyhill",
-   "Kai_Heinz07",
+   "Atalynix",
    "Rockyjnr_xX",
    "OSTEENRBA"
   ]
@@ -31,5 +31,23 @@
  "aw": {
   "bd": "",
   "c": []
+ },
+ "competition": {
+  "name": "Robotics Championship",
+  "slug": "robotics-championship",
+  "description": "The Robotics Championship is an eFootball tournament played like the Champions League. Eight players are split into two groups of four, and everyone plays the others in their group home and away. The top two in each group go through to the knockout rounds, where every game is win or go home.",
+  "season": "2026/27",
+  "kind": "championship",
+  "format": "groups_knockout",
+  "visibility": "public",
+  "qualifiersPerGroup": 2,
+  "legs": 2,
+  "pointsWin": 3,
+  "pointsDraw": 1,
+  "pointsLoss": 0
+ },
+ "organization": {
+  "description": "Robotics runs eFootball competitions for its players. Follow the group tables, fixtures, results and knockouts live, and share the link with everyone who is playing.",
+  "tagline": "eFootball, Champions League style: groups, then knockouts"
  }
 }
