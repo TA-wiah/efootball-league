@@ -241,6 +241,25 @@ def scorers(events):
 # ---------- logos ----------
 SIGNATURES = [(b"\x89PNG\r\n\x1a\n", "image/png"), (b"\xff\xd8\xff", "image/jpeg"), (b"GIF87a", "image/gif"), (b"GIF89a", "image/gif")]
 MAX_LOGO = 256 * 1024
+MAX_PROOF = 1536 * 1024          # screenshots: the browser shrinks big ones first
+
+
+def decode_image(data_url, limit):
+    """Like decode_logo, with a different size limit (PNG, JPEG, GIF or WebP only)."""
+    if not isinstance(data_url, str) or not data_url.startswith("data:image/") or ";base64," not in data_url:
+        raise ValueError("Upload a PNG, JPG, GIF or WebP image.")
+    try:
+        raw = base64.b64decode(data_url.split(";base64,", 1)[1], validate=True)
+    except ValueError:
+        raise ValueError("That image file is damaged.") from None
+    if len(raw) > limit:
+        raise ValueError(f"The image must be smaller than {limit // 1024} KB.")
+    if raw[:4] == b"RIFF" and raw[8:12] == b"WEBP":
+        return raw, "image/webp"
+    for sig, ctype in SIGNATURES:
+        if raw.startswith(sig):
+            return raw, ctype
+    raise ValueError("Upload a PNG, JPG, GIF or WebP image.")
 
 
 def decode_logo(data_url):

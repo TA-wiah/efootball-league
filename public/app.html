@@ -173,6 +173,8 @@ label.toggle small{display:block;color:var(--soft);font-weight:500}label.toggle 
 .bracket{display:flex;gap:14px;overflow-x:auto;padding-bottom:6px}.bracket .rnd{flex:none;width:240px;display:flex;flex-direction:column;gap:8px}.bracket h3{margin:0 0 2px;font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--soft)}
 .bm{display:block;background:var(--card2);border:1px solid var(--line);border-left:3px solid var(--btn);border-radius:10px;padding:8px 10px;color:var(--tx);text-decoration:none;font-size:14px}.bm:hover{border-color:var(--line2)}
 .bm div{display:flex;justify-content:space-between;gap:8px}.bm b{font-variant-numeric:tabular-nums}.bm .w{font-weight:800}.bm small{color:var(--soft)}
+.pgal{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}.pgal figure{margin:0;background:var(--card2);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.pgal img{display:block;width:100%;height:150px;object-fit:cover;background:#000}.pgal figcaption{padding:8px 10px;font-size:13px}.pgal figcaption small{display:block;color:var(--soft)}.pgal .btn{margin-top:6px}
 .nlist a{display:flex;gap:12px;align-items:flex-start;padding:12px 4px;border-top:1px solid var(--line);color:var(--tx);text-decoration:none}.nlist a:first-child{border-top:0}.nlist a:hover{background:rgba(255,255,255,.03)}.nlist .ic{width:20px;height:20px;color:var(--gold);margin-top:2px}.nlist small{display:block;color:var(--soft)}
 @media (prefers-reduced-motion:no-preference){#main>*{animation:rise .35s cubic-bezier(.2,.8,.2,1) both}.toast{animation:rise .3s both}}
 @keyframes rise{from{opacity:0;transform:translateY(12px)}}
@@ -308,6 +310,8 @@ function route(){topnav();var p=location.pathname.replace(/\/+$/,"")||"/",m;
   if(p==="/app")return dashboard();
   if(p==="/app/support")return supportView();
   if(p==="/app/profile")return profileView();
+  if(p==="/app/matches")return myMatchesView();
+  if((m=p.match(/^\/app\/report\/(\d+)$/)))return reportView(+m[1]);
   if(p==="/app/new")return createOrgView();
   if((m=p.match(/^\/app\/org\/([a-z0-9-]+)(?:\/([a-z]+)(?:\/(.+))?)?$/)))return orgView(m[1],m[2]||"overview",m[3]);
   main('<div class="card empty"><h2>Page not found</h2><p class="note">That page doesn\'t exist.</p><a class="btn" href="/app" data-nav>Go to my organizations</a></div>')}
@@ -338,10 +342,10 @@ function U(inner,o){o=o||{};var L=function(h,label,on){return'<a href="'+h+'" da
         return'<div class="ag open"><div class="agh-static">'+esc(grp)+'</div><div class="agi">'+items.map(function(s){
           if(s[0]==="preview")return'<a href="/org/'+esc(g.slug)+'" target="_blank" rel="noopener">'+ic(s[4])+' '+esc(s[1])+' ↗</a>';
           return L(s[0]==="newcomp"?app0("/competitions?new=1"):app0(s[0]==="overview"?"":"/"+s[0]),ic(s[4])+' '+esc(s[1]),s[0]===o.section)}).join("")+'</div></div>'}).join("")+
-      '<div class="asb-f"><a href="'+mineUrl()+'" data-nav>← All organizations</a><a href="/app/profile" data-nav>My profile</a><a href="/app/support" data-nav>Help &amp; support</a>'+(ME.superAdmin?'<a href="/admin" data-nav>Admin panel</a>':'')+'</div>'}
+      '<div class="asb-f"><a href="'+mineUrl()+'" data-nav>← All organizations</a><a href="/app/matches" data-nav>My matches</a><a href="/app/profile" data-nav>My profile</a><a href="/app/support" data-nav>Help &amp; support</a>'+(ME.superAdmin?'<a href="/admin" data-nav>Admin panel</a>':'')+'</div>'}
   else side='<div class="asb-h">'+ic("trophy")+' Dashboard</div><div class="asb-who">'+esc(ME.username)+(ME.superAdmin?' <span class="sb amber">Super admin</span>':'')+'</div>'+
     '<div class="ag open"><div class="agh-static">Menu</div><div class="agi">'+L(mineUrl(),ic("users")+" My organizations",o.key==="orgs")+L("/app/new",ic("plus")+" Create organization",o.key==="new")+
-    L("/app/profile",ic("user")+" My profile",o.key==="profile")+L("/app/support",ic("mail")+" Help &amp; support",o.key==="support")+(ME.superAdmin?L("/admin",ic("shield")+" Admin panel"):"")+'</div></div>'+
+    L("/app/matches",ic("cal")+" My matches",o.key==="matches")+L("/app/profile",ic("user")+" My profile",o.key==="profile")+L("/app/support",ic("mail")+" Help &amp; support",o.key==="support")+(ME.superAdmin?L("/admin",ic("shield")+" Admin panel"):"")+'</div></div>'+
     (ORGS.length?'<div class="ag open"><div class="agh-static">Your organizations</div><div class="agi">'+ORGS.map(function(g){return L("/app/org/"+g.slug,'<span class="dot" style="background:'+safeColor(g.brandColor)+'"></span>'+esc(g.name),false)}).join("")+'</div></div>':'')+
     '<div class="asb-f"><a href="/competitions">Public competitions</a><a href="/">Public home page</a>'+(ME.leagueAccess?'<a href="/classic">Original league site</a>':'')+'</div>';
   return'<div class="ashell"><aside class="asb" id="asb" aria-label="'+(o.org?"Organization menu":"Dashboard menu")+'">'+side+'</aside>'+
@@ -778,6 +782,7 @@ function matchPage(id){api(api0("/matches/"+id)).then(function(r){if(!r.ok)retur
         '<div class="actions"><button class="btn" id="eadd">Add event</button></div></form>':'')+'</div>'+
     (canF?'<details class="card"><summary>Match setup</summary><div id="setup" class="note">Loading…</div></details>':'');
   var reload=function(){matchPage(id)};
+   proofsCard(id);
   if($("rf"))$("rf").onsubmit=function(e){e.preventDefault();var d={homeScore:intOrNull(val("hs")),awayScore:intOrNull(val("as")),status:val("mst"),kickoff:fromLocal(val("mko")),venue:val("mv"),referee:val("mref"),notes:val("mnotes")};
     if(d.homeScore!=null&&d.awayScore!=null&&d.status==="scheduled")d.status="finished";if($("hp")){d.homePens=intOrNull(val("hp"));d.awayPens=intOrNull(val("ap"))}
     var b=$("rsave");busy(b,true,"Saving…");api(api0("/matches/"+id),"PATCH",d).then(function(r){busy(b,false);if(!r.ok){$("rmsg").innerHTML=errBox(r);return}toast("Match saved");reload()})};
@@ -1283,6 +1288,8 @@ function aPro(){var sec=A("Pro League",[["Pro League"]]);
       '<div class="row"><label for="pll">Teams meet<select id="pll">'+opts({1:"Once",2:"Twice (home and away)"},S.legs)+'</select></label><label for="plc">Which teams<input id="plc" maxlength="60" value="'+esc(S.country)+'" placeholder="Worldwide (or a country, e.g. Ghana)"></label></div>'+
       '<div class="row"><label for="plfee">Entry fee per team (0 = free)<input id="plfee" inputmode="decimal" value="'+esc(S.fee)+'"></label><label for="plcur">Currency<select id="plcur">'+curOpts(S.currency)+'</select></label></div>'+
       '<label for="plw">WhatsApp number for results<input id="plw" type="tel" value="'+esc(S.whatsapp?"+"+S.whatsapp:"")+'" placeholder="+233241234567"></label><div class="note">Pro League match pages get a “Send the result on WhatsApp” button to this number.</div>'+
+      '<label class="toggle" style="margin-top:10px"><span>Walkovers for no-shows<small>When no result is in by the deadline, a team that checked in (or sent a screenshot) wins; if neither did, the match is marked not played.</small></span><input type="checkbox" id="plwo"'+(S.walkovers?" checked":"")+'></label>'+
+      '<div class="row"><label for="plwh">Deadline (hours after kick-off)<input id="plwh" type="number" min="1" max="168" value="'+S.walkover_hours+'"></label><label for="plws">Walkover score<input id="plws" type="number" min="1" max="10" value="'+S.walkover_score+'"></label></div>'+
       '<p class="note">'+d.capacity+' places: '+esc(S.divisions)+', up to '+S.size+' teams each. A division needs at least 4 teams.</p>'+
       '<div class="actions"><button class="btn">Save settings</button></div></form>';
     var seasonCard='';
@@ -1299,7 +1306,7 @@ function aPro(){var sec=A("Pro League",[["Pro League"]]);
         return'<tr><td class="num">'+t.seed+'</td><td><b>'+esc(t.team.name)+'</b><small>'+esc(t.org.name)+'</small></td><td><small>'+esc(t.reason)+'</small></td><td class="num">'+t.rating+'</td><td>'+stTag(t.status,STS)+'</td><td>'+esc(t.division||"—")+(t.finalPosition?'<small>Finished '+t.finalPosition+'</small>':'')+'</td><td style="white-space:nowrap">'+acts+'</td></tr>'}).join("")+'</tbody></table></div></div>'}
     var past=d.seasons.slice(1);
     sec.innerHTML=warn+'<div class="agrid">'+settingsCard+'<div>'+seasonCard+'</div></div>'+(past.length?'<div class="card"><div class="gh">Past seasons</div>'+past.map(function(s){return'<p>'+esc(s.name)+' '+stTag(s.status,SNS)+'</p>'}).join("")+'</div>':'');
-    $("plf").onsubmit=function(e){e.preventDefault();act("/api/admin/settings","PATCH",{section:"proleague",changes:{enabled:$("plen").checked,name:val("pln"),divisions:val("pld"),size:+val("pls"),move:+val("plm"),legs:+val("pll"),country:val("plc").trim(),fee:val("plfee").trim()||"0",currency:val("plcur"),whatsapp:val("plw").trim()}},"Settings saved").then(function(x){if(x)aPro()})};
+    $("plf").onsubmit=function(e){e.preventDefault();act("/api/admin/settings","PATCH",{section:"proleague",changes:{enabled:$("plen").checked,name:val("pln"),divisions:val("pld"),size:+val("pls"),move:+val("plm"),legs:+val("pll"),country:val("plc").trim(),fee:val("plfee").trim()||"0",currency:val("plcur"),whatsapp:val("plw").trim(),walkovers:$("plwo").checked,walkover_hours:parseInt(val("plwh"),10)||24,walkover_score:parseInt(val("plws"),10)||3}},"Settings saved").then(function(x){if(x)aPro()})};
     if($("plnew"))$("plnew").onclick=function(){var b=this;busy(b,true,"Picking teams…");api("/api/admin/proleague/season","POST",{}).then(function(r){busy(b,false);if(!r.ok){toast(r.data.error,true);return}toast(r.data.season.name+": "+r.data.season.teams.length+" teams proposed");aPro()})};
     var labels={invite:["Send the invitations?","Each team’s organization is emailed and sees the invitation on its dashboard.","Send invitations"],delete:["Delete this draft?","Nothing has been sent yet.","Delete"],
       start:["Start the season?","Confirmed teams are put into divisions by strength, and the fixtures are created. Teams that haven’t confirmed are left out.","Start the season"],
@@ -1318,12 +1325,66 @@ function proCard(){var box=$("prolg");if(!box)return;var q=new URLSearchParams(l
         (i.canAnswer&&s.status==="inviting"&&st==="invited"?'<button class="btn sm" data-pa="accept" data-id="'+i.id+'">Accept</button><button class="btn g sm" data-pa="decline" data-id="'+i.id+'">Decline</button>':'')+
         (i.checkoutUrl?'<a class="btn sm" href="'+esc(i.checkoutUrl)+'">Pay the entry fee</a><button class="btn g sm" data-pa="check" data-id="'+i.id+'">I’ve paid</button>':'')+
         (i.competition?'<a class="btn g sm" href="/competition/'+esc(i.competition.slug)+'" target="_blank" rel="noopener">Fixtures & table ↗</a>':'')+'</div></div>'}).join("")+
-      (P.whatsapp?'<p class="note" style="margin:10px 0 0">After each Pro League match, send the result on WhatsApp to +'+esc(P.whatsapp)+' (each match page has a button).</p>':'')+'</div>';
+      '<p style="margin:10px 0 0"><a class="btn sm" href="/app/matches" data-nav>'+ic("cal")+' My matches: check in &amp; send screenshots</a></p>'+(P.whatsapp?'<p class="note" style="margin:10px 0 0">After each Pro League match, send the result on WhatsApp to +'+esc(P.whatsapp)+' (each match page has a button).</p>':'')+'</div>';
     document.querySelectorAll("[data-pa]").forEach(function(b){b.onclick=function(){var a=b.dataset.pa,run=function(){busy(b,true,"…");api(api0("/proleague/"+b.dataset.id+"/"+a),"POST",{}).then(function(r){busy(b,false);
         if(!r.ok){toast(r.data.error,true);return}if(r.data.checkoutUrl){toast("Opening PayNova…");location.href=r.data.checkoutUrl;return}
         toast(a==="check"?(r.data.confirmed?"Payment received: your place is confirmed":"Not paid yet"):a==="accept"?"Accepted: your place is confirmed":"Declined");load()})};
       if(a==="decline")confirmBox("Decline the invitation?","Your place goes to the next team in the rankings.",{ok:"Decline",danger:true}).then(function(ok){if(ok)run()});else run()}})})};
   if(back){history.replaceState(null,"",location.pathname);api(api0("/proleague/"+back+"/check"),"POST",{}).then(function(r){if(r.ok&&r.data.confirmed)toast("Payment received: your place is confirmed");load()})}else load()}
+
+// ---------- match reports by the teams: check-in, screenshots, walkovers ----------
+// Screenshots stay readable: shrunk to at most 1600 px and about 1.4 MB before they're sent.
+function shrinkShot(file,cb){if(!/^image\/(png|jpeg|gif|webp)$/.test(file.type)){toast("Use PNG, JPG, GIF or WebP screenshots",true);return}
+  var LIMIT=1400*1024,rd=new FileReader();rd.onerror=function(){toast("Couldn't read that image",true)};
+  rd.onload=function(){var src=rd.result;if(file.size<=LIMIT)return cb(src);var img=new Image();img.onerror=function(){toast("That image file is damaged",true)};
+    img.onload=function(){var out=null;[1600,1280,1024].some(function(max){var k=Math.min(1,max/Math.max(img.width,img.height)),c=document.createElement("canvas");
+        c.width=Math.max(1,Math.round(img.width*k));c.height=Math.max(1,Math.round(img.height*k));c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+        return[.85,.75,.6].some(function(q){var d=c.toDataURL("image/webp",q);if(d.indexOf("data:image/webp")!==0)d=c.toDataURL("image/jpeg",q);out=d;return d.length*.75<=LIMIT})});
+      if(out&&out.length*.75<=LIMIT)cb(out);else toast("That screenshot is too large even after shrinking",true)};img.src=src};rd.readAsDataURL(file)}
+function decidedTag(d){return d==="walkover"?'<span class="pill warn">Walkover</span>':d==="no_show"?'<span class="pill cancelled">Not played</span>':''}
+function proofGallery(R,M){var name=function(s){return s==="home"?M.home:M.away};
+  return R.proofs.length?'<div class="pgal">'+R.proofs.map(function(p){return'<figure><a href="'+esc(p.url)+'" target="_blank" rel="noopener"><img src="'+esc(p.url)+'" alt="'+esc(p.kindLabel)+'" loading="lazy"></a><figcaption><b>'+esc(name(p.side))+'</b> · '+esc(p.kindLabel)+
+    (p.homeScore!=null?' · says <b>'+p.homeScore+'–'+p.awayScore+'</b>':'')+'<small>'+esc(p.by||"")+' · '+ago(p.created)+(p.note?' · '+esc(p.note):'')+'</small>'+
+    ((R.staff||p.by===ME.username)?'<button type="button" class="btn g sm" data-pdel="'+p.id+'">Delete</button>':'')+'</figcaption></figure>'}).join("")+'</div>':'<p class="note">No screenshots yet.</p>'}
+function checkins(R,M){var ck=function(s){var n=s==="home"?M.home:M.away;return R.checkin[s]?'<span class="sb green">'+esc(n)+': here ('+ago(R.checkin[s])+')</span>':'<span class="sb grey">'+esc(n)+': not checked in</span>'};return ck("home")+' '+ck("away")}
+function reportView(id){document.title="Match report · Competition Manager";UM('<div id="rp">'+LOADING+'</div>',{key:"matches"});
+  var load=function(){api("/api/report/"+id).then(function(r){if(!r.ok){$("rp").innerHTML='<div class="card empty">'+ic("lock")+'<h2>Match not found</h2><p class="note">You can only report matches your teams play in.</p><a class="btn" href="/app/matches" data-nav>My matches</a></div>';return}
+    var R=r.data,M=R.match,name=function(s){return s==="home"?M.home:M.away};
+    $("rp").innerHTML='<div class="ph"><div><div class="note">'+esc(M.competition.name)+' · '+esc(M.round)+'</div><h1>'+esc(M.home)+' v '+esc(M.away)+'</h1><p>'+(M.kickoff?esc(when(M.kickoff)):"Date to be set")+
+        (M.homeScore!=null?' · <b style="color:var(--tx)">'+M.homeScore+'–'+M.awayScore+'</b>':'')+' '+decidedTag(M.decided)+'</p></div><a class="btn g sm" href="/app/matches" data-nav>← My matches</a></div>'+
+      '<div class="agrid"><div class="card"><div class="gh">Showing up</div><p style="margin-top:0">'+checkins(R,M)+'</p>'+
+        (R.deadline?'<p class="note">Deadline: <b style="color:var(--tx)">'+esc(when(R.deadline))+'</b>. If the result isn’t in by then, a team that checked in wins by walkover; if neither did, the match is marked not played.</p>':'')+
+        (R.checkinOpen?R.sides.filter(function(s){return!R.checkin[s]}).map(function(s){return'<button class="btn" data-ck="'+s+'">'+ic("check")+' We’re here: '+esc(name(s))+'</button> '}).join(""):
+          (R.checkinOpens&&new Date(R.checkinOpens)>new Date()&&R.sides.length?'<p class="note">“We’re here” opens at '+esc(when(R.checkinOpens))+' (an hour before kick-off).</p>':''))+'</div>'+
+      (R.sides.length&&M.status!=="finished"&&M.status!=="cancelled"?'<form class="card" id="pf2" novalidate><div class="gh">Send screenshots</div>'+(R.sides.length>1?'<label for="psd">For<select id="psd">'+R.sides.map(function(s){return'<option value="'+s+'">'+esc(name(s))+'</option>'}).join("")+'</select></label>':'')+
+        '<label for="pkd">What they show<select id="pkd">'+opts(R.kinds,"start")+'</select></label><div id="psc" class="row" hidden><label for="phs">'+esc(M.home)+' scored<input id="phs" type="number" min="0" max="99"></label><label for="pas">'+esc(M.away)+' scored<input id="pas" type="number" min="0" max="99"></label></div>'+
+        '<label for="pnt">Note (optional)<input id="pnt" maxlength="200" placeholder="e.g. the connection dropped at 60′"></label><label for="pim">Screenshots (you can pick several)<input id="pim" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple></label>'+
+        '<div class="actions"><button class="btn" id="pgo">'+ic("plus")+' Send</button>'+(R.whatsapp?'<a class="btn g" href="'+esc(R.whatsapp)+'" target="_blank" rel="noopener">WhatsApp the result</a>':'')+'</div></form>':'')+'</div>'+
+      '<div class="card"><div class="gh">Screenshots · '+R.proofs.length+'</div><p class="note" style="margin-top:0">Only the two teams and the league can see these.</p>'+proofGallery(R,M)+'</div>'+
+      (R.staff?'<div class="card"><div class="gh">For the league</div><p class="note" style="margin-top:0">Compare both teams’ screenshots, then enter the result.</p><a class="btn" href="/app/org/'+esc(M.competition.org)+'/match/'+M.id+'" data-nav>Enter the result</a></div>':'');
+    document.querySelectorAll("[data-ck]").forEach(function(b){b.onclick=function(){busy(b,true,"…");api("/api/report/"+id+"/checkin","POST",{side:b.dataset.ck}).then(function(r){busy(b,false);toast(r.ok?"Checked in. Good luck!":r.data.error,!r.ok);load()})}});
+    document.querySelectorAll("[data-pdel]").forEach(function(b){b.onclick=function(){confirmBox("Delete this screenshot?","",{danger:true,ok:"Delete"}).then(function(ok){if(ok)api("/api/report/"+id+"/proof/"+b.dataset.pdel,"DELETE",{}).then(function(r){toast(r.ok?"Deleted":r.data.error,!r.ok);load()})})}});
+    if(!$("pf2"))return;$("pkd").onchange=function(){$("psc").hidden=this.value!=="result"};
+    $("pf2").onsubmit=function(e){e.preventDefault();var files=[].slice.call($("pim").files),b=$("pgo");if(!files.length){toast("Choose at least one screenshot",true);return}
+      var base={side:$("psd")?val("psd"):R.sides[0],kind:val("pkd"),note:val("pnt")};if(base.kind==="result"){base.homeScore=val("phs");base.awayScore=val("pas")}
+      var sent=0,i=0;busy(b,true,"Sending…");var next=function(){if(i>=files.length){busy(b,false);toast(sent+" screenshot"+(sent===1?"":"s")+" sent");load();return}
+        shrinkShot(files[i++],function(img){api("/api/report/"+id+"/proof","POST",Object.assign({image:img},base)).then(function(r){if(r.ok)sent++;else toast(r.data.error,true);next()})})};next()}})};
+  load()}
+function myMatchesView(){document.title="My matches · Competition Manager";
+  UM('<div class="ph"><div><h1>My matches</h1><p>Your teams’ fixtures. Before kick-off press “We’re here”, then send screenshots of the start, the end and the result.</p></div></div><div id="mm">'+LOADING+'</div>',{key:"matches"});
+  api("/api/report/mine").then(function(r){if(!r.ok){$("mm").innerHTML=errBox(r);return}var ms=r.data.matches,now=Date.now();
+    var row=function(m){return'<tr><td style="white-space:nowrap">'+(m.kickoff?esc(when(m.kickoff)):"Date to be set")+'</td><td><b>'+esc(m.home)+' v '+esc(m.away)+'</b><small>'+esc(m.competition)+(m.pro?' · Pro League':'')+'</small></td><td>'+
+      (m.homeScore!=null?'<b>'+m.homeScore+'–'+m.awayScore+'</b> ':'')+decidedTag(m.decided)+(m.status==="scheduled"&&m.checkedIn?'<span class="sb green">Checked in</span>':'')+(m.proofs?' <span class="note">'+m.proofs+' screenshot'+(m.proofs===1?"":"s")+'</span>':'')+'</td>'+
+      '<td style="text-align:right"><a class="btn sm'+(m.status==="scheduled"?"":" g")+'" href="/app/report/'+m.id+'" data-nav>'+(m.status==="scheduled"?"Report":"View")+'</a></td></tr>'};
+    var up=ms.filter(function(m){return m.status==="scheduled"||m.status==="live"}),past=ms.filter(function(m){return!(m.status==="scheduled"||m.status==="live")}).reverse();
+    $("mm").innerHTML=ms.length?(up.length?'<div class="card"><div class="gh">Coming up</div><div class="tbl"><table class="dt"><tbody>'+up.map(row).join("")+'</tbody></table></div></div>':'')+
+      (past.length?'<div class="card"><div class="gh">Played</div><div class="tbl"><table class="dt"><tbody>'+past.map(row).join("")+'</tbody></table></div></div>':'')
+      :'<div class="card empty">'+ic("cal")+'<h2>No matches</h2><p class="note">Matches of the teams you manage or play for show here.</p></div>'})}
+// for the league: the teams' screenshots and check-ins on the match page
+function proofsCard(id){var box=document.createElement("div");box.id="proofbox";$("sec").appendChild(box);
+  api("/api/report/"+id).then(function(r){if(!r.ok)return;var R=r.data,M=R.match;if(!R.proofs.length&&!R.checkin.home&&!R.checkin.away&&!R.deadline){return}
+    box.innerHTML='<div class="card"><div class="gh">From the teams</div><p style="margin-top:0">'+checkins(R,M)+' '+decidedTag(M.decided)+'</p>'+(R.deadline?'<p class="note">Deadline for a result: '+esc(when(R.deadline))+'.</p>':'')+proofGallery(R,M)+'</div>';
+    box.querySelectorAll("[data-pdel]").forEach(function(b){b.onclick=function(){api("/api/report/"+id+"/proof/"+b.dataset.pdel,"DELETE",{}).then(function(r){toast(r.ok?"Deleted":r.data.error,!r.ok);box.remove();proofsCard(id)})}})})}
 
 // ---------- accepting an invitation ----------
 function inviteView(token){document.title="Invitation · Competition Manager";main('<div class="card note auth">Checking your invitation…</div>');

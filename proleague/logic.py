@@ -31,7 +31,9 @@ def config():
     return {"enabled": bool(s.get("enabled")), "name": (s.get("name") or "eFootball Pro League")[:80], "divisions": names[:26],
             "size": min(6, max(MIN_SIZE, int(s.get("size") or 6))), "move": min(3, max(0, int(s.get("move") or 1))),
             "legs": 2 if int(s.get("legs") or 2) == 2 else 1, "country": (s.get("country") or "").strip(), "fee": fee,
-            "currency": s.get("currency") or "GHS", "whatsapp": re.sub(r"\D", "", str(s.get("whatsapp") or "")), "org_id": int(s.get("org_id") or 0)}
+            "currency": s.get("currency") or "GHS", "whatsapp": re.sub(r"\D", "", str(s.get("whatsapp") or "")), "org_id": int(s.get("org_id") or 0),
+            "walkovers": s.get("walkovers", True) is not False, "walkover_hours": min(168, max(1, int(s.get("walkover_hours") or 24))),
+            "walkover_score": min(10, max(1, int(s.get("walkover_score") or 3)))}
 
 
 def pro_org(user=None):

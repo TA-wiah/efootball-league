@@ -797,6 +797,10 @@ def check_proleague_settings(c):
         raise ApiError(400, "Teams going up and down must be from 0 to 3.")
     if "legs" in c and c["legs"] not in (1, 2):
         raise ApiError(400, "Teams meet once or twice.")
+    if "walkover_hours" in c and (not isinstance(c["walkover_hours"], int) or not 1 <= c["walkover_hours"] <= 168):
+        raise ApiError(400, "The deadline must be from 1 to 168 hours after kick-off.")
+    if "walkover_score" in c and (not isinstance(c["walkover_score"], int) or not 1 <= c["walkover_score"] <= 10):
+        raise ApiError(400, "The walkover score must be from 1 to 10.")
     if "currency" in c and c["currency"] not in CURRENCIES:
         raise ApiError(400, "Choose a supported currency.")
     if "whatsapp" in c:

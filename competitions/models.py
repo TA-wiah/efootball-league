@@ -124,6 +124,9 @@ class Match(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
     finished_at = models.DateTimeField(null=True, blank=True)   # when the result was entered (for analytics)
+    home_checkin = models.DateTimeField(null=True, blank=True)  # the team pressed "We're here" (or sent a screenshot)
+    away_checkin = models.DateTimeField(null=True, blank=True)
+    decided = models.CharField(max_length=10, blank=True)       # "walkover" or "no_show" when the system settled it
 
     class Meta:
         ordering = ["round", "kickoff", "id"]
@@ -155,3 +158,22 @@ class Announcement(models.Model):
     author = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+")
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
+
+
+class MatchProof(models.Model):
+    """A screenshot a team sends as proof: the start, the end, the result screen, or anything else.
+    Only the two teams and the competition's staff can see it."""
+    KINDS = {"start": "Start of the match", "end": "End of the match", "result": "Result screen", "other": "Other"}
+    match = models.ForeignKey(Match, on_delete=models.CASCADE, related_name="proofs")
+    side = models.CharField(max_length=4)                          # home / away
+    kind = models.CharField(max_length=10)
+    image = models.BinaryField()
+    content_type = models.CharField(max_length=30)
+    note = models.CharField(max_length=200, blank=True)
+    home_score = models.PositiveSmallIntegerField(null=True, blank=True)   # the score this team says it was
+    away_score = models.PositiveSmallIntegerField(null=True, blank=True)
+    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+")
+    created = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created", "id"]

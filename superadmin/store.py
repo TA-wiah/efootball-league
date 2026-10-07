@@ -17,11 +17,13 @@ DEFAULTS = {
     "rankings": {"enabled": False, "min_matches": 3},
     # The Pro League: divisions of the best-ranked teams, run by the platform.
     "proleague": {"enabled": False, "name": "eFootball Pro League", "divisions": "Division A, Division B, Division C, Division D", "size": 6,
-                  "move": 1, "legs": 2, "country": "", "fee": "0", "currency": "GHS", "whatsapp": "", "org_id": 0},
+                  "move": 1, "legs": 2, "country": "", "fee": "0", "currency": "GHS", "whatsapp": "", "org_id": 0,
+                  "walkovers": True, "walkover_hours": 24, "walkover_score": 3},
 }
 SECRETS = {"email": {"password", "api_key"}, "payments": {"secret_key"}, "sms": {"api_key"}}
 TYPES = {"allow_signups": bool, "require_org_approval": bool, "max_orgs_per_user": int, "port": int, "enabled": bool, "fee_enabled": bool,
-         "min_credits": int, "min_matches": int, "size": int, "move": int, "legs": int, "org_id": int}
+         "min_credits": int, "min_matches": int, "size": int, "move": int, "legs": int, "org_id": int,
+         "walkovers": bool, "walkover_hours": int, "walkover_score": int}
 
 
 def get(section):

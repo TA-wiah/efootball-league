@@ -131,7 +131,8 @@ def match_json(m, detail=False):
          "homeFrom": bracket.label(m.home_from) or None, "awayFrom": bracket.label(m.away_from) or None, "slot": m.slot,
          "homeFrom": bracket.label(m.home_from) or None, "awayFrom": bracket.label(m.away_from) or None, "kickoff": iso(m.kickoff), "venue": m.venue or None,
          "referee": m.referee or None, "status": m.status, "homeScore": m.home_score, "awayScore": m.away_score,
-         "homePens": m.home_pens, "awayPens": m.away_pens}
+         "homePens": m.home_pens, "awayPens": m.away_pens, "decided": m.decided or None,
+         "proofs": m.proofs.count() if detail else None}
     if detail:
         d["notes"] = m.notes
         d["events"] = [event_json(e) for e in m.events.select_related("player", "assist")]
@@ -711,6 +712,8 @@ def match_detail(request, user, ip, slug, match_id):
     apply_match(mt, b)
     if mt.status == "finished" and before["status"] != "finished":
         mt.finished_at = timezone.now()
+    if set(b) & {"homeScore", "awayScore", "status"} and mt.decided:
+        mt.decided = ""                                   # entered by hand: no longer a walkover / no show
     mt.save()
     bracket.resolve(mt.competition)                       # a finished group or tie fills in the next knockout matches
     after = {"score": [mt.home_score, mt.away_score], "status": mt.status}

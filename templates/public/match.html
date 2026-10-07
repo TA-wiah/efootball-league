@@ -14,7 +14,9 @@
   </div>
   <div style="display:flex;justify-content:center">{% include "public/_share.html" with share_url=url share_text=title %}</div>
 </section>
-{% if whatsapp %}<section class="card" style="border-color:rgba(37,211,102,.5)"><div class="gh">Played this match?</div><p class="note" style="margin-top:0">Send the final score to the league on WhatsApp. They'll enter it, and the table updates.</p><a class="btn" href="{{ whatsapp }}" target="_blank" rel="noopener noreferrer" style="background:#25d366;color:#062b16">Send the result on WhatsApp</a></section>{% endif %}
+{% if whatsapp or report %}<section class="card" style="border-color:rgba(37,211,102,.5)"><div class="gh">Playing in this match?</div><p class="note" style="margin-top:0">Press “We're here” before kick-off and send screenshots of the start, the end and the result. A team that doesn't show up loses by walkover.</p>
+  <div class="actions">{% if report %}<a class="btn" href="{{ report }}">Check in &amp; upload screenshots</a>{% endif %}{% if whatsapp %}<a class="btn" href="{{ whatsapp }}" target="_blank" rel="noopener noreferrer" style="background:#25d366;color:#062b16">Send the result on WhatsApp</a>{% endif %}</div></section>{% endif %}
+{% if decided == "walkover" %}<section class="card"><span class="pill warn">Walkover</span> <span class="note">Decided because only one team showed up.</span></section>{% elif decided == "no_show" %}<section class="card"><span class="pill cancelled">Not played</span> <span class="note">Neither team showed up.</span></section>{% endif %}
 
 <div class="two">
   <div>
