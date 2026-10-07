@@ -127,8 +127,8 @@ def create_invitation(request, org, user, role, email, teams=()):
     if email:
         if not EMAIL_RE.fullmatch(email):
             raise ApiError(400, "Enter a valid email address, or leave it empty to create an invitation link.")
-        if org.memberships.filter(user__email__iexact=email).exists():
-            raise ApiError(409, "Someone with that email is already a member.")
+        if not teams and org.memberships.filter(user__email__iexact=email).exists():
+            raise ApiError(409, "Someone with that email is already a member. To add them to a team, invite them from the team's page.")
         if org.invitations.filter(email__iexact=email, status=Invitation.PENDING, expires__gt=timezone.now()).exists():
             raise ApiError(409, "That email already has a pending invitation. Resend or revoke it below.")
     if hit(f"orginvite:{org.id}", 50, 3600):
@@ -167,7 +167,7 @@ def my_pending_invitations(user):
         return Invitation.objects.none()
     return (Invitation.objects.select_related("org", "invited_by")
             .filter(email__iexact=user.email, status=Invitation.PENDING, expires__gt=timezone.now())
-            .exclude(org__memberships__user=user))
+            .exclude(Q(org__memberships__user=user) & Q(teams__isnull=True)).distinct())
 
 
 def send_invitation_email(request, inv, link):
@@ -202,15 +202,24 @@ def join(user, inv):
                                  "expired": "This invitation has expired. Ask for a new one."}[inv.state])
         if inv.email and (user.email or "").lower() != inv.email.lower():
             raise ApiError(403, f"This invitation was sent to {mask(inv.email)}. Log in with the account that uses that email to accept it.")
-        if Membership.objects.filter(org=inv.org, user=user).exists():
-            raise ApiError(409, f"You're already a member of {inv.org.name}.")
-        mem = Membership.objects.create(org=inv.org, user=user, role=inv.role, last_active=timezone.now())
         teams = list(inv.teams.filter(org=inv.org))
+        mem = Membership.objects.filter(org=inv.org, user=user).first()
+        if mem and not teams:
+            raise ApiError(409, f"You're already a member of {inv.org.name}.")
+        if mem:                                      # already in: join the team, keep the higher role
+            if mem.teams.filter(id__in=[t.id for t in teams]).count() == len(teams):
+                raise ApiError(409, f"You're already in {', '.join(t.name for t in teams)}.")
+            if mem.role != OWNER and RANK[inv.role] > RANK[mem.role]:
+                mem.role = inv.role
+                mem.save(update_fields=["role"])
+        else:
+            mem = Membership.objects.create(org=inv.org, user=user, role=inv.role, last_active=timezone.now())
         if teams:
             mem.teams.add(*teams)
         inv.status, inv.accepted_by, inv.accepted_at = Invitation.ACCEPTED, user, timezone.now()
         inv.save(update_fields=["status", "accepted_by", "accepted_at"])
-    log(inv.org, user, f"joined as {ROLE_INFO[inv.role][0]}")
+    where = f" ({', '.join(t.name for t in teams)})" if teams else ""
+    log(inv.org, user, f"joined as {ROLE_INFO[inv.role][0]}{where}")
     return inv.org
 
 
@@ -610,7 +619,14 @@ def invitations(request, user, ip, slug):
     role, email = text(b, "role", 20), text(b, "email", 254).lower()
     if role not in assignable_roles(m.role):
         raise ApiError(403, f"Your role ({ROLE_INFO[m.role][0]}) can't invite people as {ROLE_INFO.get(role, ('that role',))[0]}.")
-    return create_invitation(request, org, user, role, email)
+    teams = []
+    if b.get("teamId") not in (None, ""):
+        if role not in TEAM_ROLES and role != PLAYER:
+            raise ApiError(400, "Only team managers, coaches and players are invited into a team.")
+        teams = list(org.teams.filter(id=b["teamId"] if isinstance(b["teamId"], int) else -1))
+        if not teams:
+            raise ApiError(404, "Team not found.")
+    return create_invitation(request, org, user, role, email, teams=teams)
 
 
 @endpoint("POST", login_required=True)
@@ -661,8 +677,8 @@ def invitation_public(request, user, ip, token):
     inv = find_invitation(ip, token)
     return {"org": {"name": inv.org.name, "slug": inv.org.slug}, **role_json(inv.role), "roleDescription": ROLE_INFO[inv.role][1],
             "invitedBy": getattr(inv.invited_by, "username", None), "email": mask(inv.email) if inv.email else None,
-            "kind": "email" if inv.email else "link", "status": inv.state,
-            "alreadyMember": bool(user and Membership.objects.filter(org=inv.org, user=user).exists())}
+            "kind": "email" if inv.email else "link", "status": inv.state, "teams": [t.name for t in inv.teams.all()],
+            "alreadyMember": bool(user and not inv.teams.exists() and Membership.objects.filter(org=inv.org, user=user).exists())}
 
 
 @endpoint("POST", login_required=True)
@@ -673,7 +689,7 @@ def invitation_accept(request, user, ip, token):
 
 @endpoint("GET", login_required=True)
 def my_invitations(request, user, ip):
-    return {"invitations": [{"id": i.id, "org": {"name": i.org.name, "slug": i.org.slug}, **role_json(i.role),
+    return {"invitations": [{"id": i.id, "org": {"name": i.org.name, "slug": i.org.slug}, **role_json(i.role), "teams": [t.name for t in i.teams.all()],
                              "invitedBy": getattr(i.invited_by, "username", None), "expires": ms(i.expires)}
                             for i in my_pending_invitations(user)]}
 
