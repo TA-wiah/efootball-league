@@ -50,7 +50,7 @@ def send_text(org, user, numbers, body_text, kind="message", running_host=""):
     """Check, charge and send one text to these numbers. Raises ApiError (blocked, no credits, bad numbers, provider down)."""
     cfg = providers.config()
     if not providers.ready(cfg):
-        raise ApiError(400, "Text messages aren't set up on this platform yet. Ask the platform super admin.")
+        raise ApiError(400, "Text messages aren't available yet. Please contact the platform administrator to turn them on.")
     body_text = (body_text or "").strip()
     if not body_text:
         raise ApiError(400, "Write the message.")
@@ -198,7 +198,7 @@ def org_sms_buy(request, user, ip, slug):
     currency = cfg.get("currency") or "GHS"
     method = b.get("method") if b.get("method") in ("paynova", "request") else "paynova"
     if method == "paynova" and (amount <= 0 or not paynova.ready()):
-        raise ApiError(400, "Paying online isn't available. Ask the platform to add the credits instead.")
+        raise ApiError(400, "Paying online isn't available yet. Use “Ask the platform to add them” instead, or contact the platform administrator.")
     if SmsPurchase.objects.filter(org=org, status=SmsPurchase.PENDING).count() >= 5:
         raise ApiError(429, "You already have 5 open credit requests. Finish or cancel one first.")
     p = SmsPurchase.objects.create(org=org, credits=n, amount=amount, currency=currency, method=method, requested_by=user)

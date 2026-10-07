@@ -85,7 +85,7 @@ def send(numbers, text, cfg=None):
     cfg = cfg or config()
     p = cfg.get("provider")
     if not ready(cfg):
-        raise SmsError("SMS isn't set up on this platform yet.")
+        raise SmsError("Text messages aren't available yet. Please contact the platform administrator to turn them on.")
     if p == "console":
         log.warning("SMS (test mode) to %s: %s", ", ".join(numbers), text)
         return "test"

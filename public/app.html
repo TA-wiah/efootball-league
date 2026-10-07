@@ -1050,7 +1050,9 @@ function curOpts(sel){var m={};CURS.forEach(function(c){m[c]=c});return opts(m,s
 function money(a,c){return'<span style="white-space:nowrap">'+esc(c)+' '+esc(a)+'</span>'}
 var PST={pending:["Unpaid","amber"],paid:["Paid","green"],cancelled:["Cancelled","grey"],requested:["Waiting for approval","amber"],processing:["Sending…","blue"],sent:["Sent","green"],rejected:["Rejected","red"]};
 function pst(s){var x=PST[s]||[s,"grey"];return'<span class="sb '+x[1]+'">'+esc(x[0])+'</span>'}
-function payBanner(P){return(!P.ready?'<div class="banner">Payments aren’t switched on for this platform yet. The platform super admin connects the PayNova account first.</div>':'')+
+// Who to ask when a platform feature isn't turned on yet: the support email if there is one, otherwise the help page.
+function contactAdmin(){return SITE.supportEmail?' Email <a href="mailto:'+esc(SITE.supportEmail)+'">'+esc(SITE.supportEmail)+'</a>.':' <a href="/app/support" data-nav>Contact the administrator</a>.'}
+function payBanner(P){return(!P.ready?'<div class="banner">Online payments aren’t available yet. Please contact the platform administrator to turn them on.'+contactAdmin()+'</div>':'')+
   (P.ready&&P.mode==="test"?'<div class="banner">Test mode: invoices and payouts are practice runs. No real money moves.</div>':'')+
   (P.syncError?'<div class="err" style="margin:0 0 14px">'+esc(P.syncError)+'</div>':'')}
 function destText(p){var d=p.destination||{};return p.method==="paynova"?esc(d.email):p.method==="mobile_money"?esc((PAY&&PAY.networks[d.network])||d.network)+' '+esc(d.phone_number):esc(d.bank_name)+' · '+esc(d.account_number)}
@@ -1167,7 +1169,7 @@ var MST={sent:["Sent","green"],failed:["Not sent","red"],blocked:["Blocked","red
 function messagesSec(){var q=new URLSearchParams(location.search),pid=q.get("purchase");
   var go2=function(){Promise.all([api(api0("/sms")),api(api0("/competitions")),api(api0("/matches?view=all"))]).then(function(res){var r=res[0];if(!r.ok)return fail(r);var S=r.data,cs=(res[1].data||{}).competitions||[],ms=(res[2].data||{}).matches||[];
     var price=+S.price,cur=S.currency;
-    $("sec").innerHTML=(!S.ready?'<div class="banner">Text messages aren’t set up on this platform yet. The platform super admin connects the SMS provider first.</div>':'')+
+    $("sec").innerHTML=(!S.ready?'<div class="banner">Text messages aren’t available yet. Please contact the platform administrator to turn them on.'+contactAdmin()+'</div>':'')+
       '<div class="kpis"><div class="kpi"><span>SMS credits</span><b>'+n(S.credits)+'</b><small>1 credit = 1 SMS to 1 person'+(price?' · '+esc(cur)+' '+esc(S.price)+' per credit':'')+'</small></div></div>'+
       (S.canSend?'<form class="card" id="smf" novalidate><div class="gh">Send a message</div><p class="note" style="margin-top:0">Pick a ready-made message: it’s written for you from your fixtures and results. Every message is checked before it goes out.</p>'+
         '<label for="smt">Message<select id="smt">'+opts(S.templates,"match_reminder")+'</select></label>'+
