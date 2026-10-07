@@ -73,6 +73,7 @@ INSTALLED_APPS = [
     "superadmin",
     "payments",
     "sms",
+    "proleague",
 ]
 MIDDLEWARE = [
     "league.middleware.health",                       # answers /api/health before host checks

@@ -14,6 +14,7 @@
   </div>
   <div style="display:flex;justify-content:center">{% include "public/_share.html" with share_url=url share_text=title %}</div>
 </section>
+{% if whatsapp %}<section class="card" style="border-color:rgba(37,211,102,.5)"><div class="gh">Played this match?</div><p class="note" style="margin-top:0">Send the final score to the league on WhatsApp. They'll enter it, and the table updates.</p><a class="btn" href="{{ whatsapp }}" target="_blank" rel="noopener noreferrer" style="background:#25d366;color:#062b16">Send the result on WhatsApp</a></section>{% endif %}
 
 <div class="two">
   <div>

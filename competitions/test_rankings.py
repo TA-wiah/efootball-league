@@ -64,3 +64,21 @@ class RankingsTest(Helpers, TestCase):
 
     def test_margin_and_penalties(self):
         self.assertEqual((rankings.margin_factor(1), rankings.margin_factor(2), rankings.margin_factor(3)), (1.0, 1.5, 1.75))
+
+    def test_rankings_by_country_and_region(self):
+        b1, c1 = self.league(self.a, self.sa, ["Lions", "Tigers"])          # Kasoa League: Central, Ghana
+        self.b.call("patch", f"/api/orgs/{self.sb}", {"country": "Nigeria", "region": "Lagos"})
+        b2, c2 = self.league(self.b, self.sb, ["Eagles", "Hawks"])
+        self.play(self.a, b1, c1, "Lions")
+        self.play(self.b, b2, c2, "Eagles")
+        self.root.call("patch", "/api/admin/settings", {"section": "rankings", "changes": {"enabled": True, "min_matches": 1}})
+        world = Client().get("/rankings").content.decode()
+        self.assertIn("Worldwide", world)
+        self.assertTrue("Lions" in world and "Eagles" in world)
+        ng = Client().get("/rankings?country=Nigeria").content.decode()
+        self.assertIn("Eagles", ng)
+        self.assertNotIn("Lions", ng)
+        lagos = Client().get("/rankings?country=Nigeria&region=Lagos").content.decode()
+        self.assertIn("Lagos, Nigeria", lagos)
+        self.assertIn("Eagles", lagos)
+        self.assertNotIn("Eagles", Client().get("/rankings?country=Nigeria&region=Abuja").content.decode())

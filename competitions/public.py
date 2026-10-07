@@ -216,7 +216,9 @@ def match(request, slug):
     else:
         when = timezone.localtime(m.kickoff).strftime("%d %b %Y, %H:%M") if m.kickoff else "date to be set"
         desc = f"{title}, {when}. {c.name}, {mv['round']}."
-    ctx = {"c": c, "m": mv, "events": events, "aggregate": aggregate, "table": table, "same_round": same_round, "referee": m.referee,
+    from proleague.logic import is_pro, whatsapp_link
+    wa = whatsapp_link(m) if is_pro(c) and m.status != "finished" else ""
+    ctx = {"c": c, "m": mv, "events": events, "aggregate": aggregate, "whatsapp": wa, "table": table, "same_round": same_round, "referee": m.referee,
            "title": title + (f" {m.home_score}–{m.away_score}" if mv["played"] else ""), "description": desc,
            "logo": logo("competition", c), "share_image": logo("competition", c) or org_logo(c.org), "notes": m.notes}
     return page(request, "match.html", ctx, index=c.visibility == "public" and not c.hidden, private=c.hidden)
@@ -419,19 +421,26 @@ def rankings_page(request, tab=""):
         raise Http404
     data = compute()
     country = (request.GET.get("country") or "").strip()[:60]
+    region = (request.GET.get("region") or "").strip()[:60] if country else ""
+    where = lambda o: (not country or o.country.lower() == country.lower()) and (not region or o.region.lower() == region.lower())
     teams = [r for r in data["teams"] if r["played"] >= cfg["min_matches"]]
     countries = sorted({r["team"].org.country for r in teams if r["team"].org.country})
+    regions = sorted({r["team"].org.region for r in teams if r["team"].org.region and r["team"].org.country.lower() == country.lower()}) if country else []
     rows = []
-    for pos, r in enumerate(teams, 1):
-        if country and r["team"].org.country.lower() != country.lower():
-            continue
-        rows.append({**r, "position": pos, "rating": round(r["rating"]), "t": team_view(r["team"], public_team_ids([r["team"].id])),
-                     "org": r["team"].org, "gd": r["gf"] - r["ga"]})
+    for r in teams:                                   # positions are counted inside the chosen area
+        if where(r["team"].org):
+            rows.append({**r, "position": len(rows) + 1, "rating": round(r["rating"]), "t": team_view(r["team"], public_team_ids([r["team"].id])),
+                         "org": r["team"].org, "gd": r["gf"] - r["ga"]})
     players = []
-    for i, p in enumerate(data["players"][:100], 1):
+    for p in data["players"]:
         team = p["team"]
-        players.append({**p, "position": i, "t": team_view(team, set()) if team else None, "org": team.org if team else None})
-    ctx = {"tab": tab, "rows": rows[:200], "players": players, "countries": countries, "country": country, "min_matches": cfg["min_matches"],
+        if team and where(team.org) or (not team and not country):
+            players.append({**p, "position": len(players) + 1, "t": team_view(team, set()) if team else None, "org": team.org if team else None})
+        if len(players) >= 100:
+            break
+    area = ", ".join(x for x in (region, country) if x) or "Worldwide"
+    ctx = {"tab": tab, "rows": rows[:200], "players": players, "countries": countries, "country": country, "regions": regions, "region": region,
+           "area": area, "min_matches": cfg["min_matches"],
            "matches": data["matches"], "preview": not cfg["enabled"], "nav": "rankings",
-           "title": "Player rankings" if tab else "Team rankings", "description": "The best teams and players across every league and tournament on the platform."}
+           "title": ("Player rankings" if tab else "Team rankings") + ("" if area == "Worldwide" else f": {area}"), "description": "The best teams and players across every league and tournament on the platform."}
     return page(request, "rankings.html", ctx, index=cfg["enabled"], private=not cfg["enabled"], banner=False)

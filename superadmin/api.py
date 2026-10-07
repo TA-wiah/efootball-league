@@ -755,6 +755,8 @@ def platform_settings(request, user, ip):
             check_payment_settings(changes)
         if section == "sms":
             check_sms_settings(changes)
+        if section == "proleague":
+            check_proleague_settings(changes)
         if section == "rankings" and "min_matches" in changes and (not isinstance(changes["min_matches"], int) or not 1 <= changes["min_matches"] <= 100):
             raise ApiError(400, "The minimum number of matches must be from 1 to 100.")
         if section == "email":
@@ -772,10 +774,44 @@ def platform_settings(request, user, ip):
     pay = paynova.config()
     from sms import providers as smsp
     return {"site": store.masked("site"), "email": store.masked("email"), "payments": store.masked("payments"), "sms": store.masked("sms"),
-            "rankings": store.masked("rankings"),
+            "rankings": store.masked("rankings"), "proleague": store.masked("proleague"),
             "smsStatus": {"ready": smsp.ready(), "providers": smsp.PROVIDERS},
             "paymentStatus": {"ready": paynova.ready(pay), "mode": paynova.mode(pay["secret_key"]) or None, "source": pay["source"] or None},
             "emailStatus": {"ready": emailer.ready(cfg), "provider": cfg["provider"] or None, "source": cfg["source"]}}
+
+
+def check_proleague_settings(c):
+    from decimal import Decimal, InvalidOperation
+    from payments.api import CURRENCIES
+    c.pop("org_id", None)                             # set by the system only
+    if "name" in c and not 3 <= len(str(c["name"]).strip()) <= 80:
+        raise ApiError(400, "Give the league a name (3–80 characters).")
+    if "divisions" in c:
+        names = [n.strip() for n in str(c["divisions"]).split(",") if n.strip()]
+        if not 1 <= len(names) <= 26 or any(len(n) > 40 for n in names):
+            raise ApiError(400, "List 1 to 26 division names separated by commas (each up to 40 characters).")
+        c["divisions"] = ", ".join(names)
+    if "size" in c and (not isinstance(c["size"], int) or not 4 <= c["size"] <= 6):
+        raise ApiError(400, "Teams in a division must be from 4 to 6.")
+    if "move" in c and (not isinstance(c["move"], int) or not 0 <= c["move"] <= 3):
+        raise ApiError(400, "Teams going up and down must be from 0 to 3.")
+    if "legs" in c and c["legs"] not in (1, 2):
+        raise ApiError(400, "Teams meet once or twice.")
+    if "currency" in c and c["currency"] not in CURRENCIES:
+        raise ApiError(400, "Choose a supported currency.")
+    if "whatsapp" in c:
+        digits = re.sub(r"\D", "", str(c["whatsapp"]))
+        if c["whatsapp"] and not 9 <= len(digits) <= 15:
+            raise ApiError(400, "Enter the WhatsApp number with the country code, e.g. +233241234567.")
+        c["whatsapp"] = ("+" + digits) if digits else ""
+    if "fee" in c:
+        try:
+            v = Decimal(str(c["fee"]).strip() or "0")
+        except InvalidOperation:
+            raise ApiError(400, "The entry fee must be a number, e.g. 10.") from None
+        if not Decimal("0") <= v <= Decimal("100000") or v.as_tuple().exponent < -2:
+            raise ApiError(400, "The entry fee must be from 0 with up to 2 decimals.")
+        c["fee"] = f"{v:.2f}"
 
 
 def check_sms_settings(c):

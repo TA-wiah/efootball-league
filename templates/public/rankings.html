@@ -11,10 +11,12 @@
 </style>
 {% if preview %}<div class="banner">Preview for super admins: rankings are switched off, so visitors can't see this page. Turn them on in Admin panel → Platform settings.</div>{% endif %}
 <div class="rkhead"><div><h1 class="page-h">{% if tab %}Player rankings{% else %}Team rankings{% endif %}</h1>
-  <p class="note" style="margin:0 0 14px;font-size:15px">Across every league and tournament on the platform · {{ matches }} match{{ matches|pluralize:"es" }} counted</p></div>
-  {% if not tab and countries %}<form class="rkf" method="get"><label for="rkc" class="note">Country</label><select id="rkc" name="country"><option value="">Everywhere</option>{% for c in countries %}<option{% if c|lower == country|lower %} selected{% endif %}>{{ c }}</option>{% endfor %}</select><noscript><button class="btn sm">Show</button></noscript></form>{% endif %}
+  <p class="note" style="margin:0 0 14px;font-size:15px"><b style="color:var(--tx)">{{ area }}</b> · across every league and tournament on the platform · {{ matches }} match{{ matches|pluralize:"es" }} counted</p></div>
+  {% if countries %}<form class="rkf" method="get"><label for="rkc" class="note">Country</label><select id="rkc" name="country"><option value="">Worldwide</option>{% for c in countries %}<option{% if c|lower == country|lower %} selected{% endif %}>{{ c }}</option>{% endfor %}</select>
+    {% if regions %}<label for="rkr" class="note">Region</label><select id="rkr" name="region"><option value="">All of {{ country }}</option>{% for r in regions %}<option{% if r|lower == region|lower %} selected{% endif %}>{{ r }}</option>{% endfor %}</select>{% endif %}
+    <noscript><button class="btn sm">Show</button></noscript></form>{% endif %}
 </div>
-<nav class="tabs" style="margin:0 0 16px" aria-label="Rankings"><a href="/rankings" class="{% if not tab %}on{% endif %}">Teams</a><a href="/rankings/players" class="{% if tab %}on{% endif %}">Players</a></nav>
+<nav class="tabs" style="margin:0 0 16px" aria-label="Rankings"><a href="/rankings{% if country %}?country={{ country|urlencode }}{% if region %}&amp;region={{ region|urlencode }}{% endif %}{% endif %}" class="{% if not tab %}on{% endif %}">Teams</a><a href="/rankings/players{% if country %}?country={{ country|urlencode }}{% if region %}&amp;region={{ region|urlencode }}{% endif %}{% endif %}" class="{% if tab %}on{% endif %}">Players</a></nav>
 {% if not tab %}
 <section class="card"><div class="tbl"><table class="st rk">
   <thead><tr><th>#</th><th class="tl">Team</th><th><abbr title="Rating">Rating</abbr></th><th><abbr title="Played">P</abbr></th><th><abbr title="Won">W</abbr></th><th><abbr title="Drawn">D</abbr></th><th><abbr title="Lost">L</abbr></th><th><abbr title="Goal difference">GD</abbr></th><th class="hide-s">Form</th></tr></thead>
@@ -23,7 +25,7 @@
     <td class="tl"><span class="tm">{% include "public/_crest.html" with t=r.t size=26 %}<span>{% if r.t.link %}<a href="/team/{{ r.t.slug }}">{{ r.t.name }}</a>{% else %}{{ r.t.name }}{% endif %}<span class="org">{{ r.org.name }}{% if r.org.country %} · {{ r.org.country }}{% endif %}</span></span></span></td>
     <td class="elo">{{ r.rating }}</td><td>{{ r.played }}</td><td>{{ r.won }}</td><td>{{ r.drawn }}</td><td>{{ r.lost }}</td><td>{% if r.gd > 0 %}+{% endif %}{{ r.gd }}</td>
     <td class="hide-s">{% for f in r.form %}<span class="fm {{ f }}">{{ f }}</span>{% endfor %}</td>
-  </tr>{% empty %}<tr><td colspan="9" class="note">No team has played {{ min_matches }} matches in a public competition yet.</td></tr>{% endfor %}</tbody>
+  </tr>{% empty %}<tr><td colspan="9" class="note">No team{% if area != "Worldwide" %} in {{ area }}{% endif %} has played {{ min_matches }} matches in a public competition yet.</td></tr>{% endfor %}</tbody>
 </table></div>
 <p class="note">Teams are rated like chess players: everyone starts at 1500, and each result moves points from the loser to the winner. Beating a stronger team earns more, and bigger wins count a little more. Matches decided on penalties count as draws. Teams appear once they've played {{ min_matches }} matches in public competitions.</p></section>
 {% else %}
@@ -36,5 +38,6 @@
   </tr>{% empty %}<tr><td colspan="4" class="note">No goals recorded in public competitions yet. Goals come from the match details organizers enter.</td></tr>{% endfor %}</tbody>
 </table></div></section>
 {% endif %}
-<script nonce="{{ nonce }}">(function(){var s=document.getElementById("rkc");if(s)s.addEventListener("change",function(){s.form.submit()})})();</script>
+<script nonce="{{ nonce }}">(function(){var c=document.getElementById("rkc"),r=document.getElementById("rkr");
+  if(c)c.addEventListener("change",function(){if(r)r.value="";c.form.submit()});if(r)r.addEventListener("change",function(){r.form.submit()})})();</script>
 {% endblock %}
