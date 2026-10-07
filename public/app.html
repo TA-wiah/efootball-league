@@ -176,6 +176,9 @@ label.toggle small{display:block;color:var(--soft);font-weight:500}label.toggle 
 .mbox.studio{max-width:780px}.stgrid{display:grid;grid-template-columns:260px 1fr;gap:18px;align-items:start;margin-top:10px}@media(max-width:640px){.stgrid{grid-template-columns:1fr}}
 .stprev canvas{width:100%;max-width:260px;aspect-ratio:1;display:block;margin:0 auto;background:repeating-conic-gradient(rgba(255,255,255,.05) 0 25%,transparent 0 50%) 0 0/24px 24px;border-radius:12px}
 .stprev .note{font-size:12px}.sw [data-c]{width:30px;height:30px}
+.bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;max-height:380px;overflow-y:auto;padding-right:4px}
+.bgrid button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px;border-radius:10px;border:1px solid var(--line);background:var(--card2);color:var(--tx);font:inherit;font-size:11px;cursor:pointer}
+.bgrid button:hover{border-color:var(--line2)}.bgrid button.on{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}.bgrid canvas{width:72px;height:72px}
 .kits{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin:6px 0 10px;max-height:150px;overflow-y:auto;padding-right:4px}
 .kits button{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card2);color:var(--tx);font:inherit;font-size:12px;cursor:pointer;text-align:left}
 .kits button:hover{border-color:var(--gold)}.kits i{width:22px;height:22px;border-radius:6px;border:2px solid;flex:none}
@@ -1416,6 +1419,20 @@ var CREST={shapes:{shield:"Shield",round:"Round",hexagon:"Hexagon",diamond:"Diam
     ["Yellow & black","hoops","#f5c400","#111111","#111111"],["Red & black stripes","stripes","#c8102e","#111111","#ffffff"],["Navy & white sash","sash","#0b1f4d","#ffffff","#d4af37"],
     ["Green & white hoops","hoops","#13904a","#ffffff","#ffffff"],["Orange & white","chevron","#ea580c","#ffffff","#111111"],["Blue & white stripes","stripes","#2563eb","#ffffff","#0b1f4d"],
     ["Red & gold","quarters","#c8102e","#f5c400","#ffffff"],["Purple & white","plain","#7c3aed","#7c3aed","#ffffff"]]};
+// Club badges: [label, shape, pattern, icon, main, second, letters/border, ring, font, border]
+CREST.badges=[["Royal roundel","round","plain","crown","#0b1f4d","#0b1f4d","#d4af37",1,"serif","double"],["Classic shield","shield","stripes","none","#a50044","#0b1f4d","#f5c400",0,"cond","thick"],
+  ["Sky roundel","round","plain","ball","#6cabdd","#6cabdd","#0b1f4d",1,"cond","normal"],["Fire shield","shield","plain","flame","#c8102e","#c8102e","#f5c400",0,"cond","thick"],
+  ["Black & white","shield","stripes","star","#ffffff","#111111","#111111",0,"cond","normal"],["Twin colours ring","round","halves","tower","#7a263a","#6cabdd","#ffffff",1,"cond","normal"],
+  ["Checkered ring","round","checkers","none","#c8102e","#2563eb","#ffffff",1,"wide","normal"],["Gold star stripes","shield","stripes","star","#111111","#ffffff","#d4af37",0,"serif","double"],
+  ["Red & black stripes","shield","stripes","none","#c8102e","#111111","#ffffff",0,"serif","thick"],["Midnight ring","round","stripes","star","#0b1f4d","#111111","#d4af37",1,"wide","double"],
+  ["Lightning shield","shield","plain","bolt","#c8102e","#c8102e","#ffffff",0,"cond","normal"],["Blue tower ring","round","plain","tower","#2563eb","#2563eb","#ffffff",1,"serif","normal"],
+  ["Green hoops ring","round","hoops","none","#13904a","#ffffff","#13904a",1,"cond","thick"],["Orange crown","shield","plain","crown","#ea580c","#ea580c","#ffffff",0,"wide","normal"],
+  ["Yellow storm","round","plain","bolt","#f5c400","#f5c400","#111111",1,"wide","thick"],["White crown ring","round","plain","crown","#ffffff","#ffffff","#7c3aed",1,"serif","double"],
+  ["Sea side","hexagon","diagonal","wave","#0ea5e9","#0b1f4d","#ffffff",0,"cond","normal"],["Highlanders","shield","chevron","mountain","#13904a","#111111","#d4af37",0,"serif","normal"],
+  ["Purple reign","diamond","plain","crown","#7c3aed","#7c3aed","#ffffff",0,"wide","thick"],["Golden age","round","gradient","trophy","#8b5e34","#d4af37","#ffffff",1,"serif","double"],
+  ["Street style","square","pinstripes","flame","#111111","#db2777","#ffffff",0,"cond","thick"],["Black stars","round","sash","star","#c8102e","#f5c400","#13904a",1,"wide","normal"],
+  ["Lagoon","hexagon","halves","wave","#13904a","#0ea5e9","#ffffff",0,"wide","normal"],["Fortress","shield","quarters","tower","#0b1f4d","#c8102e","#ffffff",0,"cond","double"]];
+function badgeOf(b,name){return{shape:b[1],pattern:b[2],icon:b[3],c1:b[4],c2:b[5],c3:b[6],ring:!!b[7]&&b[1]==="round",font:b[8],border:b[9],text:initials(name),name:name||"",year:""}}
 var FLAGS=null;
 function crestPath(x,shape,s){x.beginPath();var m=s*.06,w=s-2*m;
   if(shape==="round"){x.arc(s/2,s/2,w/2,0,Math.PI*2)}
@@ -1472,7 +1489,7 @@ function initials(n){var w=String(n||"").replace(/[^A-Za-z0-9 ]/g," ").trim().sp
 function logoStudio(name,onSave){var o={shape:"shield",pattern:"stripes",icon:"ball",c1:"#0b1f4d",c2:"#2563eb",c3:"#ffffff",text:initials(name),name:name||"",year:"",ring:false,font:"cond",border:"normal"},mode="crest",flag=null,round=false;
   var d=document.createElement("div");d.className="modal";
   var sw=function(id,val){return'<div class="sw" data-sw="'+id+'">'+CREST.colors.map(function(c){return'<button type="button" aria-label="'+c+'" class="'+(c===val?"on":"")+'" data-c="'+c+'" style="background:'+c+'"></button>'}).join("")+'<input type="color" data-cc="'+id+'" value="'+val+'" aria-label="Any colour" title="Any colour"></div>'};
-  d.innerHTML='<div class="mbox studio" role="dialog" aria-modal="true" aria-labelledby="stt"><h2 id="stt">Team logo</h2><div class="chips"><button type="button" class="chip on" data-mode="crest">Design a crest</button><button type="button" class="chip" data-mode="flag">Country flag (national teams)</button></div>'+
+  d.innerHTML='<div class="mbox studio" role="dialog" aria-modal="true" aria-labelledby="stt"><h2 id="stt">Team logo</h2><div class="chips"><button type="button" class="chip on" data-mode="crest">Design a crest</button><button type="button" class="chip" data-mode="flag">National flag</button><button type="button" class="chip" data-mode="club">Club badge</button></div>'+
     '<div class="stgrid"><div class="stprev"><canvas id="stc" width="512" height="512"></canvas><p class="note">Original designs and public-domain flags: free to use. Real club badges belong to the clubs, so they aren’t offered here.</p></div><div id="stctl"></div></div>'+
     '<div class="actions"><button type="button" class="btn" id="stok">Use this logo</button><button type="button" class="btn g" id="stno">Cancel</button></div></div>';
   document.body.appendChild(d);var cv=$("stc");
@@ -1500,9 +1517,16 @@ function logoStudio(name,onSave){var o={shape:"shield",pattern:"stripes",icon:"b
     $("strd").onchange=function(){round=this.checked;if(flag)drawFlag(cv,flag,round)};$("stq").oninput=list;
     var ready=function(){list();if(flag)drawFlag(cv,flag,round);else{cv.getContext("2d").clearRect(0,0,512,512)}};
     if(FLAGS)ready();else api("/flags/countries.json").then(function(r){FLAGS=r.ok?r.data:[];ready()})};
-  d.querySelectorAll("[data-mode]").forEach(function(b){b.onclick=function(){mode=b.dataset.mode;d.querySelectorAll("[data-mode]").forEach(function(x){x.classList.toggle("on",x===b)});mode==="crest"?crestCtl():flagCtl()}});
+  var picked=-1,clubCtl=function(){$("stctl").innerHTML='<p class="note" style="margin-top:0">Ready-made club badges with your team’s name. Pick one, then press “Change it” to adjust colours, letters or the year.</p><div class="bgrid" id="stbg">'+
+      CREST.badges.map(function(b,i){return'<button type="button" data-badge="'+i+'" class="'+(i===picked?"on":"")+'" title="'+esc(b[0])+'"><canvas width="160" height="160"></canvas><span>'+esc(b[0])+'</span></button>'}).join("")+'</div>'+
+      '<div class="actions" style="margin-top:8px"><button type="button" class="btn g sm" id="stedit"'+(picked<0?" disabled":"")+'>'+ic("palette")+' Change it</button></div>';
+    $("stbg").querySelectorAll("[data-badge]").forEach(function(b){drawCrest(b.querySelector("canvas"),badgeOf(CREST.badges[+b.dataset.badge],name));
+      b.onclick=function(){picked=+b.dataset.badge;o=badgeOf(CREST.badges[picked],name);drawCrest(cv,o);$("stbg").querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});$("stedit").disabled=false}});
+    $("stedit").onclick=function(){d.querySelector('[data-mode="crest"]').click()};
+    if(picked>=0)drawCrest(cv,o);else cv.getContext("2d").clearRect(0,0,512,512)};
+  d.querySelectorAll("[data-mode]").forEach(function(b){b.onclick=function(){mode=b.dataset.mode;d.querySelectorAll("[data-mode]").forEach(function(x){x.classList.toggle("on",x===b)});mode==="crest"?crestCtl():mode==="club"?clubCtl():flagCtl()}});
   $("stno").onclick=close;d.onclick=function(e){if(e.target===d)close()};
-  $("stok").onclick=function(){if(mode==="flag"&&!flag){toast("Choose a country",true);return}var out=function(){onSave(cv.toDataURL("image/png"));close()};if(mode==="flag")drawFlag(cv,flag,round,out);else out()};
+  $("stok").onclick=function(){if(mode==="flag"&&!flag){toast("Choose a country",true);return}if(mode==="club"&&picked<0){toast("Choose a badge",true);return}var out=function(){onSave(cv.toDataURL("image/png"));close()};if(mode==="flag")drawFlag(cv,flag,round,out);else out()};
   (document.fonts&&document.fonts.load?document.fonts.load("800 40px 'Barlow Condensed'"):Promise.resolve()).then(crestCtl,crestCtl)}
 
 // ---------- accepting an invitation ----------
