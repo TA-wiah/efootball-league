@@ -79,7 +79,8 @@ def org_logo(org):
 def org_json(org):
     return {"id": org.id, "name": org.name, "slug": org.slug, "description": org.description, "country": org.country,
             "region": org.region, "created": ms(org.created), "status": org.status, "kind": org.kind, "kindLabel": KIND_L.get(org.kind, "Organization"),
-            "timezone": org.timezone, "brandColor": org.brand_color or None, "logo": org_logo(org), "website": org.site()}
+            "timezone": org.timezone, "brandColor": org.brand_color or None, "logo": org_logo(org), "website": org.site(),
+            "inRankings": org.in_rankings}
 
 
 def org_card(m):
@@ -432,6 +433,8 @@ def org_detail(request, user, ip, slug):
             org.timezone = clean_tz(text(b, "timezone", 60))
         if "website" in b:
             org.website = {**org.site(), **clean_website(b["website"])}
+        if "inRankings" in b:
+            org.in_rankings = b["inRankings"] is True
         org.save()
         log(org, user, "updated the organization settings")
         return {"ok": True, "org": org_json(org)}

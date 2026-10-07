@@ -2,6 +2,7 @@
 {% block content %}
 <section class="card">
   <div class="hero">{% include "public/_crest.html" with t=t size=72 %}<div><h1>{{ team.name }}</h1>
+    {% if rank %}<a href="/rankings" class="pill gold" style="text-decoration:none;margin:4px 0">Ranked #{{ rank.0 }} on the platform · rating {{ rank.1 }}</a>{% endif %}
     <div class="note">{% if team.city %}{{ team.city }}{% endif %}{% if team.city and team.venue %} · {% endif %}{% if team.venue %}Home ground: {{ team.venue }}{% endif %}{% if team.founded %} · Founded {{ team.founded }}{% endif %}{% if team.colors %} · Colours: {{ team.colors }}{% endif %}</div>
     {% if form %}<div style="margin-top:6px">{% for f in form %}<span class="fm {{ f }}">{{ f }}</span>{% endfor %} <span class="note">last {{ form|length }}</span></div>{% endif %}
   </div></div>

@@ -13,10 +13,12 @@ DEFAULTS = {
     # Text messages: the provider and its keys, and what organizations pay per credit (1 credit = 1 SMS to 1 person).
     "sms": {"enabled": False, "provider": "", "api_key": "", "sender": "", "country_code": "233",
             "credit_price": "0.05", "currency": "GHS", "min_credits": 100},
+    # Platform rankings: teams (Elo rating) and players across all organizations, from public competitions.
+    "rankings": {"enabled": False, "min_matches": 3},
 }
 SECRETS = {"email": {"password", "api_key"}, "payments": {"secret_key"}, "sms": {"api_key"}}
 TYPES = {"allow_signups": bool, "require_org_approval": bool, "max_orgs_per_user": int, "port": int, "enabled": bool, "fee_enabled": bool,
-         "min_credits": int}
+         "min_credits": int, "min_matches": int}
 
 
 def get(section):

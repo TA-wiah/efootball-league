@@ -180,6 +180,8 @@ urlpatterns = [
     path("match/<slug:slug>", pub.match),
     path("team/<slug:slug>", pub.team),
     path("org/<slug:slug>", pub.organization),
+    path("rankings", pub.rankings_page),
+    path("rankings/<slug:tab>", pub.rankings_page),
     path("org/<slug:slug>/p/<slug:page_slug>", pub.org_page),
     path("receipt/<str:token>", pay.receipt),
     path("fonts/<str:name>", font_file),

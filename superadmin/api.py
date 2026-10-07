@@ -755,6 +755,8 @@ def platform_settings(request, user, ip):
             check_payment_settings(changes)
         if section == "sms":
             check_sms_settings(changes)
+        if section == "rankings" and "min_matches" in changes and (not isinstance(changes["min_matches"], int) or not 1 <= changes["min_matches"] <= 100):
+            raise ApiError(400, "The minimum number of matches must be from 1 to 100.")
         if section == "email":
             if changes.get("provider", "") not in ("", "smtp", "brevo", "resend", "console"):
                 raise ApiError(400, "Choose an email provider.")
@@ -770,6 +772,7 @@ def platform_settings(request, user, ip):
     pay = paynova.config()
     from sms import providers as smsp
     return {"site": store.masked("site"), "email": store.masked("email"), "payments": store.masked("payments"), "sms": store.masked("sms"),
+            "rankings": store.masked("rankings"),
             "smsStatus": {"ready": smsp.ready(), "providers": smsp.PROVIDERS},
             "paymentStatus": {"ready": paynova.ready(pay), "mode": paynova.mode(pay["secret_key"]) or None, "source": pay["source"] or None},
             "emailStatus": {"ready": emailer.ready(cfg), "provider": cfg["provider"] or None, "source": cfg["source"]}}
