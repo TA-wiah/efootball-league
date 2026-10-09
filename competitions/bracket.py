@@ -11,7 +11,8 @@ _rng = random.SystemRandom()
 OUT = "out"            # a place nobody fills: a bye, or a 3rd place without enough points
 ROUND_NAMES = {2: "Final", 4: "Semi-finals", 8: "Quarter-finals", 16: "Round of 16", 32: "Round of 32", 64: "Round of 64"}
 SINGULAR = {"Final": "Final", "Semi-finals": "Semi-final", "Quarter-finals": "Quarter-final"}
-MODES = {"cross": "Group winners play runners-up from another group (Champions League style)",
+MODES = {"ranked": "After the groups: ranked by results, the best teams get any byes",
+         "cross": "Group winners play runners-up from another group (Champions League style)",
          "random": "Random draw: group winners play lower-placed teams from other groups"}
 
 
@@ -26,6 +27,10 @@ def label(src):
     parts = src.split(":")
     if parts[0] == "BYE":
         return "Bye"
+    if parts[0] == "S":
+        return f"Seed {parts[1]} (by group results)"
+    if parts[0] == "T":
+        return f"Best {ordinal(int(parts[2]))}-placed team {parts[1]}"
     if parts[0] == "G":
         k = int(parts[2])
         return f"Group {parts[1]} " + {1: "winner", 2: "runner-up"}.get(k, ordinal(k))
@@ -44,14 +49,18 @@ def seed_order(n):
     return order
 
 
-def first_round(groups, q, mode):
-    """The first knockout round as [(home source, away source)], in bracket order (tie 1 and 2 meet next, and so on)."""
-    n = len(groups) * q
+def first_round(groups, q, mode, thirds=0):
+    """The first knockout round as [(home source, away source)], in bracket order (tie 1 and 2 meet next, and so on).
+    "ranked": the places are filled once every group has finished, best record first ("S:1", "S:2"…)."""
+    n = len(groups) * q + thirds
     if n < 2:
         raise ValueError("A knockout needs at least 2 teams. Change “Qualify from each group” in Settings.")
+    if mode == "ranked":
+        return build([(f"S:{i}", None, i) for i in range(1, n + 1)])
     g = lambda grp, k: f"G:{grp}:{k}"
-    if n & (n - 1):
-        return with_byes(groups, q)
+    if thirds or n & (n - 1):
+        return build([(g(grp, k), grp, k) for k in range(1, q + 1) for grp in groups] +
+                     [(f"T:{i}:{q + 1}", None, q + 1) for i in range(1, thirds + 1)])
     if len(groups) == 1:                                   # one group: 1st v last, 2nd v 2nd-last…
         order = seed_order(q)
         return [(g(groups[0], order[i]), g(groups[0], order[i + 1])) for i in range(0, q, 2)]
@@ -80,24 +89,21 @@ def first_round(groups, q, mode):
     return ties
 
 
-def with_byes(groups, q):
-    """When the teams going through aren't 2, 4, 8, 16 or 32 (e.g. 3 from each of 2 groups = 6): the bracket is
-    rounded up, and the best-placed teams (group winners first) get a bye into the next round. Teams from the same
-    group are kept apart in the first round where possible."""
-    seeds = [(grp, k) for k in range(1, q + 1) for grp in groups]           # all winners, then runners-up, then thirds…
+def build(seeds):
+    """A seeded first round from [(source, group or None, rank)], best first. The bracket is rounded up to 2, 4, 8, 16…
+    and the best seeds get byes ("BYE"). Teams from the same group are kept apart in the first round where possible."""
     size = 1
     while size < len(seeds):
         size *= 2
     order = seed_order(size)
     ties = [[seeds[a - 1] if a <= len(seeds) else None, seeds[b - 1] if b <= len(seeds) else None] for a, b in zip(order[::2], order[1::2])]
-    for i, t in enumerate(ties):                                           # same group in the first round: swap opponents
-        if t[0] and t[1] and t[0][0] == t[1][0]:
+    for t in ties:                                                         # same group: swap with an opponent of the same rank
+        if t[0] and t[1] and t[0][1] and t[0][1] == t[1][1]:
             for u in ties:
-                if u is not t and u[0] and u[1] and u[1][1] == t[1][1] and u[0][0] != t[1][0] and t[0][0] != u[1][0]:
+                if u is not t and u[0] and u[1] and u[1][2] == t[1][2] and u[0][1] != t[1][1] and t[0][1] != u[1][1]:
                     t[1], u[1] = u[1], t[1]
                     break
-    src = lambda s: f"G:{s[0]}:{s[1]}" if s else "BYE"
-    return [(src(a), src(b)) for a, b in ties]
+    return [(a[0] if a else "BYE", b[0] if b else "BYE") for a, b in ties]
 
 
 def plan_rounds(first, legs):
@@ -145,12 +151,30 @@ def resolve(c):
         return 0
     league = list(c.matches.filter(stage="league"))
     entries = list(c.entries.select_related("team"))
-    tables = {}
-    for grp in {e.group for e in entries}:
+    tables, rows_by_group = {}, {}
+    groups = {e.group for e in entries}
+    for grp in groups:
         games = [m for m in league if m.group == grp]
         if games and all(m.status in ("finished", "cancelled") for m in games):
             rows = engine.standings(c, [e for e in entries if e.group == grp], [m for m in games if m.status == "finished"])
+            rows_by_group[grp] = rows
             tables[grp] = [r["entryId"] if engine.goes_through(c, r["position"], r["points"]) else OUT for r in rows]
+    done = bool(groups) and len(rows_by_group) == len(groups)      # rankings across groups wait for every group
+    wild = engine.best_next(c, rows_by_group) if done else None
+    seedmap = None
+    if done and any(m.home_from.startswith("S:") for m in planned if m.home_from):
+        seeds = engine.seeding(c, rows_by_group)
+        seedmap = {i + 1: s for i, s in enumerate(seeds)}
+        first = min(m.round for m in planned)
+        pairs = {tuple(sorted((int(m.home_from[2:]), int(m.away_from[2:]))))
+                 for m in planned if m.round == first and (m.home_from or "").startswith("S:") and (m.away_from or "").startswith("S:")}
+        pairs = sorted(pairs)
+        for a, b in pairs:                                             # keep teams from the same group apart
+            if a in seedmap and b in seedmap and seedmap[a][1] == seedmap[b][1]:
+                for x, y in pairs:
+                    if (x, y) != (a, b) and x in seedmap and y in seedmap and seedmap[y][1] != seedmap[a][1] and seedmap[b][1] != seedmap[x][1]:
+                        seedmap[b], seedmap[y] = seedmap[y], seedmap[b]
+                        break
     ties = {}
     for m in ko:
         ties.setdefault((m.round, m.slot), []).append(m)
@@ -159,6 +183,10 @@ def resolve(c):
         parts = src.split(":")
         if parts[0] == "BYE":
             return OUT
+        if parts[0] == "S":
+            return None if seedmap is None else (seedmap[int(parts[1])][0] if int(parts[1]) in seedmap else OUT)
+        if parts[0] == "T":
+            return None if wild is None else (wild[int(parts[1]) - 1] if len(wild) >= int(parts[1]) else OUT)
         if parts[0] == "G":
             table, k = tables.get(parts[1]), int(parts[2])
             return table[k - 1] if table and len(table) >= k else None
