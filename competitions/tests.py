@@ -305,12 +305,55 @@ class CompetitionApiTest(Helpers, TestCase):
             self.assertNotEqual(m["homeFrom"].split()[1], m["awayFrom"].split()[1], "never someone from their own group")
         self.assertEqual(len([m for m in ko if m["roundName"] == "Final"]), 1, "the final is one match")
         self.assertEqual(self.owner.call("post", url + "/knockout-plan", {}).status_code, 409, "asks before replacing")
-        self.owner.call("patch", url, {"qualifiersPerGroup": 3})              # 12 through: not a knockout size
+        self.owner.call("patch", url, {"qualifiersPerGroup": 3})              # 12 through: round of 16, winners get byes
         r = self.owner.call("post", url + "/knockout-plan", {"replace": True})
-        self.assertEqual(r.status_code, 400)
-        self.assertIn("2, 4, 8, 16 or 32", r.json()["error"])
+        self.assertEqual(r.status_code, 200, r.json())
+        self.assertEqual(r.json()["rounds"], ["Round of 16", "Quarter-finals", "Semi-finals", "Final"])
+        r16 = [m for m in self.owner.get(url + "/matches").json()["matches"] if m["roundName"] == "Round of 16" and m["leg"] == 1]
+        byes = [m for m in r16 if "Bye" in (m["homeFrom"], m["awayFrom"])]
+        self.assertEqual(sorted(m["homeFrom"] for m in byes), [f"Group {g} winner" for g in "ABCD"])
+        for m in r16:
+            if m not in byes:
+                self.assertNotEqual(m["homeFrom"].split()[1], m["awayFrom"].split()[1], "never someone from their own group")
         plain = self.comp()
         self.assertEqual(self.owner.call("post", f"{self.base}/competitions/{plain}/knockout-plan", {}).status_code, 400)
+
+    def test_third_place_needs_the_points_or_stays_out(self):
+        from competitions.models import Match
+        cs, url, e = self.groups_comp(groups=2, per=4, q=3)
+        self.assertEqual(self.owner.call("patch", url, {"thirdMinPoints": 4}).json()["competition"]["thirdMinPoints"], 4)
+        r = self.owner.call("post", url + "/generate", {"knockout": {"mode": "cross"}})
+        self.assertEqual(r.status_code, 200, r.json())
+        self.assertEqual(r.json()["knockout"]["rounds"], ["Quarter-finals", "Semi-finals", "Final"], "6 through: group winners get byes")
+        # group A: A3 finishes 3rd with 3 points (not enough); group B: B3 finishes 3rd with 4 points
+        wins = {("A1", "A2"): (2, 0), ("A1", "A3"): (2, 0), ("A1", "A4"): (2, 0), ("A2", "A3"): (2, 0), ("A2", "A4"): (2, 0), ("A3", "A4"): (2, 0),
+                ("B1", "B2"): (2, 0), ("B1", "B3"): (2, 0), ("B1", "B4"): (2, 0), ("B2", "B3"): (1, 1), ("B2", "B4"): (3, 0), ("B3", "B4"): (2, 0)}
+        for m in Match.objects.filter(competition__slug=cs, stage="league"):
+            h, a = m.home.team.name, m.away.team.name
+            hs, as_ = wins[(h, a)] if (h, a) in wins else wins[(a, h)][::-1]
+            self.owner.call("patch", f"{self.base}/matches/{m.id}", {"homeScore": hs, "awayScore": as_})
+        table = self.owner.get(url + "/standings").json()
+        marks = {r["team"]["name"]: (r["position"], r["points"], r["qualifies"], r["short"]) for g in table["groups"] for r in g["rows"]}
+        self.assertEqual(marks["A3"], (3, 3, False, True), "3rd without enough points: faded, not through")
+        self.assertEqual(marks["B3"][2:], (True, False))
+        self.assertEqual((marks["A2"][2], marks["A4"][2]), (True, False))
+        ko = [m for m in self.owner.get(url + "/matches").json()["matches"] if m["stage"] == "knockout"]
+        teams = lambda m: (m["home"]["name"] if m["home"] else None, m["away"]["name"] if m["away"] else None)
+        names = [n for m in ko for n in teams(m) if n]
+        self.assertNotIn("A3", names, "the 3rd without the points isn't added")
+        self.assertIn("B3", names)
+        qf = [m for m in ko if m["roundName"] == "Quarter-finals"]
+        self.assertEqual(sum(m["decided"] == "bye" for m in qf), 3, "two group winners' byes, and A3's opponent goes straight through")
+        semis = [teams(m) for m in ko if m["roundName"] == "Semi-finals"]
+        self.assertIn("A1", [x for t in semis for x in t])
+        self.assertIn("B1", [x for t in semis for x in t])
+        page = __import__("django.test", fromlist=["Client"]).Client().get(f"/competition/{cs}/table").content.decode()
+        self.assertIn("3rd place needs 4+ points", page)
+        # a corrected result giving A3 the points puts it back in
+        m = Match.objects.get(competition__slug=cs, stage="league", home__team__name__in=["A2", "A3"], away__team__name__in=["A2", "A3"])
+        self.owner.call("patch", f"{self.base}/matches/{m.id}", {"homeScore": 1, "awayScore": 1})
+        names = [n for m in self.owner.get(url + "/matches").json()["matches"] if m["stage"] == "knockout" for n in teams(m) if n]
+        self.assertIn("A3", names)
 
     def test_knockout_dates_follow_the_group_stage(self):
         from datetime import date, timedelta

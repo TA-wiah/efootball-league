@@ -95,6 +95,7 @@ class Command(BaseCommand):
         fields = dict(kind=meta.get("kind") or "championship", format="groups_knockout" if len(groups) > 1 else "league", status="active",
                       description=description if description is not None else (meta.get("description") or ui.get("s", "").title()),
                       qualifiers_per_group=meta.get("qualifiersPerGroup") or (3 if cfg.get("a") == 3 else 2),
+                      third_min_points=meta.get("thirdMinPoints") or (max(0, min(30, int(cfg.get("mp") or 0))) if cfg.get("a") == 3 else 0),
                       tiebreakers=["points", "goal_difference", "goals_for"])
         for k, attr in (("pointsWin", "points_win"), ("pointsDraw", "points_draw"), ("pointsLoss", "points_loss"), ("legs", "legs")):
             if isinstance(meta.get(k), int):

@@ -8,6 +8,7 @@ Teams are filled in automatically as groups finish and ties are won, until that 
 import random
 
 _rng = random.SystemRandom()
+OUT = "out"            # a place nobody fills: a bye, or a 3rd place without enough points
 ROUND_NAMES = {2: "Final", 4: "Semi-finals", 8: "Quarter-finals", 16: "Round of 16", 32: "Round of 32", 64: "Round of 64"}
 SINGULAR = {"Final": "Final", "Semi-finals": "Semi-final", "Quarter-finals": "Quarter-final"}
 MODES = {"cross": "Group winners play runners-up from another group (Champions League style)",
@@ -23,6 +24,8 @@ def label(src):
     if not src:
         return ""
     parts = src.split(":")
+    if parts[0] == "BYE":
+        return "Bye"
     if parts[0] == "G":
         k = int(parts[2])
         return f"Group {parts[1]} " + {1: "winner", 2: "runner-up"}.get(k, ordinal(k))
@@ -44,10 +47,11 @@ def seed_order(n):
 def first_round(groups, q, mode):
     """The first knockout round as [(home source, away source)], in bracket order (tie 1 and 2 meet next, and so on)."""
     n = len(groups) * q
-    if n < 2 or n & (n - 1):
-        raise ValueError(f"A knockout needs 2, 4, 8, 16 or 32 teams. {len(groups)} group{'s' if len(groups) != 1 else ''} × "
-                         f"{q} going through = {n}. Change “Qualify from each group” in Settings.")
+    if n < 2:
+        raise ValueError("A knockout needs at least 2 teams. Change “Qualify from each group” in Settings.")
     g = lambda grp, k: f"G:{grp}:{k}"
+    if n & (n - 1):
+        return with_byes(groups, q)
     if len(groups) == 1:                                   # one group: 1st v last, 2nd v 2nd-last…
         order = seed_order(q)
         return [(g(groups[0], order[i]), g(groups[0], order[i + 1])) for i in range(0, q, 2)]
@@ -74,6 +78,26 @@ def first_round(groups, q, mode):
     ties = [(g(*t), g(*r)) for t, r in zip(tops, rest)]
     _rng.shuffle(ties)
     return ties
+
+
+def with_byes(groups, q):
+    """When the teams going through aren't 2, 4, 8, 16 or 32 (e.g. 3 from each of 2 groups = 6): the bracket is
+    rounded up, and the best-placed teams (group winners first) get a bye into the next round. Teams from the same
+    group are kept apart in the first round where possible."""
+    seeds = [(grp, k) for k in range(1, q + 1) for grp in groups]           # all winners, then runners-up, then thirds…
+    size = 1
+    while size < len(seeds):
+        size *= 2
+    order = seed_order(size)
+    ties = [[seeds[a - 1] if a <= len(seeds) else None, seeds[b - 1] if b <= len(seeds) else None] for a, b in zip(order[::2], order[1::2])]
+    for i, t in enumerate(ties):                                           # same group in the first round: swap opponents
+        if t[0] and t[1] and t[0][0] == t[1][0]:
+            for u in ties:
+                if u is not t and u[0] and u[1] and u[1][1] == t[1][1] and u[0][0] != t[1][0] and t[0][0] != u[1][0]:
+                    t[1], u[1] = u[1], t[1]
+                    break
+    src = lambda s: f"G:{s[0]}:{s[1]}" if s else "BYE"
+    return [(src(a), src(b)) for a, b in ties]
 
 
 def plan_rounds(first, legs):
@@ -126,28 +150,42 @@ def resolve(c):
         games = [m for m in league if m.group == grp]
         if games and all(m.status in ("finished", "cancelled") for m in games):
             rows = engine.standings(c, [e for e in entries if e.group == grp], [m for m in games if m.status == "finished"])
-            tables[grp] = [r["entryId"] for r in rows]
+            tables[grp] = [r["entryId"] if engine.goes_through(c, r["position"], r["points"]) else OUT for r in rows]
     ties = {}
     for m in ko:
         ties.setdefault((m.round, m.slot), []).append(m)
 
     def source(src):
         parts = src.split(":")
+        if parts[0] == "BYE":
+            return OUT
         if parts[0] == "G":
             table, k = tables.get(parts[1]), int(parts[2])
             return table[k - 1] if table and len(table) >= k else None
         if parts[0] == "W":
-            return tie_winner(ties.get((int(parts[1]), int(parts[2])), []))
+            legs = ties.get((int(parts[1]), int(parts[2])), [])
+            if legs and all(x.decided == "bye" for x in legs):    # nobody to play: whoever is there goes through
+                return legs[0].home_id or legs[0].away_id or OUT
+            return tie_winner(legs)
         return None
 
+    names = {e.id: e.team.name for e in entries}
     changed = 0
     for m in planned:                                       # earlier rounds first, so winners flow forward
-        if m.status not in ("scheduled", "postponed") or m.home_score is not None:
+        if m.decided != "bye" and (m.status not in ("scheduled", "postponed") or m.home_score is not None):
             continue
         home = source(m.home_from) if m.home_from else m.home_id
         away = source(m.away_from) if m.away_from else m.away_id
-        if (home, away) != (m.home_id, m.away_id):
+        bye = OUT in (home, away) and (home not in (None,) and away not in (None,))
+        home, away = (None if home == OUT else home), (None if away == OUT else away)
+        if bye:
+            who = names.get(home or away)
+            state = ("cancelled", "bye", f"Bye: {who} goes straight through." if who else "Bye: neither place was filled.")
+        else:
+            state = ("scheduled", "", "") if m.decided == "bye" else (m.status, m.decided, m.notes)
+        if (home, away, *state) != (m.home_id, m.away_id, m.status, m.decided, m.notes):
             m.home_id, m.away_id = home, away
-            m.save(update_fields=["home", "away"])
+            m.status, m.decided, m.notes = state
+            m.save(update_fields=["home", "away", "status", "decided", "notes"])
             changed += 1
     return changed

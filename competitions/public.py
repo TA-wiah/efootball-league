@@ -128,8 +128,10 @@ def standings_view(c, linkable, only_group=None):
         rows = engine.standings(c, [e for e in entries if e.group == g], played)
         for r in rows:
             r["team"] = team_view(r["team"], linkable)
-            r["qualifies"] = c.format == "groups_knockout" and r["position"] <= c.qualifiers_per_group
-        groups.append({"name": g, "rows": rows, "through": c.qualifiers_per_group if c.format == "groups_knockout" else 0})
+            r["qualifies"] = engine.goes_through(c, r["position"], r["points"])
+            r["short"] = c.format == "groups_knockout" and r["position"] <= c.qualifiers_per_group and not r["qualifies"]
+        groups.append({"name": g, "rows": rows, "through": c.qualifiers_per_group if c.format == "groups_knockout" else 0,
+                       "min3": c.third_min_points if c.format == "groups_knockout" and c.qualifiers_per_group >= 3 else 0})
     return groups
 
 
