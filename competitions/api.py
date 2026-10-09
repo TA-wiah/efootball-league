@@ -513,6 +513,13 @@ def create_plan(c, org, user, b):
     small = [g for g in groups if sum(e.group == g for e in entries) < q]
     if small:
         raise ApiError(400, f"Group {small[0]} has fewer than {q} teams, but {q} go through from each group.")
+    if mode == "ranked":                                  # everyone plays: the places are topped up to 4, 8, 16…
+        size = 1
+        while size < len(groups) * q + thirds:
+            size *= 2
+        if len(entries) < size:
+            raise ApiError(400, f"Drawing after the groups needs {size} teams so everyone plays, but the groups only have {len(entries)}. "
+                                f"Change “Qualify from each group” in Settings, or plan the knockouts in advance.")
     try:
         rounds = bracket.plan_rounds(bracket.first_round(groups, q, mode, thirds), legs)
     except ValueError as e:
