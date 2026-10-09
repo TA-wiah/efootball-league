@@ -213,10 +213,23 @@ def _record(r):
     return (-r["points"], -r["goalDifference"], -r["goalsFor"], str(getattr(r["team"], "name", r["team"])).lower())
 
 
+def thirds_for(comp, n_groups):
+    """How many best next-placed teams go through: the set number, or on "Auto" as many as needed to make the knockout
+    4, 8, 16 or 32 teams (at most one per group)."""
+    if comp.format != "groups_knockout" or not comp.qualifiers_per_group:
+        return 0
+    if comp.best_thirds_auto:
+        n, size = n_groups * comp.qualifiers_per_group, 1
+        while size < n:
+            size *= 2
+        return min(n_groups, size - n)
+    return comp.best_thirds or 0
+
+
 def best_next(comp, rows_by_group):
     """The best teams from the place after the qualifying ones (e.g. the best thirds), ranked across all groups by points,
     goal difference and goals scored. From 3rd place down they need the minimum points too."""
-    q, n = comp.qualifiers_per_group, comp.best_thirds or 0
+    q, n = comp.qualifiers_per_group, thirds_for(comp, len(rows_by_group))
     if comp.format != "groups_knockout" or not n or not q:
         return []
     cands = [r for rows in rows_by_group.values() for r in rows
@@ -242,7 +255,7 @@ def marks(comp, rows_by_group):
     """For the tables: entry id → "q" (through), "wc" (through as one of the best next-placed teams) or "short"
     (a qualifying place, or a best-thirds candidate, without the minimum points)."""
     q, low = comp.qualifiers_per_group, comp.third_min_points or 0
-    wild = set(best_next(comp, rows_by_group))
+    wild, thirds = set(best_next(comp, rows_by_group)), thirds_for(comp, len(rows_by_group))
     out = {}
     for rows in rows_by_group.values():
         for r in rows:
@@ -251,7 +264,7 @@ def marks(comp, rows_by_group):
                 out[r["entryId"]] = "q"
             elif r["entryId"] in wild:
                 out[r["entryId"]] = "wc"
-            elif comp.format == "groups_knockout" and (p <= q or (comp.best_thirds and p == q + 1 and p >= 3 and r["points"] < low)):
+            elif comp.format == "groups_knockout" and (p <= q or (thirds and p == q + 1 and p >= 3 and r["points"] < low)):
                 out[r["entryId"]] = "short"
     return out
 
