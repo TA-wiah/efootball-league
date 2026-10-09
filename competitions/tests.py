@@ -355,6 +355,60 @@ class CompetitionApiTest(Helpers, TestCase):
         names = [n for m in self.owner.get(url + "/matches").json()["matches"] if m["stage"] == "knockout" for n in teams(m) if n]
         self.assertIn("A3", names)
 
+    def play_groups(self, cs, goals):
+        """Every group match: home scores goals[home], away scores goals[away]."""
+        from competitions.models import Match
+        for m in Match.objects.filter(competition__slug=cs, stage="league"):
+            self.owner.call("patch", f"{self.base}/matches/{m.id}", {"homeScore": goals[m.home.team.name], "awayScore": goals[m.away.team.name]})
+
+    def ko_matches(self, url, name=None):
+        return [m for m in self.owner.get(url + "/matches").json()["matches"] if m["stage"] == "knockout" and (name is None or m["roundName"] == name)]
+
+    def test_draw_after_the_groups_gives_byes_to_the_best(self):
+        cs, url, e = self.groups_comp(groups=2, per=4, q=3)
+        self.owner.call("patch", url, {"thirdMinPoints": 4})
+        r = self.owner.call("post", url + "/generate", {"knockout": {"mode": "ranked"}})
+        self.assertEqual(r.status_code, 200, r.json())
+        qf = self.ko_matches(url, "Quarter-finals")
+        self.assertEqual(qf[0]["homeFrom"], "Seed 1 (by group results)")
+        # A1 9 pts (+12), B1 9 pts (+6), A2 6 pts, B2 4 pts, B3 4 pts; A3 has 3 points: not through. 5 teams: seeds 1-3 get byes
+        self.play_groups(cs, {"A1": 4, "A2": 2, "A3": 1, "A4": 0, "B1": 2, "B2": 1, "B3": 1, "B4": 0})
+        qf = self.ko_matches(url, "Quarter-finals")
+        name = lambda t: t["name"] if t else None
+        byes = sorted(name(m["home"]) or name(m["away"]) for m in qf if m["decided"] == "bye")
+        self.assertEqual(byes, ["A1", "A2", "B1"], "the three best records get the byes")
+        played = [m for m in qf if m["decided"] != "bye"]
+        self.assertEqual(len(played), 1)
+        self.assertEqual({name(played[0]["home"]), name(played[0]["away"])}, {"B2", "B3"})
+        self.assertNotIn("A3", [name(m[k]) for m in self.ko_matches(url) for k in ("home", "away")])
+
+    def test_best_third_placed_teams_world_cup_style(self):
+        cs, url, e = self.groups_comp(groups=3, per=4, q=2)
+        self.assertEqual(self.owner.call("patch", url, {"bestThirds": 4}).status_code, 200)
+        self.assertEqual(self.owner.call("post", url + "/knockout-plan", {}).status_code, 400, "only 3 groups, so at most 3 thirds")
+        self.owner.call("patch", url, {"bestThirds": 2})
+        r = self.owner.call("post", url + "/generate", {"knockout": {"mode": "cross"}})
+        self.assertEqual(r.status_code, 200, r.json())
+        self.assertEqual(r.json()["knockout"]["rounds"], ["Quarter-finals", "Semi-finals", "Final"], "6 + 2 best thirds = 8, no byes")
+        froms = [x for m in self.ko_matches(url, "Quarter-finals") for x in (m["homeFrom"], m["awayFrom"])]
+        self.assertEqual(sorted(f for f in froms if f.startswith("Best")), ["Best 3rd-placed team 1", "Best 3rd-placed team 2"])
+        self.assertNotIn("Bye", froms)
+        # A3 goal difference 0, B3 -11, C3 -13: A3 and B3 go through
+        self.play_groups(cs, {"A1": 9, "A2": 6, "A3": 5, "A4": 0, "B1": 9, "B2": 6, "B3": 2, "B4": 0, "C1": 9, "C2": 6, "C3": 1, "C4": 0})
+        table = self.owner.get(url + "/standings").json()
+        marks = {r["team"]["name"]: ("q" if r["qualifies"] else "wc" if r["wildcard"] else "") for g in table["groups"] for r in g["rows"]}
+        self.assertEqual((marks["A3"], marks["B3"], marks["C3"], marks["A2"]), ("wc", "wc", "", "q"))
+        names = {m[k]["name"] for m in self.ko_matches(url, "Quarter-finals") for k in ("home", "away") if m[k]}
+        self.assertEqual(names, {"A1", "A2", "B1", "B2", "C1", "C2", "A3", "B3"})
+        from django.test import Client
+        self.assertIn("the best 2 from the next place", Client().get(f"/competition/{cs}/table").content.decode())
+        # with a points minimum, a third that falls short is replaced by nobody: its opponent goes straight through
+        self.owner.call("patch", url, {"thirdMinPoints": 4})
+        from competitions import bracket
+        from competitions.models import Competition
+        bracket.resolve(Competition.objects.get(slug=cs))
+        self.assertEqual(sum(m["decided"] == "bye" for m in self.ko_matches(url, "Quarter-finals")), 2, "A3 and B3 have 3 points")
+
     def test_knockout_dates_follow_the_group_stage(self):
         from datetime import date, timedelta
         cs, url, e = self.groups_comp()

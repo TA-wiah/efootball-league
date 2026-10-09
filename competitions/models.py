@@ -50,6 +50,7 @@ class Competition(Logo):
     legs = models.PositiveSmallIntegerField(default=1)            # how often teams meet in the league stage
     max_teams = models.PositiveSmallIntegerField(null=True, blank=True)
     qualifiers_per_group = models.PositiveSmallIntegerField(default=2)
+    best_thirds = models.PositiveSmallIntegerField(default=0)        # the best N teams from the next place also go through
     third_min_points = models.PositiveSmallIntegerField(default=0)   # with 3+ going through: 3rd place needs this many points
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+")
     created = models.DateTimeField(auto_now_add=True)

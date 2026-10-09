@@ -95,7 +95,7 @@ def comp_json(c, extra=False):
         d["schedule"] = {**engine.SCHEDULE_DEFAULT, **(c.schedule or {})}
         d.update({"rules": c.rules, "pointsWin": c.points_win, "pointsDraw": c.points_draw, "pointsLoss": c.points_loss,
                   "tiebreakers": engine.clean_tiebreakers(c.tiebreakers or engine.DEFAULT_TIEBREAKERS), "legs": c.legs,
-                  "maxTeams": c.max_teams, "qualifiersPerGroup": c.qualifiers_per_group, "thirdMinPoints": c.third_min_points,
+                  "maxTeams": c.max_teams, "qualifiersPerGroup": c.qualifiers_per_group, "thirdMinPoints": c.third_min_points, "bestThirds": c.best_thirds,
                   "teams": c.entries.count(), "matches": c.matches.count(),
                   "finished": c.matches.filter(status="finished").count()})
     return d
@@ -185,7 +185,7 @@ def summary(request, user, ip, slug):
 
 # ---------- competitions ----------
 COMP_STRUCTURE = {"name", "country", "region", "season", "kind", "format", "visibility", "status", "startDate", "endDate", "pointsWin",
-                  "pointsDraw", "pointsLoss", "tiebreakers", "legs", "maxTeams", "qualifiersPerGroup", "thirdMinPoints", "schedule", "money"}
+                  "pointsDraw", "pointsLoss", "tiebreakers", "legs", "maxTeams", "qualifiersPerGroup", "thirdMinPoints", "bestThirds", "schedule", "money"}
 COMP_CONTENT = {"description", "rules"}
 
 
@@ -259,6 +259,8 @@ def apply_competition(c, b):
         c.qualifiers_per_group = num(b, "qualifiersPerGroup", 0, 32, allow_null=False)
     if "thirdMinPoints" in b:
         c.third_min_points = num(b, "thirdMinPoints", 0, 999, allow_null=False)
+    if "bestThirds" in b:
+        c.best_thirds = num(b, "bestThirds", 0, 32, allow_null=False)
 
 
 @endpoint("GET", "POST", login_required=True)
@@ -503,13 +505,16 @@ def create_plan(c, org, user, b):
     q = c.qualifiers_per_group
     if q < 1:
         raise ApiError(400, "Set how many teams go through from each group (Settings).")
-    if len(groups) * q > 64:
-        raise ApiError(400, f"{len(groups)} groups × {q} going through is more than 64 teams. Change “Qualify from each group” in Settings.")
+    thirds = c.best_thirds or 0
+    if thirds > len(groups):
+        raise ApiError(400, f"There are only {len(groups)} groups, so at most {len(groups)} best next-placed teams can go through. Change it in Settings.")
+    if len(groups) * q + thirds > 64:
+        raise ApiError(400, f"{len(groups) * q + thirds} teams going through is more than 64. Change “Qualify from each group” in Settings.")
     small = [g for g in groups if sum(e.group == g for e in entries) < q]
     if small:
         raise ApiError(400, f"Group {small[0]} has fewer than {q} teams, but {q} go through from each group.")
     try:
-        rounds = bracket.plan_rounds(bracket.first_round(groups, q, mode), legs)
+        rounds = bracket.plan_rounds(bracket.first_round(groups, q, mode, thirds), legs)
     except ValueError as e:
         raise ApiError(400, str(e)) from None
     note = ""
@@ -777,14 +782,14 @@ def table_payload(c):
     entries = list(c.entries.select_related("team"))
     matches = list(c.matches.filter(stage="league", status="finished"))
     groups = sorted({e.group for e in entries})
-    out = []
-    for g in groups:
-        rows = engine.standings(c, [e for e in entries if e.group == g], matches)   # only matches between these teams count
-        out.append({"name": g or None, "rows": [{**r, "team": team_brief(r["team"]), "qualifies": engine.goes_through(c, r["position"], r["points"]),
-                                                 "short": c.format == "groups_knockout" and r["position"] <= c.qualifiers_per_group
-                                                 and not engine.goes_through(c, r["position"], r["points"])} for r in rows]})
+    tables = {g: engine.standings(c, [e for e in entries if e.group == g], matches) for g in groups}   # only matches within each group count
+    mk = engine.marks(c, tables)
+    out = [{"name": g or None, "rows": [{**r, "team": team_brief(r["team"]), "qualifies": mk.get(r["entryId"]) == "q",
+                                         "wildcard": mk.get(r["entryId"]) == "wc", "short": mk.get(r["entryId"]) == "short"} for r in tables[g]]}
+           for g in groups]
     return {"competition": comp_json(c), "groups": out, "qualifiersPerGroup": c.qualifiers_per_group if c.format == "groups_knockout" else 0,
-            "thirdMinPoints": c.third_min_points if c.format == "groups_knockout" and c.qualifiers_per_group >= 3 else 0,
+            "thirdMinPoints": c.third_min_points if c.format == "groups_knockout" and (c.qualifiers_per_group >= 3 or c.best_thirds) else 0,
+            "bestThirds": c.best_thirds if c.format == "groups_knockout" else 0,
             "pointsSystem": {"win": c.points_win, "draw": c.points_draw, "loss": c.points_loss},
             "tiebreakers": [engine.CRITERIA[k] for k in engine.clean_tiebreakers(c.tiebreakers or engine.DEFAULT_TIEBREAKERS)]}
 

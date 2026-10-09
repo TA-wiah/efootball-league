@@ -209,6 +209,48 @@ def goes_through(comp, position, points):
     return position < 3 or points >= (comp.third_min_points or 0)
 
 
+def _record(r):
+    return (-r["points"], -r["goalDifference"], -r["goalsFor"], str(getattr(r["team"], "name", r["team"])).lower())
+
+
+def best_next(comp, rows_by_group):
+    """The best teams from the place after the qualifying ones (e.g. the best thirds), ranked across all groups by points,
+    goal difference and goals scored. From 3rd place down they need the minimum points too."""
+    q, n = comp.qualifiers_per_group, comp.best_thirds or 0
+    if comp.format != "groups_knockout" or not n or not q:
+        return []
+    cands = [r for rows in rows_by_group.values() for r in rows
+             if r["position"] == q + 1 and (q + 1 < 3 or r["points"] >= (comp.third_min_points or 0))]
+    return [r["entryId"] for r in sorted(cands, key=_record)[:n]]
+
+
+def seeding(comp, rows_by_group):
+    """Everyone going through, best first: group winners, then runners-up… (each ranked by their record), then the best
+    next-placed teams. Returns [(entry id, group)]."""
+    wild = set(best_next(comp, rows_by_group))
+    picked = [(r, g) for g, rows in rows_by_group.items() for r in rows if goes_through(comp, r["position"], r["points"]) or r["entryId"] in wild]
+    picked.sort(key=lambda x: (x[0]["position"], *_record(x[0])))
+    return [(r["entryId"], g) for r, g in picked]
+
+
+def marks(comp, rows_by_group):
+    """For the tables: entry id → "q" (through), "wc" (through as one of the best next-placed teams) or "short"
+    (a qualifying place, or a best-thirds candidate, without the minimum points)."""
+    q, low = comp.qualifiers_per_group, comp.third_min_points or 0
+    wild = set(best_next(comp, rows_by_group))
+    out = {}
+    for rows in rows_by_group.values():
+        for r in rows:
+            p = r["position"]
+            if goes_through(comp, p, r["points"]):
+                out[r["entryId"]] = "q"
+            elif r["entryId"] in wild:
+                out[r["entryId"]] = "wc"
+            elif comp.format == "groups_knockout" and (p <= q or (comp.best_thirds and p == q + 1 and p >= 3 and r["points"] < low)):
+                out[r["entryId"]] = "short"
+    return out
+
+
 def standings(comp, entries, matches):
     """Table rows (already sorted) for these entries, from these finished league matches."""
     pts_cfg = (comp.points_win, comp.points_draw, comp.points_loss)

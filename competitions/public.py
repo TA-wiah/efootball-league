@@ -122,16 +122,17 @@ def standings_view(c, linkable, only_group=None):
     entries = list(c.entries.select_related("team"))
     played = list(c.matches.filter(stage="league", status="finished"))
     groups = []
-    for g in sorted({e.group for e in entries}):
+    tables = {g: engine.standings(c, [e for e in entries if e.group == g], played) for g in sorted({e.group for e in entries})}
+    mk = engine.marks(c, tables)                                  # best thirds are ranked across all groups
+    ko = c.format == "groups_knockout"
+    for g, rows in tables.items():
         if only_group is not None and g != only_group:
             continue
-        rows = engine.standings(c, [e for e in entries if e.group == g], played)
         for r in rows:
             r["team"] = team_view(r["team"], linkable)
-            r["qualifies"] = engine.goes_through(c, r["position"], r["points"])
-            r["short"] = c.format == "groups_knockout" and r["position"] <= c.qualifiers_per_group and not r["qualifies"]
-        groups.append({"name": g, "rows": rows, "through": c.qualifiers_per_group if c.format == "groups_knockout" else 0,
-                       "min3": c.third_min_points if c.format == "groups_knockout" and c.qualifiers_per_group >= 3 else 0})
+            r["qualifies"], r["wildcard"], r["short"] = (mk.get(r["entryId"]) == k for k in ("q", "wc", "short"))
+        groups.append({"name": g, "rows": rows, "through": c.qualifiers_per_group if ko else 0, "thirds": c.best_thirds if ko else 0,
+                       "min3": c.third_min_points if ko and (c.qualifiers_per_group >= 3 or c.best_thirds) else 0})
     return groups
 
 
