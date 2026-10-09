@@ -200,6 +200,15 @@ def _rank(rows, criteria, matches, pts_cfg):
     return out
 
 
+def goes_through(comp, position, points):
+    """Does this group position go through? The top `qualifiers_per_group`, but from 3rd place down only with at least
+    `third_min_points` points (like the original league page)."""
+    q = comp.qualifiers_per_group if comp.format == "groups_knockout" else 0
+    if not q or position > q:
+        return False
+    return position < 3 or points >= (comp.third_min_points or 0)
+
+
 def standings(comp, entries, matches):
     """Table rows (already sorted) for these entries, from these finished league matches."""
     pts_cfg = (comp.points_win, comp.points_draw, comp.points_loss)
