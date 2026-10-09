@@ -131,8 +131,9 @@ def standings_view(c, linkable, only_group=None):
         for r in rows:
             r["team"] = team_view(r["team"], linkable)
             r["qualifies"], r["wildcard"], r["short"] = (mk.get(r["entryId"]) == k for k in ("q", "wc", "short"))
-        groups.append({"name": g, "rows": rows, "through": c.qualifiers_per_group if ko else 0, "thirds": c.best_thirds if ko else 0,
-                       "min3": c.third_min_points if ko and (c.qualifiers_per_group >= 3 or c.best_thirds) else 0})
+        thirds = engine.thirds_for(c, len(tables))
+        groups.append({"name": g, "rows": rows, "through": c.qualifiers_per_group if ko else 0, "thirds": thirds,
+                       "min3": c.third_min_points if ko and (c.qualifiers_per_group >= 3 or thirds) else 0})
     return groups
 
 

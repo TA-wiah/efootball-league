@@ -95,7 +95,7 @@ def comp_json(c, extra=False):
         d["schedule"] = {**engine.SCHEDULE_DEFAULT, **(c.schedule or {})}
         d.update({"rules": c.rules, "pointsWin": c.points_win, "pointsDraw": c.points_draw, "pointsLoss": c.points_loss,
                   "tiebreakers": engine.clean_tiebreakers(c.tiebreakers or engine.DEFAULT_TIEBREAKERS), "legs": c.legs,
-                  "maxTeams": c.max_teams, "qualifiersPerGroup": c.qualifiers_per_group, "thirdMinPoints": c.third_min_points, "bestThirds": c.best_thirds,
+                  "maxTeams": c.max_teams, "qualifiersPerGroup": c.qualifiers_per_group, "thirdMinPoints": c.third_min_points, "bestThirds": "auto" if c.best_thirds_auto else c.best_thirds,
                   "teams": c.entries.count(), "matches": c.matches.count(),
                   "finished": c.matches.filter(status="finished").count()})
     return d
@@ -260,7 +260,8 @@ def apply_competition(c, b):
     if "thirdMinPoints" in b:
         c.third_min_points = num(b, "thirdMinPoints", 0, 999, allow_null=False)
     if "bestThirds" in b:
-        c.best_thirds = num(b, "bestThirds", 0, 32, allow_null=False)
+        c.best_thirds_auto = b["bestThirds"] == "auto"
+        c.best_thirds = 0 if c.best_thirds_auto else num(b, "bestThirds", 0, 32, allow_null=False)
 
 
 @endpoint("GET", "POST", login_required=True)
@@ -505,7 +506,7 @@ def create_plan(c, org, user, b):
     q = c.qualifiers_per_group
     if q < 1:
         raise ApiError(400, "Set how many teams go through from each group (Settings).")
-    thirds = c.best_thirds or 0
+    thirds = engine.thirds_for(c, len(groups))
     if thirds > len(groups):
         raise ApiError(400, f"There are only {len(groups)} groups, so at most {len(groups)} best next-placed teams can go through. Change it in Settings.")
     if len(groups) * q + thirds > 64:
@@ -795,8 +796,8 @@ def table_payload(c):
                                          "wildcard": mk.get(r["entryId"]) == "wc", "short": mk.get(r["entryId"]) == "short"} for r in tables[g]]}
            for g in groups]
     return {"competition": comp_json(c), "groups": out, "qualifiersPerGroup": c.qualifiers_per_group if c.format == "groups_knockout" else 0,
-            "thirdMinPoints": c.third_min_points if c.format == "groups_knockout" and (c.qualifiers_per_group >= 3 or c.best_thirds) else 0,
-            "bestThirds": c.best_thirds if c.format == "groups_knockout" else 0,
+            "thirdMinPoints": c.third_min_points if c.format == "groups_knockout" and (c.qualifiers_per_group >= 3 or engine.thirds_for(c, len(groups))) else 0,
+            "bestThirds": engine.thirds_for(c, len(groups)),
             "pointsSystem": {"win": c.points_win, "draw": c.points_draw, "loss": c.points_loss},
             "tiebreakers": [engine.CRITERIA[k] for k in engine.clean_tiebreakers(c.tiebreakers or engine.DEFAULT_TIEBREAKERS)]}
 
