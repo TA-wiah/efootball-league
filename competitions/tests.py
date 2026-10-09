@@ -364,23 +364,27 @@ class CompetitionApiTest(Helpers, TestCase):
     def ko_matches(self, url, name=None):
         return [m for m in self.owner.get(url + "/matches").json()["matches"] if m["stage"] == "knockout" and (name is None or m["roundName"] == name)]
 
-    def test_draw_after_the_groups_gives_byes_to_the_best(self):
+    def test_draw_after_the_groups_everyone_plays(self):
         cs, url, e = self.groups_comp(groups=2, per=4, q=3)
         self.owner.call("patch", url, {"thirdMinPoints": 4})
         r = self.owner.call("post", url + "/generate", {"knockout": {"mode": "ranked"}})
         self.assertEqual(r.status_code, 200, r.json())
+        self.assertEqual(r.json()["knockout"]["rounds"], ["Quarter-finals", "Semi-finals", "Final"])
         qf = self.ko_matches(url, "Quarter-finals")
         self.assertEqual(qf[0]["homeFrom"], "Seed 1 (by group results)")
-        # A1 9 pts (+12), B1 9 pts (+6), A2 6 pts, B2 4 pts, B3 4 pts; A3 has 3 points: not through. 5 teams: seeds 1-3 get byes
+        self.assertNotIn("Bye", [x for m in qf for x in (m["homeFrom"], m["awayFrom"])])
+        # A1, B1, A2, B2, B3 qualify (A3 has 3 points, short of 4). Topped up to 8 with the best of the rest: A3, B4, A4
         self.play_groups(cs, {"A1": 4, "A2": 2, "A3": 1, "A4": 0, "B1": 2, "B2": 1, "B3": 1, "B4": 0})
         qf = self.ko_matches(url, "Quarter-finals")
-        name = lambda t: t["name"] if t else None
-        byes = sorted(name(m["home"]) or name(m["away"]) for m in qf if m["decided"] == "bye")
-        self.assertEqual(byes, ["A1", "A2", "B1"], "the three best records get the byes")
-        played = [m for m in qf if m["decided"] != "bye"]
-        self.assertEqual(len(played), 1)
-        self.assertEqual({name(played[0]["home"]), name(played[0]["away"])}, {"B2", "B3"})
-        self.assertNotIn("A3", [name(m[k]) for m in self.ko_matches(url) for k in ("home", "away")])
+        self.assertFalse(any(m["decided"] for m in qf), "no byes: everyone plays")
+        pairs = {frozenset((m["home"]["name"], m["away"]["name"])) for m in qf}
+        self.assertEqual(pairs, {frozenset(p) for p in (("A1", "B4"), ("B1", "A4"), ("A2", "B3"), ("B2", "A3"))},
+                         "best v weakest, never someone from their own group")
+        # not enough teams to fill the places: asks for another setting
+        cs2, url2, _ = self.groups_comp(groups=2, per=3, q=3)
+        r = self.owner.call("post", url2 + "/knockout-plan", {"mode": "ranked"})
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("needs 8 teams", r.json()["error"])
 
     def test_best_third_placed_teams_world_cup_style(self):
         cs, url, e = self.groups_comp(groups=3, per=4, q=2)

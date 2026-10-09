@@ -11,7 +11,7 @@ _rng = random.SystemRandom()
 OUT = "out"            # a place nobody fills: a bye, or a 3rd place without enough points
 ROUND_NAMES = {2: "Final", 4: "Semi-finals", 8: "Quarter-finals", 16: "Round of 16", 32: "Round of 32", 64: "Round of 64"}
 SINGULAR = {"Final": "Final", "Semi-finals": "Semi-final", "Quarter-finals": "Quarter-final"}
-MODES = {"ranked": "After the groups: ranked by results, the best teams get any byes",
+MODES = {"ranked": "After the groups: ranked by results; places are topped up with the best of the rest so everyone plays",
          "cross": "Group winners play runners-up from another group (Champions League style)",
          "random": "Random draw: group winners play lower-placed teams from other groups"}
 
@@ -51,12 +51,16 @@ def seed_order(n):
 
 def first_round(groups, q, mode, thirds=0):
     """The first knockout round as [(home source, away source)], in bracket order (tie 1 and 2 meet next, and so on).
-    "ranked": the places are filled once every group has finished, best record first ("S:1", "S:2"…)."""
+    "ranked": the places are filled once every group has finished, best record first ("S:1", "S:2"…). The bracket is
+    rounded up to 4, 8, 16… and topped up with the best teams that didn't qualify, so everyone plays (no byes)."""
     n = len(groups) * q + thirds
     if n < 2:
         raise ValueError("A knockout needs at least 2 teams. Change “Qualify from each group” in Settings.")
     if mode == "ranked":
-        return build([(f"S:{i}", None, i) for i in range(1, n + 1)])
+        size = 1
+        while size < n:
+            size *= 2
+        return build([(f"S:{i}", None, i) for i in range(1, size + 1)])
     g = lambda grp, k: f"G:{grp}:{k}"
     if thirds or n & (n - 1):
         return build([(g(grp, k), grp, k) for k in range(1, q + 1) for grp in groups] +
@@ -163,7 +167,8 @@ def resolve(c):
     wild = engine.best_next(c, rows_by_group) if done else None
     seedmap = None
     if done and any(m.home_from.startswith("S:") for m in planned if m.home_from):
-        seeds = engine.seeding(c, rows_by_group)
+        slots = max(int(src[2:]) for m in planned for src in (m.home_from, m.away_from) if (src or "").startswith("S:"))
+        seeds = engine.seeding(c, rows_by_group, fill=slots)
         seedmap = {i + 1: s for i, s in enumerate(seeds)}
         first = min(m.round for m in planned)
         pairs = {tuple(sorted((int(m.home_from[2:]), int(m.away_from[2:]))))

@@ -224,12 +224,17 @@ def best_next(comp, rows_by_group):
     return [r["entryId"] for r in sorted(cands, key=_record)[:n]]
 
 
-def seeding(comp, rows_by_group):
+def seeding(comp, rows_by_group, fill=0):
     """Everyone going through, best first: group winners, then runners-up… (each ranked by their record), then the best
-    next-placed teams. Returns [(entry id, group)]."""
+    next-placed teams. With `fill`, the list is topped up to that many with the best of the rest (higher group place
+    first, then record), so a knockout of 4, 8, 16… teams has no byes. Returns [(entry id, group)]."""
     wild = set(best_next(comp, rows_by_group))
-    picked = [(r, g) for g, rows in rows_by_group.items() for r in rows if goes_through(comp, r["position"], r["points"]) or r["entryId"] in wild]
-    picked.sort(key=lambda x: (x[0]["position"], *_record(x[0])))
+    rank = lambda x: (x[0]["position"], *_record(x[0]))
+    every = [(r, g) for g, rows in rows_by_group.items() for r in rows]
+    picked = sorted([x for x in every if goes_through(comp, x[0]["position"], x[0]["points"]) or x[0]["entryId"] in wild], key=rank)
+    if fill > len(picked):
+        chosen = {r["entryId"] for r, _ in picked}
+        picked += sorted([x for x in every if x[0]["entryId"] not in chosen], key=rank)[:fill - len(picked)]
     return [(r["entryId"], g) for r, g in picked]
 
 
