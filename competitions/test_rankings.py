@@ -118,6 +118,11 @@ class RankingsTest(Helpers, TestCase):
         page = Client().get(f"/team/{Match.objects.filter(competition__slug=c1).first().competition.entries.get(team__name='Lions').team.slug}").content.decode()
         self.assertIn("in the world · #1 in Ghana · #1 in Central", page)
         self.assertIn("How the rankings work", Client().get("/rankings").content.decode())
+        m = Match.objects.filter(competition__slug=c1).select_related("home__team").first()
+        self.a.call("post", f"{b1}/matches/{m.id}/events", {"kind": "goal", "side": "home", "minute": 9, "playerName": "Kofi Mensah"})
+        mine = self.a.get(f"/api/orgs/{self.sa}/rankings").json()["players"]
+        self.assertEqual([(p["name"], p["team"]["name"], p["goals"], p["world"], p["inCountry"]) for p in mine], [("Kofi Mensah", m.home.team.name, 1, 1, 1)])
+        self.assertEqual(self.b.get(f"/api/orgs/{self.sb}/rankings").json()["players"], [], "only your own organization's players")
 
     def test_margin_and_penalties(self):
         self.assertEqual((rankings.margin_factor(1), rankings.margin_factor(2), rankings.margin_factor(3)), (1.0, 1.5, 1.75))
