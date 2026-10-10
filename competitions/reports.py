@@ -189,6 +189,9 @@ def report_approve(request, user, ip, match_id):
     log(m.competition.org, user, f"confirmed {m.home.team.name} {p.home_score}–{p.away_score} {m.away.team.name} from {team}'s screenshot")
     from league.http import site_url
     from .reminders import email_teams
+    from .reminders import text_team
+    for t in (m.home.team, m.away.team):
+        text_team(t, f"Result confirmed by {m.competition.org.name}: {m.home.team.name} {p.home_score}-{p.away_score} {m.away.team.name}.")
     email_teams([m.home.team_id, m.away.team_id], f"Result confirmed: {m.home.team.name} {p.home_score}–{p.away_score} {m.away.team.name}",
                 [f"{m.competition.org.name} confirmed the result of {m.home.team.name} v {m.away.team.name}: {p.home_score}–{p.away_score}."],
                 f"{site_url(request)}/app/report/{m.id}", "Open the match")

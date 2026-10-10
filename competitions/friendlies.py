@@ -111,10 +111,14 @@ def managers_with_email(team, org=None):
 
 
 def notify(team, subject, lines, request, org_slug, org=None, page="friendlies"):
+    """Email everyone on the team, and text them too when their organization turned automatic texts on."""
+    link = f"{site_url(request)}/app/org/{org_slug}/{page}"
+    if team:
+        from .reminders import text_team
+        text_team(team, f"{subject}. {lines[1] if len(lines) > 1 else ''} Open: {link}".replace("  ", " "))
     if not emailer.ready():
         return
-    link = f"{site_url(request)}/app/org/{org_slug}/{page}"
-    txt, html = emailer.body(subject, lines, link, "Open friendlies", "You get this because you manage teams there.")
+    txt, html = emailer.body(subject, lines, link, "Open friendlies", "You get this because you're on this team or manage teams there.")
     for to in managers_with_email(team, org):
         try:
             emailer.send(to, subject, txt, html)

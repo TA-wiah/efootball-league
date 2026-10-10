@@ -41,6 +41,24 @@ def email_teams(team_ids, subject, lines, link, button="Open"):
     return sent
 
 
+def text_team(team, message):
+    """Best effort: an SMS to everyone on the team with a phone, paid from the team's organization's credits, only when
+    that organization turned on automatic text messages. Returns how many people it went to."""
+    org = team.org
+    if not org.auto_sms_reminders:
+        return 0
+    numbers = list(Membership.objects.filter(org=org, teams=team).exclude(user__phone="").values_list("user__phone", flat=True).distinct())
+    if not numbers:
+        return 0
+    try:
+        from sms.api import send_text
+        send_text(org, None, numbers, message[:450], kind="notice")
+        return len(numbers)
+    except ApiError as e:                                  # no credits, SMS off, blocked…: emails still go
+        log.info("SMS to %s not sent: %s", team.name, e.message)
+        return 0
+
+
 def send_due(force=False):
     now_t = time.monotonic()
     if not force and now_t - _last["t"] < 600:

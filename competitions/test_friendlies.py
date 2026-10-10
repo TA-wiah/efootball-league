@@ -385,6 +385,34 @@ class FriendliesTest(Helpers, TestCase):
         self.assertIn("Lions v Leopards", sms[0].body)
         self.assertLess(SmsAccount.objects.get(org__slug=self.a).credits, 10, "the organization's credits pay for it")
 
+    def test_friendly_notices_by_sms_when_turned_on(self):
+        from league.models import Admin
+        from orgs.models import Organization
+        from sms.models import SmsAccount, SmsMessage
+        board = f"/api/orgs/{self.a}/friendly-board"
+        leopards = self.team(self.boss, self.a, "Leopards")
+        p1 = self.join_team("lion_s", self.lions, "player")
+        self.join_team("leo_s", leopards, "player")
+        Admin.objects.filter(username__in=["lion_s", "leo_s"]).update(phone="0241234567")
+        store.update("sms", {"enabled": True, "provider": "console", "sender": "League"})
+        org = Organization.objects.get(slug=self.a)
+        SmsAccount.objects.update_or_create(org=org, defaults={"credits": 20})
+        first = p1.call("post", board, {"teamId": self.lions, "toTeamId": leopards, "kickoff": self.soon()}).json()["challenge"]["id"]
+        self.assertEqual(SmsMessage.objects.filter(org=org).count(), 0, "off by default: emails only")
+        p1.call("post", f"{board}/{first}/cancel")
+        self.assertEqual(self.boss.call("patch", f"/api/orgs/{self.a}", {"autoSmsReminders": True}).json()["org"]["autoSmsReminders"], True)
+        cid = p1.call("post", board, {"teamId": self.lions, "toTeamId": leopards, "kickoff": self.soon(3)}).json()["challenge"]["id"]
+        texts = list(SmsMessage.objects.filter(org=org, kind="notice").values_list("body", flat=True))
+        self.assertTrue(any("Lions challenged Leopards" in t for t in texts), texts)
+        self.assertLess(SmsAccount.objects.get(org=org).credits, 20)
+        # the Leopards player approves from their dashboard's data, and the Lions get a text
+        leo = self.signup("leo_s2")
+        link = self.boss.call("post", f"/api/orgs/{self.a}/teams/{leopards}/invitations", {"role": "team_manager"}).json()["link"]
+        leo.call("post", "/api/invitations/" + link.rsplit("/", 1)[1] + "/accept")
+        self.assertEqual([x["id"] for x in leo.get(board).json()["incoming"]], [cid])
+        leo.call("post", f"{board}/{cid}/approve")
+        self.assertTrue(SmsMessage.objects.filter(org=org, kind="notice", body__contains="Leopards accepted your friendly").exists())
+
     def test_friendly_series_is_always_a_plain_series_and_counts_less(self):
         r = self.boss.call("post", f"/api/orgs/{self.a}/competitions", {"name": "Summer Friendlies", "kind": "friendly", "format": "groups_knockout", "visibility": "public"})
         c = Competition.objects.get(slug=r.json()["competition"]["slug"])
