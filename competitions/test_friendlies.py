@@ -224,6 +224,25 @@ class FriendliesTest(Helpers, TestCase):
         self.assertIn("1</b> won", page)
         self.assertNotIn('class="fm W"', page, "not in the league form")
 
+    def test_edit(self):
+        url, theirs = f"/api/orgs/{self.a}/friendlies", f"/api/orgs/{self.b}/friendlies"
+        ch = self.boss.call("post", url, {"fromTeamId": self.lions, "toTeamId": self.tigers, "kickoff": self.soon()}).json()["challenge"]
+        self.assertTrue(ch["canEdit"])
+        self.assertFalse(self.chief.get(theirs).json()["challenges"][0]["canEdit"], "waiting: only the sender edits it")
+        self.assertEqual(self.chief.call("post", f"{theirs}/{ch['id']}/edit", {"message": "x"}).status_code, 403)
+        later = (timezone.now() + timedelta(days=5)).replace(microsecond=0)
+        r = self.boss.call("post", f"{url}/{ch['id']}/edit", {"kickoff": later.isoformat(), "message": "Moved to Friday"}).json()["challenge"]
+        self.assertEqual((r["message"], r["kickoff"][:16]), ("Moved to Friday", later.isoformat()[:16]))
+        self.assertEqual(self.boss.call("post", f"{url}/{ch['id']}/edit", {"kickoff": (timezone.now() - timedelta(days=1)).isoformat()}).status_code, 400)
+        # accepted: either side moves the time, and the match moves with it
+        mid = self.chief.call("post", f"{theirs}/{ch['id']}/accept").json()["challenge"]["match"]["id"]
+        sooner = (timezone.now() + timedelta(days=2)).replace(microsecond=0)
+        self.assertEqual(self.chief.call("post", f"{theirs}/{ch['id']}/edit", {"kickoff": sooner.isoformat()}).status_code, 200)
+        self.assertEqual(Match.objects.get(id=mid).kickoff, sooner)
+        # played: no more editing (the result is changed with Enter result)
+        self.boss.call("patch", f"/api/orgs/{self.a}/matches/{mid}", {"homeScore": 1, "awayScore": 1, "status": "finished"})
+        self.assertEqual(self.boss.call("post", f"{url}/{ch['id']}/edit", {"message": "late"}).status_code, 403)
+
     def test_friendly_series_is_always_a_plain_series_and_counts_less(self):
         r = self.boss.call("post", f"/api/orgs/{self.a}/competitions", {"name": "Summer Friendlies", "kind": "friendly", "format": "groups_knockout", "visibility": "public"})
         c = Competition.objects.get(slug=r.json()["competition"]["slug"])

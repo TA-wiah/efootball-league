@@ -289,7 +289,7 @@ Object.assign(IC,{wallet:'<rect x="3" y="6" width="18" height="14" rx="2"/><path
   key:'<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M14 9l2 2"/>',lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
   globe:'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',file:'<path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4M9 13h6M9 17h6"/>',
   megaphone:'<path d="M3 10v4h4l8 5V5L7 10z"/><path d="M18 9a4 4 0 0 1 0 6"/>',eye:'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
-  trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',out:'<path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h11"/>',swap:'<path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/>'});
+  trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',pen:'<path d="M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4"/>',out:'<path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h11"/>',swap:'<path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/>'});
 function safeColor(c){return/^#[0-9a-f]{6}$/i.test(c||"")?c:"#2563eb"}
 // Readable text on a brand colour (WCAG contrast: white or near-black, whichever is stronger)
 function inkOn(c){c=safeColor(c);var l=[1,3,5].map(function(i){var v=parseInt(c.substr(i,2),16)/255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)});
@@ -1425,6 +1425,18 @@ function reportView(id){document.title="Match report · Competition Manager";UM(
 function frDay(n){var d=new Date(Date.now()+n*864e5);return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2)}
 function frTimes(){var d=new Date(),next=Math.ceil((d.getHours()*60+d.getMinutes()+1)/15)*15%(24*60),o='<option value="now">Now</option>';
   for(var m=0;m<24*60;m+=15){var t=("0"+Math.floor(m/60)).slice(-2)+":"+("0"+m%60).slice(-2);o+='<option value="'+t+'"'+(m===next?" selected":"")+'>'+t+'</option>'}return o}
+// change a friendly's time and message (a small dialog with the same date and time fields)
+function friendlyEdit(c,done){var d=document.createElement("div"),k=new Date(c.kickoff),day=k.getFullYear()+"-"+("0"+(k.getMonth()+1)).slice(-2)+"-"+("0"+k.getDate()).slice(-2),
+    tm=("0"+k.getHours()).slice(-2)+":"+("0"+Math.floor(k.getMinutes()/15)*15).slice(-2),other=c.direction==="sent"?c.to:c.from;
+  d.className="modal";d.innerHTML='<form class="mbox" id="fef" role="dialog" aria-modal="true" aria-labelledby="fet" novalidate><h2 id="fet">Edit friendly</h2><p class="note" style="margin-top:0">'+esc(c.from.name)+' v '+esc(c.to.name)+(c.status==="accepted"?'. The other team is told about a new time.':'')+'</p>'+
+    '<div class="row"><label for="fed">Date<input id="fed" type="date" value="'+day+'" max="'+frDay(730)+'"></label><label for="fetm">Time<select id="fetm">'+frTimes()+'</select></label></div>'+
+    '<label for="fem">Message (optional)<input id="fem" maxlength="300" value="'+esc(c.message||"")+'"></label><div class="actions"><button class="btn" id="feok">Save changes</button><button type="button" class="btn g" id="feno">Cancel</button></div></form>';
+  document.body.appendChild(d);$("fetm").value=tm;if($("fetm").value!==tm)$("fetm").value=$("fetm").options[1].value;
+  var close=function(){document.removeEventListener("keydown",kd);d.remove()},kd=function(e){if(e.key==="Escape")close()};document.addEventListener("keydown",kd);
+  d.onclick=function(e){if(e.target===d)close()};$("feno").onclick=close;
+  $("fef").onsubmit=function(e){e.preventDefault();var now=val("fetm")==="now",ko=now?null:new Date(val("fed")+"T"+val("fetm"));if(!now&&(!val("fed")||isNaN(ko))){toast("Choose the date",true);return}
+    var b=$("feok");busy(b,true,"Saving…");api(api0("/friendlies/"+c.id+"/edit"),"POST",{kickoff:now?"now":ko.toISOString(),message:val("fem")}).then(function(x){busy(b,false);
+      if(!x.ok){toast(x.data.error,true);return}toast("Friendly updated");close();done()})}}
 function friendliesSec(){Promise.all([api(api0("/friendlies")),api(api0("/teams"))]).then(function(res){var r=res[0];if(!r.ok)return fail(r);var d=r.data,mine=d.teams,cs=d.challenges,pick=null,where="ours",ours=(res[1].ok?res[1].data.teams:[]).filter(function(t){return!t.suspended});
   var row=function(c){var other=c.direction==="sent"?c.to:c.from,me=c.direction==="sent"?c.from:c.to;
     return'<tr><td><b>'+esc(me.name)+'</b> v <b>'+esc(other.name)+'</b><small>'+esc(c.internal?"Our organization":other.org.name)+(c.message?' · “'+esc(c.message)+'”':'')+'</small></td><td style="white-space:nowrap">'+esc(when(c.kickoff))+'</td><td><span class="pill '+({accepted:"finished",pending:"scheduled"}[c.status]||"cancelled")+'">'+esc({pending:"Waiting",accepted:"Accepted",declined:"Declined",cancelled:"Cancelled",expired:"Expired"}[c.status])+'</span></td><td style="text-align:right;white-space:nowrap">'+
@@ -1432,6 +1444,7 @@ function friendliesSec(){Promise.all([api(api0("/friendlies")),api(api0("/teams"
       (c.canAnswer?'<button type="button" class="btn sm" data-fa="accept" data-id="'+c.id+'">Accept</button> <button type="button" class="btn bad sm" data-fa="decline" data-id="'+c.id+'">Decline</button>':'')+
       (c.canCancel?'<button type="button" class="btn g sm" data-fa="cancel" data-id="'+c.id+'">Cancel</button>':'')+
       (c.match?(c.host===ORG.org.slug&&has("results.enter")?'<a class="btn sm" href="'+app0("/match/"+c.match.id)+'" data-nav>Enter result</a> ':'<a class="btn g sm" href="/app/report/'+c.match.id+'" data-nav>Match</a> ')+'<a class="btn g sm" href="/match/'+esc(c.match.slug)+'" target="_blank" rel="noopener">Public page ↗</a>':'')+
+      (c.canEdit?' <button type="button" class="btn g sm" data-fedit="'+c.id+'">'+ic("pen")+' Edit</button>':'')+
       (c.canDelete?' <button type="button" class="btn bad sm" data-fdel="'+c.id+'" data-played="'+(c.played?1:0)+'" data-match="'+(c.match?1:0)+'" aria-label="Delete">'+ic("trash")+' Delete</button>':'')+'</td></tr>'};
   var list=function(title,xs,empty){return'<div class="card"><div class="gh">'+title+' · '+xs.length+'</div>'+(xs.length?'<div class="tbl"><table class="dt"><tbody>'+xs.map(row).join("")+'</tbody></table></div>':'<p class="note">'+empty+'</p>')+'</div>'};
   var recv=cs.filter(function(c){return c.direction==="received"}),sent=cs.filter(function(c){return c.direction==="sent"});
@@ -1445,6 +1458,7 @@ function friendliesSec(){Promise.all([api(api0("/friendlies")),api(api0("/teams"
     list("Challenges for you",recv,"No challenges yet.")+'<p class="note">Accepting a challenge puts the match on the challenging organization’s public “Friendlies” page, with both teams’ names and logos.</p>'+list("Challenges you sent",sent,"You haven’t challenged anyone yet.");
   document.querySelectorAll("[data-fa]").forEach(function(b){b.onclick=function(){busy(b,true,"…");var tsel=document.querySelector('[data-fteam="'+b.dataset.id+'"]');api(api0("/friendlies/"+b.dataset.id+"/"+b.dataset.fa),"POST",tsel?{teamId:+tsel.value}:{}).then(function(x){busy(b,false);
     toast(x.ok?{accept:"Accepted: the match is set",decline:"Declined",cancel:"Cancelled"}[b.dataset.fa]:x.data.error,!x.ok);if(x.ok)friendliesSec()})}});
+  document.querySelectorAll("[data-fedit]").forEach(function(b){b.onclick=function(){var c=cs.filter(function(x){return x.id===+b.dataset.fedit})[0];if(c)friendlyEdit(c,friendliesSec)}});
   document.querySelectorAll("[data-fdel]").forEach(function(b){b.onclick=function(){var played=b.dataset.played==="1",match=b.dataset.match==="1";
     confirmBox("Delete this friendly?",match?(played?"The match and its result are removed for both teams, and it no longer counts in head-to-head or the rankings.":"The match is removed for both teams."):"The challenge is removed from both teams’ lists.",{danger:true,ok:"Delete"}).then(function(ok){if(!ok)return;busy(b,true,"…");
       api(api0("/friendlies/"+b.dataset.fdel+"/delete"),"POST",{}).then(function(x){busy(b,false);toast(x.ok?"Friendly deleted":x.data.error,!x.ok);if(x.ok)friendliesSec()})})}});
