@@ -15,6 +15,7 @@
 {% if tab == "" %}
   <div class="two">
     <div>
+      {% if c.kind == "friendly" %}<section class="card"><div class="gh">Head to head</div>{% for p in h2h %}<div class="h2h"><span>{% include "public/_crest.html" with t=p.a size=28 %} <b>{{ p.a.name }}</b></span><span class="h2hn"><b>{{ p.aWins }}</b> – {{ p.draws }} – <b>{{ p.bWins }}</b><small>{{ p.played }} played · goals {{ p.aGoals }}–{{ p.bGoals }}</small></span><span style="justify-content:flex-end"><b>{{ p.b.name }}</b> {% include "public/_crest.html" with t=p.b size=28 %}</span></div>{% empty %}<p class="note">No friendlies played yet.</p>{% endfor %}<p class="note">Wins – draws – wins. Friendlies have no league table.</p></section>{% endif %}
       {% if has_table %}<section class="card"><div class="gh">Table</div>{% include "public/_table.html" %}<p><a class="btn g sm" href="/competition/{{ c.slug }}/table">Full table</a></p></section>{% endif %}
       <section class="card"><div class="gh">Upcoming matches</div>{% for m in upcoming %}{% include "public/_match.html" with show_round=1 %}{% empty %}<p class="note">No upcoming matches.</p>{% endfor %}</section>
       <section class="card"><div class="gh">Recent results</div>{% for m in recent %}{% include "public/_match.html" with show_round=1 %}{% empty %}<p class="note">No results yet.</p>{% endfor %}</section>

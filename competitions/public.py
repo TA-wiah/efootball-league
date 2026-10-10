@@ -146,14 +146,14 @@ TABS = [("", "Overview"), ("table", "Table"), ("fixtures", "Fixtures"), ("result
 
 def competition(request, slug, tab=""):
     c = competition_for(request, slug)
-    if tab not in dict(TABS) or (tab == "knockouts" and c.format == "league"):
+    if tab not in dict(TABS) or (tab == "knockouts" and c.format == "league") or (tab == "table" and c.kind == "friendly"):
         raise Http404
     entries = list(c.entries.select_related("team").order_by("team__name"))
     linkable = public_team_ids([e.team_id for e in entries])
     matches = list(MATCHES.filter(competition=c).order_by("kickoff", "round", "leg", "id"))
     upcoming = [m for m in matches if m.status in ("scheduled", "live", "postponed")]
     results = sorted([m for m in matches if m.status == "finished"], key=lambda m: (m.kickoff is not None, m.kickoff, m.round), reverse=True)
-    has_table = c.format != "knockout"
+    has_table = c.format != "knockout" and c.kind != "friendly"
     ctx = {"c": c, "tab": tab, "tabs": [(t, label) for t, label in TABS if (t != "table" or has_table) and (t != "knockouts" or c.format != "league")],
            "logo": logo("competition", c), "share_image": logo("competition", c) or org_logo(c.org),
            "kind": KIND_L.get(c.kind, "Competition"), "format": FORMAT_L[c.format], "has_table": has_table,
@@ -162,6 +162,8 @@ def competition(request, slug, tab=""):
            "tiebreakers": [engine.CRITERIA[k] for k in engine.clean_tiebreakers(c.tiebreakers or engine.DEFAULT_TIEBREAKERS)]}
     if tab in ("", "table") and has_table:
         ctx["groups"] = standings_view(c, linkable)
+    if tab == "" and c.kind == "friendly":
+        ctx["h2h"] = [{**p, "a": team_view(p["a"], linkable), "b": team_view(p["b"], linkable)} for p in engine.head_to_head(matches)]
     if tab == "":
         ctx["upcoming"] = [match_view(m, linkable) for m in upcoming[:6]]
         ctx["recent"] = [match_view(m, linkable) for m in results[:6]]

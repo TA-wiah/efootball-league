@@ -15,7 +15,7 @@ DEFAULTS = {
     "sms": {"enabled": False, "provider": "", "api_key": "", "sender": "", "country_code": "233",
             "credit_price": "0.05", "currency": "GHS", "min_credits": 100},
     # Platform rankings: teams (Elo rating) and players across all organizations, from public competitions.
-    "rankings": {"enabled": False, "min_matches": 3},
+    "rankings": {"enabled": False, "min_matches": 3, "friendly_weight": "0.5"},
     # The Pro League: divisions of the best-ranked teams, run by the platform.
     "proleague": {"enabled": False, "name": "eFootball Pro League", "divisions": "Division A, Division B, Division C, Division D", "size": 6,
                   "move": 1, "legs": 2, "country": "", "fee": "0", "currency": "GHS", "whatsapp": "", "org_id": 0,

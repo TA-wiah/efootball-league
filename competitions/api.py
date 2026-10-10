@@ -233,6 +233,8 @@ def apply_competition(c, b):
             if b[f] not in CHOICE[f]:
                 raise ApiError(400, f"Unknown {f}.")
             setattr(c, f, b[f])
+    if c.kind == "friendly":
+        c.format = "league"                          # friendlies: single matches, results and head-to-head (no table)
     if "startDate" in b:
         c.start_date = day(b, "startDate")
     if "endDate" in b:

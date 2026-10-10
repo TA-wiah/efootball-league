@@ -180,3 +180,17 @@ class MatchProof(models.Model):
 
     class Meta:
         ordering = ["created", "id"]
+
+
+class FriendlyChallenge(models.Model):
+    """One team challenging a team of another organization to a friendly (see competitions/friendlies.py)."""
+    from_team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="challenges_sent")
+    to_team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="challenges_received")
+    kickoff = models.DateTimeField()
+    message = models.CharField(max_length=300, blank=True)
+    status = models.CharField(max_length=10, default="pending")     # pending, accepted, declined, cancelled
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+")
+    answered_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    created = models.DateTimeField(auto_now_add=True)
+    answered = models.DateTimeField(null=True, blank=True)
+    match = models.ForeignKey(Match, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
