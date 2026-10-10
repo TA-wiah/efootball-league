@@ -11,6 +11,10 @@ from . import rankings
 from .models import Competition, Match
 
 
+def FriendlyChallengeId(who, url):
+    return who.get(url).json()["challenges"][0]["id"]
+
+
 class FriendliesTest(Helpers, TestCase):
     def setUp(self):
         self.boss, self.chief = self.signup("boss"), self.signup("chief")
@@ -103,6 +107,26 @@ class FriendliesTest(Helpers, TestCase):
         theirs = next(c for c in self.boss.get(url).json()["challenges"] if c["id"] == ch["id"])
         self.assertTrue(theirs["canAnswer"])
         self.assertEqual(self.boss.call("post", f"{url}/{ch['id']}/accept").json()["challenge"]["status"], "accepted")
+
+    def test_any_time_now_and_already_played(self):
+        url = f"/api/orgs/{self.a}/friendlies"
+        far = (timezone.now() + timedelta(days=400)).isoformat()
+        self.assertEqual(self.boss.call("post", url, {"fromTeamId": self.lions, "toTeamId": self.tigers, "kickoff": far}).status_code, 200, "more than months ahead")
+        self.boss.call("post", f"{url}/{FriendlyChallengeId(self.boss, url)}/cancel")
+        ch = self.boss.call("post", url, {"fromTeamId": self.lions, "toTeamId": self.tigers, "kickoff": "now"}).json()["challenge"]
+        self.assertEqual(ch["status"], "pending")
+        # an hour later it's still open; accepted then, the match is set for that moment
+        from .models import FriendlyChallenge
+        FriendlyChallenge.objects.filter(id=ch["id"]).update(kickoff=timezone.now() - timedelta(hours=1))
+        r = self.chief.call("post", f"/api/orgs/{self.b}/friendlies/{ch['id']}/accept").json()
+        m = Match.objects.get(id=r["challenge"]["match"]["id"])
+        self.assertLess(abs((m.kickoff - timezone.now()).total_seconds()), 60)
+        # a challenge can't be in the past, but whoever manages both teams can record one already played
+        leopards = self.team(self.boss, self.a, "Leopards")
+        past = (timezone.now() - timedelta(days=2)).isoformat()
+        self.assertEqual(self.boss.call("post", url, {"fromTeamId": self.lions, "toTeamId": self.tigers, "kickoff": past}).status_code, 400)
+        r = self.boss.call("post", url, {"fromTeamId": self.lions, "toTeamId": leopards, "kickoff": past})
+        self.assertEqual(r.json()["challenge"]["status"], "accepted")
 
     def test_friendly_series_is_always_a_plain_series_and_counts_less(self):
         r = self.boss.call("post", f"/api/orgs/{self.a}/competitions", {"name": "Summer Friendlies", "kind": "friendly", "format": "groups_knockout", "visibility": "public"})

@@ -1403,7 +1403,8 @@ function reportView(id){document.title="Match report · Competition Manager";UM(
   load()}
 // ---------- friendlies against other organizations' teams ----------
 function frDay(n){var d=new Date(Date.now()+n*864e5);return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2)}
-function frTimes(){var o="";for(var m=6*60;m<24*60;m+=15){var t=("0"+Math.floor(m/60)).slice(-2)+":"+("0"+m%60).slice(-2);o+='<option value="'+t+'"'+(t==="20:00"?" selected":"")+'>'+t+'</option>'}return o}
+function frTimes(){var d=new Date(),next=Math.ceil((d.getHours()*60+d.getMinutes()+1)/15)*15%(24*60),o='<option value="now">Now</option>';
+  for(var m=0;m<24*60;m+=15){var t=("0"+Math.floor(m/60)).slice(-2)+":"+("0"+m%60).slice(-2);o+='<option value="'+t+'"'+(m===next?" selected":"")+'>'+t+'</option>'}return o}
 function friendliesSec(){Promise.all([api(api0("/friendlies")),api(api0("/teams"))]).then(function(res){var r=res[0];if(!r.ok)return fail(r);var d=r.data,mine=d.teams,cs=d.challenges,pick=null,where="ours",ours=(res[1].ok?res[1].data.teams:[]).filter(function(t){return!t.suspended});
   var row=function(c){var other=c.direction==="sent"?c.to:c.from,me=c.direction==="sent"?c.from:c.to;
     return'<tr><td><b>'+esc(me.name)+'</b> v <b>'+esc(other.name)+'</b><small>'+esc(c.internal?"Our organization":other.org.name)+(c.message?' · “'+esc(c.message)+'”':'')+'</small></td><td style="white-space:nowrap">'+esc(when(c.kickoff))+'</td><td><span class="pill '+({accepted:"finished",pending:"scheduled"}[c.status]||"cancelled")+'">'+esc({pending:"Waiting",accepted:"Accepted",declined:"Declined",cancelled:"Cancelled",expired:"Expired"}[c.status])+'</span></td><td style="text-align:right;white-space:nowrap">'+
@@ -1412,8 +1413,8 @@ function friendliesSec(){Promise.all([api(api0("/friendlies")),api(api0("/teams"
       (c.match?'<a class="btn g sm" href="/app/report/'+c.match.id+'" data-nav>Match</a> <a class="btn g sm" href="/match/'+esc(c.match.slug)+'" target="_blank" rel="noopener">Public page ↗</a>':'')+'</td></tr>'};
   var list=function(title,xs,empty){return'<div class="card"><div class="gh">'+title+' · '+xs.length+'</div>'+(xs.length?'<div class="tbl"><table class="dt"><tbody>'+xs.map(row).join("")+'</tbody></table></div>':'<p class="note">'+empty+'</p>')+'</div>'};
   var recv=cs.filter(function(c){return c.direction==="received"}),sent=cs.filter(function(c){return c.direction==="sent"});
-  $("sec").innerHTML='<p class="note" style="margin-top:0">Arrange a friendly with another of your teams, or challenge a team from another organization. The match goes into your “Friendlies” series: results and head-to-head, no league table.</p>'+
-    (mine.length?'<form class="card" id="frf" novalidate><div class="gh">Challenge a team</div><div class="row"><label for="frm">Your team<select id="frm">'+mine.map(function(t){return'<option value="'+t.id+'">'+esc(t.name)+'</option>'}).join("")+'</select></label><label for="frd">Date<input id="frd" type="date" value="'+frDay(1)+'" min="'+frDay(0)+'" max="'+frDay(180)+'"></label><label for="frt">Time<select id="frt">'+frTimes()+'</select></label></div>'+
+  $("sec").innerHTML='<p class="note" style="margin-top:0">Arrange a friendly with another of your teams, or challenge a team from another organization: any day, any time, even right now. The match goes into your “Friendlies” series: results and head-to-head, no league table. A challenge stays open for 24 hours after its time; managing both teams, you can also record a friendly you already played.</p>'+
+    (mine.length?'<form class="card" id="frf" novalidate><div class="gh">Challenge a team</div><div class="row"><label for="frm">Your team<select id="frm">'+mine.map(function(t){return'<option value="'+t.id+'">'+esc(t.name)+'</option>'}).join("")+'</select></label><label for="frd">Date<input id="frd" type="date" value="'+frDay(0)+'" max="'+frDay(730)+'"></label><label for="frt">Time<select id="frt">'+frTimes()+'</select></label></div>'+
       '<div class="chips" style="margin-top:12px"><button type="button" class="chip on" data-where="ours">Our organization</button><button type="button" class="chip" data-where="other">Another organization</button></div>'+
       '<label for="fro" id="frol">Opponent<select id="fro"></select></label>'+
       '<div id="frsearch" hidden><label for="frq">Their team</label><div class="combo"><input id="frq" type="search" placeholder="Type the team or organization name" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="frres" aria-autocomplete="list"><div id="frres" class="sugg" role="listbox" hidden></div></div><div id="frpick" class="note"></div></div>'+
@@ -1444,9 +1445,10 @@ function friendliesSec(){Promise.all([api(api0("/friendlies")),api(api0("/teams"
   inp.onblur=function(){setTimeout(shut,150)};inp.onfocus=function(){if(found.length&&!pick&&inp.value.trim().length>=2){box.hidden=false;mark()}};
   $("frf").onsubmit=function(e){e.preventDefault();var to=where==="ours"?ours.filter(function(t){return t.id===+val("fro")})[0]:pick;
     if(!to){toast(where==="ours"?"Choose the opponent":"Type their team’s name and pick it from the list",true);return}
-    var ko=new Date(val("frd")+"T"+val("frt"));if(!val("frd")||isNaN(ko)){toast("Choose the date",true);return}if(ko<new Date()){toast("That time has already passed. Pick a later date or time.",true);return}
+    var now=val("frt")==="now",ko=now?new Date():new Date(val("frd")+"T"+val("frt"));if(!now&&(!val("frd")||isNaN(ko))){toast("Choose the date",true);return}
+    var both=mine.some(function(t){return t.id===to.id});if(!now&&!both&&ko<new Date(Date.now()-30*6e4)){toast("That time has already passed. Pick Now or a later time.",true);return}
     var b=$("frgo");busy(b,true,"Sending…");
-    api(api0("/friendlies"),"POST",{fromTeamId:+val("frm"),toTeamId:to.id,kickoff:ko.toISOString(),message:val("frmsg")}).then(function(x){busy(b,false);
+    api(api0("/friendlies"),"POST",{fromTeamId:+val("frm"),toTeamId:to.id,kickoff:now?"now":ko.toISOString(),message:val("frmsg")}).then(function(x){busy(b,false);
       toast(x.ok?(x.data.challenge.status==="accepted"?"Friendly set: "+x.data.challenge.from.name+" v "+to.name:"Challenge sent to "+to.name):x.data.error,!x.ok);if(x.ok)friendliesSec()})}})}
 function myMatchesView(){document.title="My matches · Competition Manager";
   UM('<div class="ph"><div><h1>My matches</h1><p>Your teams’ fixtures. Before kick-off press “We’re here”, then send screenshots of the start, the end and the result.</p></div></div><div id="mm">'+LOADING+'</div>',{key:"matches"});
