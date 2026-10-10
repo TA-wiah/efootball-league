@@ -61,8 +61,11 @@ class FriendliesTest(Helpers, TestCase):
         page = Client().get(f"/competition/{m.competition.slug}").content.decode()
         self.assertIn("Head to head", page)
         self.assertIn("1 played", page)
-        self.assertNotIn(f'href="/competition/{m.competition.slug}/table"', page, "no league table for friendlies")
-        self.assertEqual(Client().get(f"/competition/{m.competition.slug}/table").status_code, 404)
+        self.assertIn("Friendly table", page, "a friendly table (no points) instead of a league table")
+        table = Client().get(f"/competition/{m.competition.slug}/table").content.decode()
+        self.assertIn("Win %", table)
+        self.assertNotIn("Pts", table)
+        self.assertIn("100%", table, "Lions won their only friendly")
 
     def test_decline_cancel_and_own_team(self):
         url = f"/api/orgs/{self.a}/friendlies"

@@ -8,6 +8,7 @@ Teams are rated with Elo (the system used for chess and in the World Football El
 - walkovers and forfeits don't count (a win after the opponent's connection dropped does);
 - matches are taken in the order they were played;
 - friendlies count half by default (a super admin can make them count fully or not at all).
+Awards (Rankings → Awards) come from the current year's competitive matches; a super admin can rename them.
 Organizations can keep their teams out, and a super admin can switch rankings off entirely.
 """
 from django.db.models import Max, Q
@@ -18,6 +19,9 @@ from superadmin import store
 from .models import Match, MatchEvent
 
 START, K = 1500.0, 32.0
+CARD_POINTS = {"yellow": 1, "second_yellow": 2, "red": 3}      # for the Fair Play award
+AWARDS = [("poty", "Most goals and assists together"), ("boot", "Most goals"), ("assists", "Most assists"),
+          ("defence", "Fewest goals conceded per match"), ("team", "Highest rating"), ("fairplay", "Fewest cards per match")]
 _cache = {"key": None, "data": None}
 
 
@@ -85,10 +89,61 @@ def compute():
     year = timezone.localdate().year
     when = lambda m: m.kickoff or m.finished_at
     this_year = [e for e in events if e.match.competition.kind != "friendly" and when(e.match) and timezone.localtime(when(e.match)).year == year]
-    data = {"teams": ranked, "players": players, "matches": len(games), "year": year,
+    # this year's competitive matches per team: goals conceded, clean sheets and cards (for the awards)
+    season = {}
+    for m in games:
+        if m.competition.kind == "friendly" or not when(m) or timezone.localtime(when(m)).year != year:
+            continue
+        for e, ga in ((m.home, m.away_score), (m.away, m.home_score)):
+            r = season.setdefault(e.team_id, {"team": e.team, "played": 0, "ga": 0, "cs": 0, "cards": 0})
+            r["played"] += 1
+            r["ga"] += ga
+            r["cs"] += ga == 0
+    for e in this_year:
+        if e.kind in CARD_POINTS:
+            entry = e.match.home if e.side == "home" else e.match.away
+            if entry and entry.team_id in season:
+                season[entry.team_id]["cards"] += CARD_POINTS[e.kind]
+    data = {"teams": ranked, "players": players, "matches": len(games), "year": year, "season": season,
             "year_players": [p for p in scorers(this_year) if p["goals"] or p["assists"]]}
     _cache.update(key=key, data=data)
     return data
+
+
+def awards(where, min_matches):
+    """This year's awards (friendlies don't count), for teams whose organization passes `where` (the area filter)."""
+    s, data = store.get("rankings"), compute()
+    name = lambda k: s.get(f"award_{k}") or store.DEFAULTS["rankings"][f"award_{k}"]
+    players = [p for p in data["year_players"] if p["team"] and where(p["team"].org)]
+    teams = [r for r in data["season"].values() if r["played"] >= min_matches and where(r["team"].org)]
+    out = []
+
+    def player(key, rows, stat):
+        if rows:
+            p = rows[0]
+            out.append({"key": key, "name": name(key), "who": p["name"], "team": p["team"], "stat": stat(p)})
+
+    def team(key, rows, stat):
+        if rows:
+            out.append({"key": key, "name": name(key), "who": rows[0]["team"].name, "team": rows[0]["team"], "stat": stat(rows[0])})
+
+    per = lambda r, k: r[k] / r["played"]
+    plural = lambda n, w: f"{n} {w}{'' if n == 1 else 's'}"
+    player("poty", sorted(players, key=lambda p: (-(p["goals"] + p["assists"]), -p["goals"], p["name"].lower())),
+           lambda p: f"{plural(p['goals'], 'goal')} · {plural(p['assists'], 'assist')}")
+    player("boot", sorted([p for p in players if p["goals"]], key=lambda p: (-p["goals"], -p["assists"], p["name"].lower())), lambda p: plural(p["goals"], "goal"))
+    player("assists", sorted([p for p in players if p["assists"]], key=lambda p: (-p["assists"], -p["goals"], p["name"].lower())), lambda p: plural(p["assists"], "assist"))
+    team("defence", sorted(teams, key=lambda r: (per(r, "ga"), -r["cs"], r["team"].name.lower())),
+         lambda r: f"{r['ga']} conceded in {plural(r['played'], 'match')} · {plural(r['cs'], 'clean sheet')}")
+    rated = {r["team"].id: r["rating"] for r in data["teams"]}
+    team("team", sorted([r for r in teams if r["team"].id in rated], key=lambda r: (-rated[r["team"].id], r["team"].name.lower())),
+         lambda r: f"Rating {round(rated[r['team'].id])}")
+    team("fairplay", sorted(teams, key=lambda r: (per(r, "cards"), r["team"].name.lower())),
+         lambda r: f"{plural(r['cards'], 'card point')} in {plural(r['played'], 'match')}")
+    how = dict(AWARDS)
+    for a in out:
+        a["how"] = how[a["key"]]
+    return {"year": data["year"], "awards": out}
 
 
 def team_rank(team_id):

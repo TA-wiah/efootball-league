@@ -157,7 +157,7 @@ TABS = [("", "Overview"), ("table", "Table"), ("fixtures", "Fixtures"), ("result
 
 def competition(request, slug, tab=""):
     c = competition_for(request, slug)
-    if tab not in dict(TABS) or (tab == "knockouts" and c.format == "league") or (tab == "table" and c.kind == "friendly"):
+    if tab not in dict(TABS) or (tab == "knockouts" and c.format == "league"):
         raise Http404
     entries = list(c.entries.select_related("team").order_by("team__name"))
     linkable = public_team_ids([e.team_id for e in entries])
@@ -165,7 +165,7 @@ def competition(request, slug, tab=""):
     upcoming = [m for m in matches if m.status in ("scheduled", "live", "postponed")]
     results = sorted([m for m in matches if m.status == "finished"], key=lambda m: (m.kickoff is not None, m.kickoff, m.round), reverse=True)
     has_table = c.format != "knockout" and c.kind != "friendly"
-    ctx = {"c": c, "tab": tab, "tabs": [(t, label) for t, label in TABS if (t != "table" or has_table) and (t != "knockouts" or c.format != "league")],
+    ctx = {"c": c, "tab": tab, "tabs": [(t, label) for t, label in TABS if (t != "table" or has_table or c.kind == "friendly") and (t != "knockouts" or c.format != "league")],
            "logo": logo("competition", c), "share_image": logo("competition", c) or org_logo(c.org),
            "kind": KIND_L.get(c.kind, "Competition"), "format": FORMAT_L[c.format], "has_table": has_table,
            "team_count": len(entries), "played": len(results), "total": len(matches),
@@ -173,8 +173,9 @@ def competition(request, slug, tab=""):
            "tiebreakers": [engine.CRITERIA[k] for k in engine.clean_tiebreakers(c.tiebreakers or engine.DEFAULT_TIEBREAKERS)]}
     if tab in ("", "table") and has_table:
         ctx["groups"] = standings_view(c, linkable)
-    if tab == "" and c.kind == "friendly":
+    if tab in ("", "table") and c.kind == "friendly":
         ctx["h2h"] = [{**p, "a": team_view(p["a"], linkable), "b": team_view(p["b"], linkable)} for p in engine.head_to_head(matches)]
+        ctx["ftable"] = [{**r, "t": team_view(r["team"], linkable)} for r in engine.friendly_table(matches)]
     if tab == "":
         ctx["upcoming"] = [match_view(m, linkable) for m in upcoming[:6]]
         ctx["recent"] = [match_view(m, linkable) for m in results[:6]]
@@ -248,6 +249,11 @@ def match(request, slug):
            "title": title + (f" {m.home_score}–{m.away_score}" if mv["played"] else ""), "description": desc,
            "logo": logo("competition", c), "share_image": logo("competition", c) or org_logo(c.org), "notes": m.notes}
     return page(request, "match.html", ctx, index=c.visibility == "public" and not c.hidden, private=c.hidden)
+
+
+def store_name(key):
+    from superadmin import store
+    return store.get("rankings").get(f"award_{key}") or store.DEFAULTS["rankings"][f"award_{key}"]
 
 
 def friendly_view(t, matches, linkable):
@@ -453,12 +459,12 @@ def sitemap(request):
 
 def rankings_page(request, tab=""):
     """/rankings (teams) and /rankings/players, across every organization. Super admins can preview while it's off."""
-    from .rankings import compute, settings_
+    from .rankings import awards, compute, settings_
     cfg = settings_()
     user = session_user(request)
     if not cfg["enabled"] and not (user and user.is_superuser):
         raise Http404
-    if tab not in ("", "players"):
+    if tab not in ("", "players", "awards"):
         raise Http404
     data = compute()
     country = (request.GET.get("country") or "").strip()[:60]
@@ -480,7 +486,7 @@ def rankings_page(request, tab=""):
         if len(players) >= 100:
             break
     podium = []                                       # Player of the Year: name, team and organization (same names stay apart)
-    for p in data.get("year_players", []):
+    for p in sorted(data.get("year_players", []), key=lambda p: (-(p["goals"] + p["assists"]), -p["goals"], p["name"].lower())):
         team = p["team"]
         if team and where(team.org):
             podium.append({**p, "t": team_view(team, public_team_ids([team.id])), "org": team.org})
@@ -489,6 +495,9 @@ def rankings_page(request, tab=""):
     area = ", ".join(x for x in (region, country) if x) or "Worldwide"
     ctx = {"tab": tab, "rows": rows[:200], "players": players, "countries": countries, "country": country, "regions": regions, "region": region,
            "area": area, "min_matches": cfg["min_matches"], "podium": podium, "year": data.get("year"),
+           "poty_name": store_name("poty"),
+           "awards": [{**a, "t": team_view(a["team"], public_team_ids([a["team"].id])), "org": a["team"].org}
+                      for a in awards(where, cfg["min_matches"])["awards"]] if tab == "awards" else [],
            "matches": data["matches"], "preview": not cfg["enabled"], "nav": "rankings",
-           "title": ("Player rankings" if tab else "Team rankings") + ("" if area == "Worldwide" else f": {area}"), "description": "The best teams and players across every league and tournament on the platform."}
+           "title": {"players": "Player rankings", "awards": "Awards"}.get(tab, "Team rankings") + ("" if area == "Worldwide" else f": {area}"), "description": "The best teams and players across every league and tournament on the platform."}
     return page(request, "rankings.html", ctx, index=cfg["enabled"], private=not cfg["enabled"], banner=False)
