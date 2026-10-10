@@ -185,7 +185,8 @@ class MatchProof(models.Model):
 class FriendlyChallenge(models.Model):
     """One team challenging a team of another organization to a friendly (see competitions/friendlies.py)."""
     from_team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="challenges_sent")
-    to_team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="challenges_received")
+    to_team = models.ForeignKey(Team, null=True, blank=True, on_delete=models.CASCADE, related_name="challenges_received")  # empty: they choose
+    to_org = models.ForeignKey(Organization, null=True, on_delete=models.CASCADE, related_name="friendly_challenges")
     kickoff = models.DateTimeField()
     message = models.CharField(max_length=300, blank=True)
     status = models.CharField(max_length=10, default="pending")     # pending, accepted, declined, cancelled

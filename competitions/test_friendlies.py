@@ -181,6 +181,34 @@ class FriendliesTest(Helpers, TestCase):
         r = self.boss.call("patch", murl, {"homeScore": 2, "awayScore": 2, "status": "finished", "decided": ""}).json()["match"]
         self.assertEqual((r["decided"], r["homeScore"]), (None, 2))
 
+    def test_challenge_an_organization_they_choose_the_team(self):
+        url, theirs = f"/api/orgs/{self.a}/friendlies", f"/api/orgs/{self.b}/friendlies"
+        found = self.boss.get("/api/friendly-teams?q=kumasi").json()
+        self.assertEqual([(o["name"], o["teams"]) for o in found["orgs"]], [("Kumasi Cup", 1)])
+        self.assertEqual(self.boss.call("post", url, {"fromTeamId": self.lions, "toOrg": "nowhere", "kickoff": self.soon()}).status_code, 404)
+        self.assertEqual(self.boss.call("post", url, {"fromTeamId": self.lions, "toOrg": self.a, "kickoff": self.soon()}).status_code, 404, "not your own")
+        ch = self.boss.call("post", url, {"fromTeamId": self.lions, "toOrg": self.b, "kickoff": self.soon()}).json()["challenge"]
+        self.assertEqual((ch["to"]["choice"], ch["to"]["org"]["name"], ch["status"]), (True, "Kumasi Cup", "pending"))
+        self.assertEqual(self.boss.call("post", url, {"fromTeamId": self.lions, "toOrg": self.b, "kickoff": self.soon(2)}).status_code, 409)
+        mine = self.chief.get(theirs).json()["challenges"]
+        self.assertEqual([(c["direction"], c["canAnswer"]) for c in mine], [("received", True)])
+        self.assertEqual(self.chief.call("post", f"{theirs}/{ch['id']}/accept", {}).status_code, 400, "must choose a team")
+        hawks = self.team(self.chief, self.b, "Hawks")
+        r = self.chief.call("post", f"{theirs}/{ch['id']}/accept", {"teamId": hawks})
+        self.assertEqual(r.status_code, 200, r.json())
+        m = Match.objects.get(id=r.json()["challenge"]["match"]["id"])
+        self.assertEqual((m.home.team.name, m.away.team.name), ("Lions", "Hawks"))
+        self.assertEqual(self.boss.get(url).json()["challenges"][0]["to"]["name"], "Hawks")
+
+    def test_friendlies_stay_out_of_standings(self):
+        leopards = self.team(self.boss, self.a, "Leopards")
+        mid = self.boss.call("post", f"/api/orgs/{self.a}/friendlies", {"fromTeamId": self.lions, "toTeamId": leopards, "kickoff": "now"}).json()["challenge"]["match"]["id"]
+        self.boss.call("patch", f"/api/orgs/{self.a}/matches/{mid}", {"homeScore": 1, "awayScore": 0, "status": "finished"})
+        m = Match.objects.get(id=mid)
+        self.assertNotIn('class="st', Client().get(f"/match/{m.slug}").content.decode(), "no table on a friendly's match page")
+        org_page = Client().get(f"/org/{self.a}").content.decode()
+        self.assertNotIn('id="standings"', org_page, "the organization page has no standings for friendlies")
+
     def test_friendly_series_is_always_a_plain_series_and_counts_less(self):
         r = self.boss.call("post", f"/api/orgs/{self.a}/competitions", {"name": "Summer Friendlies", "kind": "friendly", "format": "groups_knockout", "visibility": "public"})
         c = Competition.objects.get(slug=r.json()["competition"]["slug"])

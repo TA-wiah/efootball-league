@@ -234,7 +234,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--gold);outline:0}
 .toast{background:#0b2a1a;border-color:var(--pitch)}
 .grp-h{margin:18px 0 6px;background:var(--gold);color:var(--ink);text-align:center;font-family:var(--cond);font-size:21px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;padding:6px 10px;border-radius:8px}
 .st tr.q .tm>span{color:var(--gold)}
-.st tr.short td{opacity:.45}.combo{position:relative}.sugg{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:30;background:var(--card);border:1px solid var(--line2);border-radius:12px;box-shadow:0 16px 40px -12px rgba(0,0,0,.7);max-height:280px;overflow-y:auto;padding:4px}
+.st tr.short td{opacity:.45}.combo{position:relative}.orgdot{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;background:var(--card2);flex:none}.sugg{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:30;background:var(--card);border:1px solid var(--line2);border-radius:12px;box-shadow:0 16px 40px -12px rgba(0,0,0,.7);max-height:280px;overflow-y:auto;padding:4px}
 .sugg button{display:flex;width:100%;align-items:center;gap:10px;padding:8px 10px;border:0;border-radius:8px;background:none;color:var(--tx);font:inherit;text-align:left;cursor:pointer}.sugg button:hover,.sugg button.on{background:var(--card2)}.sugg small{display:block;color:var(--soft);font-size:12px}.sugg .note{margin:8px 10px}.st tr.wc td:first-child{box-shadow:inset 3px 0 #5fe39a}.st tr.wc .tm>span{color:#5fe39a}</style></head><body>
 <header class="top"><a class="brand" href="/"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 13v3M8 20h8M9.5 20l.5-4h4l.5 4"/></svg><span>Competition Manager</span></a><nav id="topnav" aria-label="Account"></nav></header>
 <main class="w" id="main"><div class="card note">Loading…</div></main>
@@ -828,7 +828,7 @@ function matchesSec(view){var titles={upcoming:"FIXTURES: UPCOMING MATCHES",resu
       $("mlist").innerHTML=matchList(r.data.matches,{comp:!sel,by:view==="all"?"round":"date",empty:view==="upcoming"?"No upcoming matches.":view==="results"?"No results yet.":"No matches yet."})})};
     $("sec").innerHTML='<div class="card"><div class="gh">'+titles[view]+'</div>'+(cs.length>1?'<label for="mf" style="max-width:320px;margin-top:0">Competition<select id="mf"><option value="">All competitions</option>'+cs.map(function(c){return'<option value="'+esc(c.slug)+'"'+(c.slug===sel?" selected":"")+'>'+esc(c.name)+'</option>'}).join("")+'</select></label>':'')+'<div id="mlist">'+LOADING+'</div></div>';
     if($("mf"))$("mf").onchange=function(){sel=val("mf");history.replaceState(null,"",location.pathname+(sel?"?competition="+encodeURIComponent(sel):""));load()};load()})}
-function tablesSec(){api(api0("/competitions")).then(function(cr){var cs=(cr.data.competitions||[]).filter(function(c){return c.format!=="knockout"});
+function tablesSec(){api(api0("/competitions")).then(function(cr){var cs=(cr.data.competitions||[]).filter(function(c){return c.format!=="knockout"&&c.kind!=="friendly"});
   if(!cs.length){$("sec").innerHTML='<div class="card empty">'+ic("trophy")+'<h2>No league tables yet</h2><p class="note">Create a league or group competition to get a table.</p></div>';return}
   var sel=new URLSearchParams(location.search).get("competition")||cs[0].slug;
   $("sec").innerHTML='<div class="card"><div class="gh">LEAGUE TABLES</div><label for="tf" style="max-width:320px;margin-top:0">Competition<select id="tf">'+cs.map(function(c){return'<option value="'+esc(c.slug)+'"'+(c.slug===sel?" selected":"")+'>'+esc(c.name)+'</option>'}).join("")+'</select></label><div id="tout">'+LOADING+'</div></div>';
@@ -1410,13 +1410,14 @@ function frTimes(){var d=new Date(),next=Math.ceil((d.getHours()*60+d.getMinutes
 function friendliesSec(){Promise.all([api(api0("/friendlies")),api(api0("/teams"))]).then(function(res){var r=res[0];if(!r.ok)return fail(r);var d=r.data,mine=d.teams,cs=d.challenges,pick=null,where="ours",ours=(res[1].ok?res[1].data.teams:[]).filter(function(t){return!t.suspended});
   var row=function(c){var other=c.direction==="sent"?c.to:c.from,me=c.direction==="sent"?c.from:c.to;
     return'<tr><td><b>'+esc(me.name)+'</b> v <b>'+esc(other.name)+'</b><small>'+esc(c.internal?"Our organization":other.org.name)+(c.message?' · “'+esc(c.message)+'”':'')+'</small></td><td style="white-space:nowrap">'+esc(when(c.kickoff))+'</td><td><span class="pill '+({accepted:"finished",pending:"scheduled"}[c.status]||"cancelled")+'">'+esc({pending:"Waiting",accepted:"Accepted",declined:"Declined",cancelled:"Cancelled",expired:"Expired"}[c.status])+'</span></td><td style="text-align:right;white-space:nowrap">'+
+      (c.canAnswer&&c.to.choice?'<select data-fteam="'+c.id+'" aria-label="Which of your teams plays" style="width:auto;display:inline-block;margin:0 6px 4px 0">'+mine.map(function(t){return'<option value="'+t.id+'">'+esc(t.name)+'</option>'}).join("")+'</select>':'')+
       (c.canAnswer?'<button type="button" class="btn sm" data-fa="accept" data-id="'+c.id+'">Accept</button> <button type="button" class="btn bad sm" data-fa="decline" data-id="'+c.id+'">Decline</button>':'')+
       (c.canCancel?'<button type="button" class="btn g sm" data-fa="cancel" data-id="'+c.id+'">Cancel</button>':'')+
       (c.match?(c.host===ORG.org.slug&&has("results.enter")?'<a class="btn sm" href="'+app0("/match/"+c.match.id)+'" data-nav>Enter result</a> ':'<a class="btn g sm" href="/app/report/'+c.match.id+'" data-nav>Match</a> ')+'<a class="btn g sm" href="/match/'+esc(c.match.slug)+'" target="_blank" rel="noopener">Public page ↗</a>':'')+
       (c.canDelete?' <button type="button" class="btn bad sm" data-fdel="'+c.id+'" data-played="'+(c.played?1:0)+'" data-match="'+(c.match?1:0)+'" aria-label="Delete">'+ic("trash")+' Delete</button>':'')+'</td></tr>'};
   var list=function(title,xs,empty){return'<div class="card"><div class="gh">'+title+' · '+xs.length+'</div>'+(xs.length?'<div class="tbl"><table class="dt"><tbody>'+xs.map(row).join("")+'</tbody></table></div>':'<p class="note">'+empty+'</p>')+'</div>'};
   var recv=cs.filter(function(c){return c.direction==="received"}),sent=cs.filter(function(c){return c.direction==="sent"});
-  $("sec").innerHTML='<p class="note" style="margin-top:0">Arrange a friendly with another of your teams, or challenge a team from another organization: any day, any time, even right now. The match goes into your “Friendlies” series: results and head-to-head, no league table. A challenge stays open for 24 hours after its time; managing both teams, you can also record a friendly you already played.</p>'+
+  $("sec").innerHTML='<p class="note" style="margin-top:0">Arrange a friendly with another of your teams, or challenge a team from another organization (or the organization itself, and they choose the team): any day, any time, even right now. The match goes into your “Friendlies” series: results and head-to-head, no league table. A challenge stays open for 24 hours after its time; managing both teams, you can also record a friendly you already played.</p>'+
     (mine.length?'<form class="card" id="frf" novalidate><div class="gh">Challenge a team</div><div class="row"><label for="frm">Your team<select id="frm">'+mine.map(function(t){return'<option value="'+t.id+'">'+esc(t.name)+'</option>'}).join("")+'</select></label><label for="frd">Date<input id="frd" type="date" value="'+frDay(0)+'" max="'+frDay(730)+'"></label><label for="frt">Time<select id="frt">'+frTimes()+'</select></label></div>'+
       '<div class="chips" style="margin-top:12px"><button type="button" class="chip on" data-where="ours">Our organization</button><button type="button" class="chip" data-where="other">Another organization</button></div>'+
       '<label for="fro" id="frol">Opponent<select id="fro"></select></label>'+
@@ -1424,7 +1425,7 @@ function friendliesSec(){Promise.all([api(api0("/friendlies")),api(api0("/teams"
       '<label for="frmsg">Message (optional)<input id="frmsg" maxlength="300" placeholder="e.g. Fancy a warm-up before the season?"></label><div class="actions"><button class="btn" id="frgo">'+ic("mail")+' Send the challenge</button></div></form>'
       :'<div class="card"><p class="note" style="margin:0">Only people who manage a team can send challenges.</p></div>')+
     list("Challenges for you",recv,"No challenges yet.")+'<p class="note">Accepting a challenge puts the match on the challenging organization’s public “Friendlies” page, with both teams’ names and logos.</p>'+list("Challenges you sent",sent,"You haven’t challenged anyone yet.");
-  document.querySelectorAll("[data-fa]").forEach(function(b){b.onclick=function(){busy(b,true,"…");api(api0("/friendlies/"+b.dataset.id+"/"+b.dataset.fa),"POST",{}).then(function(x){busy(b,false);
+  document.querySelectorAll("[data-fa]").forEach(function(b){b.onclick=function(){busy(b,true,"…");var tsel=document.querySelector('[data-fteam="'+b.dataset.id+'"]');api(api0("/friendlies/"+b.dataset.id+"/"+b.dataset.fa),"POST",tsel?{teamId:+tsel.value}:{}).then(function(x){busy(b,false);
     toast(x.ok?{accept:"Accepted: the match is set",decline:"Declined",cancel:"Cancelled"}[b.dataset.fa]:x.data.error,!x.ok);if(x.ok)friendliesSec()})}});
   document.querySelectorAll("[data-fdel]").forEach(function(b){b.onclick=function(){var played=b.dataset.played==="1",match=b.dataset.match==="1";
     confirmBox("Delete this friendly?",match?(played?"The match and its result are removed for both teams, and it no longer counts in head-to-head or the rankings.":"The match is removed for both teams."):"The challenge is removed from both teams’ lists.",{danger:true,ok:"Delete"}).then(function(ok){if(!ok)return;busy(b,true,"…");
@@ -1439,12 +1440,14 @@ function friendliesSec(){Promise.all([api(api0("/friendlies")),api(api0("/teams"
     $("frol").style.display=where==="ours"?"":"none";$("frsearch").hidden=where==="ours";label()}});
   var box=$("frres"),inp=$("frq"),found=[],hi=-1;
   var shut=function(){box.hidden=true;inp.setAttribute("aria-expanded","false");hi=-1};
-  var choose=function(i){pick=found[i];if(!pick)return;inp.value=pick.name;$("frpick").innerHTML=crest(pick,20)+' Challenging <b>'+esc(pick.name)+'</b> · '+esc(pick.org.name);shut()};
+  var choose=function(i){pick=found[i];if(!pick)return;inp.value=pick.name;$("frpick").innerHTML=pick.choice?'Challenging <b>'+esc(pick.name)+'</b>: they choose which of their teams plays.':crest(pick,20)+' Challenging <b>'+esc(pick.name)+'</b> · '+esc(pick.org.name);shut()};
   var mark=function(){box.querySelectorAll("[data-pick]").forEach(function(b,i){b.classList.toggle("on",i===hi);if(i===hi)b.scrollIntoView({block:"nearest"})})};
   inp.oninput=function(){clearTimeout(t0);pick=null;$("frpick").innerHTML="";var q=this.value.trim();if(q.length<2){shut();return}
     t0=setTimeout(function(){api("/api/friendly-teams?q="+encodeURIComponent(q)).then(function(x){if(!x.ok||inp.value.trim()!==q)return;
-      found=x.data.teams.filter(function(t){return t.org.slug!==ORG.org.slug});hi=found.length?0:-1;
-      box.innerHTML=found.length?found.map(function(t,i){return'<button type="button" role="option" data-pick="'+i+'">'+crest(t,26)+'<span><b>'+esc(t.name)+'</b><small>'+esc(t.org.name)+'</small></span></button>'}).join("")
+      found=(x.data.orgs||[]).filter(function(o){return o.slug!==ORG.org.slug}).map(function(o){return{choice:true,name:o.name,org:o,teams:o.teams}})
+        .concat(x.data.teams.filter(function(t){return t.org.slug!==ORG.org.slug}));hi=found.length?0:-1;
+      box.innerHTML=found.length?found.map(function(t,i){return t.choice?'<button type="button" role="option" data-pick="'+i+'"><span class="orgdot">'+ic("users")+'</span><span><b>'+esc(t.name)+'</b><small>Let them choose which team plays · '+t.teams+' team'+(t.teams===1?"":"s")+'</small></span></button>'
+        :'<button type="button" role="option" data-pick="'+i+'">'+crest(t,26)+'<span><b>'+esc(t.name)+'</b><small>'+esc(t.org.name)+'</small></span></button>'}).join("")
         :'<p class="note">No team found. Teams only in private competitions show up when their organization allows friendly challenges.</p>';
       box.hidden=false;inp.setAttribute("aria-expanded","true");mark();
       box.querySelectorAll("[data-pick]").forEach(function(b){b.onmousedown=function(e){e.preventDefault();choose(+b.dataset.pick)}})})},200)};
@@ -1456,7 +1459,7 @@ function friendliesSec(){Promise.all([api(api0("/friendlies")),api(api0("/teams"
     var now=val("frt")==="now",ko=now?new Date():new Date(val("frd")+"T"+val("frt"));if(!now&&(!val("frd")||isNaN(ko))){toast("Choose the date",true);return}
     var both=mine.some(function(t){return t.id===to.id});if(!now&&!both&&ko<new Date(Date.now()-30*6e4)){toast("That time has already passed. Pick Now or a later time.",true);return}
     var b=$("frgo");busy(b,true,"Sending…");
-    api(api0("/friendlies"),"POST",{fromTeamId:+val("frm"),toTeamId:to.id,kickoff:now?"now":ko.toISOString(),message:val("frmsg")}).then(function(x){busy(b,false);
+    api(api0("/friendlies"),"POST",{fromTeamId:+val("frm"),toTeamId:to.choice?null:to.id,toOrg:to.choice?to.org.slug:null,kickoff:now?"now":ko.toISOString(),message:val("frmsg")}).then(function(x){busy(b,false);
       toast(x.ok?(x.data.challenge.status==="accepted"?"Friendly set: "+x.data.challenge.from.name+" v "+to.name:"Challenge sent to "+to.name):x.data.error,!x.ok);if(x.ok)friendliesSec()})}})}
 function myMatchesView(){document.title="My matches · Competition Manager";
   UM('<div class="ph"><div><h1>My matches</h1><p>Your teams’ fixtures. Before kick-off press “We’re here”, then send screenshots of the start, the end and the result.</p></div></div><div id="mm">'+LOADING+'</div>',{key:"matches"});
