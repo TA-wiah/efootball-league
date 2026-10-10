@@ -46,8 +46,21 @@ def challengeable():
             .filter(Q(id__in=public) | Q(org__open_to_friendlies=True)))
 
 
+def is_open(ch):
+    """An open request: "looking for a friendly" posted to the team's own organization; any of its teams can take it."""
+    return not ch.to_team_id and ch.to_org_id == ch.from_team.org_id
+
+
 def to_name(ch):
-    return ch.to_team.name if ch.to_team_id else f"{ch.to_org.name} (their choice of team)"
+    return ch.to_team.name if ch.to_team_id else ("any team (open request)" if is_open(ch) else f"{ch.to_org.name} (their choice of team)")
+
+
+def my_teams(m):
+    """Teams this member can post or take a friendly for: those they manage, and those they play or coach for."""
+    teams = {t.id: t for t in manageable(m)}
+    for t in m.teams.filter(suspended=False):
+        teams.setdefault(t.id, t)
+    return sorted(teams.values(), key=lambda t: t.name.lower())
 
 
 def state(ch):
@@ -70,8 +83,8 @@ def challenge_json(ch, org, mine_ids, staff=False):
         sent = not (ch.to_team_id in mine_ids and ch.from_team_id not in mine_ids)
     else:
         sent = ch.from_team.org_id == org.id
-    to = side_json(ch.to_team) if ch.to_team_id else {"name": "Their choice of team", "choice": True, "logo": None,
-                                                       "org": {"name": ch.to_org.name, "slug": ch.to_org.slug}}
+    to = side_json(ch.to_team) if ch.to_team_id else {"name": "Any team (open request)" if is_open(ch) else "Their choice of team", "choice": True,
+                                                       "open": is_open(ch), "logo": None, "org": {"name": ch.to_org.name, "slug": ch.to_org.slug}}
     return {"id": ch.id, "direction": "sent" if sent else "received", "from": side_json(ch.from_team), "to": to,
             "kickoff": ch.kickoff.isoformat(), "message": ch.message or None, "status": st, "created": ms(ch.created),
             "by": getattr(ch.created_by, "username", None), "answeredBy": getattr(ch.answered_by, "username", None),
@@ -164,7 +177,8 @@ def org_friendlies(request, user, ip, slug):
     mine_ids = {t.id for t in mine}
     if request.method == "GET":
         rows = (FriendlyChallenge.objects.select_related("from_team__org", "to_team__org", "to_org", "created_by", "answered_by", "match")
-                .filter(Q(from_team__org=org) | Q(to_org=org)).order_by("-created"))
+                .filter(Q(from_team__org=org) | Q(to_org=org)).order_by("-created")
+                .exclude(to_team__isnull=True, to_org=org, from_team__org=org))   # open requests live on "Find a friendly"
         if m.role == PLAYER:                             # a player follows their own teams' friendlies only
             ids = list(m.teams.values_list("id", flat=True))
             rows = rows.filter(Q(from_team_id__in=ids) | Q(to_team_id__in=ids))
@@ -251,6 +265,81 @@ def challenge_org(request, user, org, mine_t, mine_ids, b):
            + ([f"Message: {ch.message}"] if ch.message else []) + ["Pick your team and accept, or decline, in your organization's Friendlies page."],
            request, other.slug, org=other)
     return {"ok": True, "challenge": challenge_json(ch, org, mine_ids)}
+
+
+# ---------- find a friendly (players, coaches, team managers) ----------
+def board_json(ch, mine_ids, user=None, assigned=()):
+    """`mine`: you posted it, or it's for a team you're on (staff who manage every team can still take others' requests)."""
+    return {"id": ch.id, "team": side_json(ch.from_team), "kickoff": ch.kickoff.isoformat(), "message": ch.message or None,
+            "by": getattr(ch.created_by, "username", None), "status": state(ch),
+            "mine": bool(user and ch.created_by_id == user.id) or ch.from_team_id in assigned, "canCancel": ch.from_team_id in mine_ids}
+
+
+@endpoint("GET", "POST", login_required=True)
+def friendly_board(request, user, ip, slug):
+    """Teams of this organization looking for a friendly. Post "we're looking", or take someone's request: the match is
+    set straight away in the organization's Friendlies series (results are sent with screenshots and confirmed)."""
+    org, m = access(user, slug, "org.view")
+    teams = my_teams(m)
+    ids = {t.id for t in teams}
+    now = timezone.now()
+    if request.method == "GET":
+        live = (FriendlyChallenge.objects.select_related("from_team__org", "created_by")
+                .filter(from_team__org=org, to_org=org, to_team__isnull=True, status="pending", kickoff__gt=now - timezone.timedelta(hours=OPEN_HOURS))
+                .order_by("kickoff"))
+        agreed = (FriendlyChallenge.objects.select_related("from_team__org", "to_team__org", "to_org", "match")
+                  .filter(status="accepted", match__isnull=False).filter(Q(from_team_id__in=ids) | Q(to_team_id__in=ids))
+                  .exclude(match__status__in=["finished", "cancelled"]).order_by("kickoff")[:30])
+        assigned = set(m.teams.values_list("id", flat=True))
+        return {"teams": [team_brief(t) for t in teams], "open": [board_json(ch, ids, user, assigned) for ch in live],
+                "upcoming": [{"id": ch.match_id, "home": ch.from_team.name, "away": ch.to_team.name, "kickoff": ch.match.kickoff.isoformat() if ch.match.kickoff else None}
+                             for ch in agreed]}
+    b = body(request)
+    team = next((t for t in teams if t.id == b.get("teamId")), None)
+    if not team:
+        raise ApiError(403, "Choose one of your teams.")
+    kickoff = kickoff_of(b, now)
+    if FriendlyChallenge.objects.filter(from_team=team, to_org=org, to_team__isnull=True, status="pending",
+                                        kickoff__gt=now - timezone.timedelta(hours=OPEN_HOURS)).count() >= 3:
+        raise ApiError(409, f"{team.name} already has 3 open requests. Cancel one first.")
+    if hit(f"friendly:{org.id}", 30, 3600):
+        raise ApiError(429, "Too many requests. Try again later.")
+    ch = FriendlyChallenge.objects.create(from_team=team, to_org=org, kickoff=kickoff, message=text(b, "message", 300), created_by=user)
+    log(org, user, f"{team.name} is looking for a friendly ({kickoff:%a %d %b, %H:%M} UTC)")
+    return {"ok": True, "request": board_json(ch, ids, user)}
+
+
+@endpoint("POST", login_required=True)
+def friendly_board_action(request, user, ip, slug, ch_id, action):
+    org, m = access(user, slug, "org.view")
+    ids = {t.id for t in my_teams(m)}
+    with transaction.atomic():
+        ch = (FriendlyChallenge.objects.select_for_update().select_related("from_team__org", "to_org")
+              .filter(id=ch_id, from_team__org=org, to_org=org, to_team__isnull=True).first())
+        if not ch or state(ch) != "pending":
+            raise ApiError(404, "That request isn't open any more.")
+        if action == "cancel":
+            if ch.from_team_id not in ids:
+                raise ApiError(403, "Only that team can cancel its request.")
+            ch.status = "cancelled"
+            ch.save(update_fields=["status"])
+            return {"ok": True}
+        if action != "take":
+            raise ApiError(404, "Unknown action.")
+        tid = body(request).get("teamId")
+        if tid not in ids or tid == ch.from_team_id:
+            raise ApiError(400, "Choose one of your teams (not the one that posted it).")
+        ch.to_team = Team.objects.get(id=tid)
+        ch.status, ch.answered_by, ch.answered = "accepted", user, timezone.now()
+        if ch.kickoff < timezone.now():
+            ch.kickoff = timezone.now()
+        ch.match = make_match(ch)
+        ch.save()
+    log(org, user, f"friendly set: {ch.from_team.name} v {ch.to_team.name} ({ch.kickoff:%a %d %b, %H:%M} UTC)")
+    notify(ch.from_team, f"{ch.to_team.name} will play you", [f"{ch.to_team.name} took your friendly request.",
+                                                             f"{ch.from_team.name} v {ch.to_team.name}, {ch.kickoff:%a %d %b %Y, %H:%M} UTC."],
+           request, org.slug)
+    return {"ok": True, "match": {"id": ch.match_id, "slug": ch.match.slug}}
 
 
 @endpoint("POST", login_required=True)

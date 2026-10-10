@@ -64,7 +64,7 @@ class FriendliesTest(Helpers, TestCase):
         self.assertIn("Friendly table", page, "a friendly table (no points) instead of a league table")
         table = Client().get(f"/competition/{m.competition.slug}/table").content.decode()
         self.assertIn("Win %", table)
-        self.assertNotIn("Pts", table)
+        self.assertIn("<th>Pts</th>", table)
         self.assertIn("100%", table, "Lions won their only friendly")
 
     def test_decline_cancel_and_own_team(self):
@@ -280,6 +280,49 @@ class FriendliesTest(Helpers, TestCase):
         r = self.boss.call("post", f"/api/report/{mid}/approve", {"proofId": claim["id"]}).json()
         self.assertEqual((r["match"]["homeScore"], r["match"]["awayScore"], r["match"]["status"], r["claims"]), (1, 2, "finished", []))
         self.assertEqual(self.boss.get(f"/api/orgs/{self.a}/pending-results").json()["matches"], [])
+
+    def test_find_a_friendly_board(self):
+        board = f"/api/orgs/{self.a}/friendly-board"
+        leopards = self.team(self.boss, self.a, "Leopards")
+        def join(name, team, role):
+            who = self.signup(name)
+            link = self.boss.call("post", f"/api/orgs/{self.a}/teams/{team}/invitations", {"role": role}).json()["link"]
+            who.call("post", "/api/invitations/" + link.rsplit("/", 1)[1] + "/accept")
+            return who
+        p1, p2 = join("lion_player", self.lions, "player"), join("leo_coach", leopards, "coach")
+        outsider = self.signup("fan_viewer")
+        self.invite_and_join(self.boss, self.a, outsider, "viewer")
+        self.assertEqual(p1.call("post", board, {"teamId": leopards, "kickoff": "now"}).status_code, 403, "only your own team")
+        r = p1.call("post", board, {"teamId": self.lions, "kickoff": self.soon(), "message": "Anyone tonight?"})
+        self.assertEqual(r.status_code, 200, r.json())
+        rid = r.json()["request"]["id"]
+        seen = p2.get(board).json()
+        self.assertEqual([(x["team"]["name"], x["mine"]) for x in seen["open"]], [("Lions", False)])
+        self.assertEqual(self.boss.get(f"/api/orgs/{self.a}/friendlies").json()["challenges"], [], "open requests stay on the board")
+        self.assertEqual(p2.call("post", f"{board}/{rid}/take", {"teamId": self.lions}).status_code, 400, "not with the team that posted it")
+        self.assertEqual(p2.call("post", f"{board}/{rid}/cancel").status_code, 403)
+        r = p2.call("post", f"{board}/{rid}/take", {"teamId": leopards})
+        self.assertEqual(r.status_code, 200, r.json())
+        m = Match.objects.get(id=r.json()["match"]["id"])
+        self.assertEqual((m.home.team.name, m.away.team.name, m.competition.kind), ("Lions", "Leopards", "friendly"))
+        self.assertEqual(p1.call("post", f"{board}/{rid}/take", {"teamId": self.lions}).status_code, 404, "taken already")
+        self.assertEqual([u["away"] for u in p1.get(board).json()["upcoming"]], ["Leopards"])
+        # results: only sent with a screenshot, then confirmed by the organization
+        self.assertEqual(p1.call("patch", f"/api/orgs/{self.a}/matches/{m.id}", {"homeScore": 9, "awayScore": 0}).status_code, 403)
+        self.assertEqual(outsider.call("post", board, {"teamId": leopards, "kickoff": "now"}).status_code, 403, "not in a team: can look, not post")
+        self.assertEqual(len(outsider.get(board).json()["open"]), 0)
+
+    def test_friendly_table_has_points(self):
+        from . import engine
+        leopards = self.team(self.boss, self.a, "Leopards")
+        url = f"/api/orgs/{self.a}/friendlies"
+        for score in ((2, 0), (1, 1)):
+            mid = self.boss.call("post", url, {"fromTeamId": self.lions, "toTeamId": leopards, "kickoff": "now"}).json()["challenge"]["match"]["id"]
+            self.boss.call("patch", f"/api/orgs/{self.a}/matches/{mid}", {"homeScore": score[0], "awayScore": score[1], "status": "finished"})
+        c = Match.objects.get(id=mid).competition
+        rows = {r["team"].name: (r["points"], r["position"]) for r in engine.friendly_table(c.matches.select_related("home__team", "away__team"), c)}
+        self.assertEqual(rows, {"Lions": (4, 1), "Leopards": (1, 2)})
+        self.assertIn("<th>Pts</th>", Client().get(f"/competition/{c.slug}/table").content.decode())
 
     def test_friendly_series_is_always_a_plain_series_and_counts_less(self):
         r = self.boss.call("post", f"/api/orgs/{self.a}/competitions", {"name": "Summer Friendlies", "kind": "friendly", "format": "groups_knockout", "visibility": "public"})

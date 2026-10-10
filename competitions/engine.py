@@ -285,8 +285,9 @@ def standings(comp, entries, matches):
              "adjustment": r["entry"].points_adjustment, "form": r["form"][-5:]} for i, r in enumerate(ranked)]
 
 
-def friendly_table(matches):
-    """A friendly series' table: no points, just how each team has done (most wins, then goal difference, goals)."""
+def friendly_table(matches, comp=None):
+    """A friendly series' table: points (3 for a win, 1 for a draw by default), then goal difference and goals."""
+    pw, pd, pl = (comp.points_win, comp.points_draw, comp.points_loss) if comp else (3, 1, 0)
     rows = {}
     for m in matches:
         if m.status != "finished" or m.home_score is None or m.away_score is None or not m.home or not m.away:
@@ -297,7 +298,9 @@ def friendly_table(matches):
             r["goalsFor"] += gf
             r["goalsAgainst"] += ga
             r["won" if gf > ga else "lost" if gf < ga else "drawn"] += 1
-    out = sorted(rows.values(), key=lambda r: (-r["won"], -(r["goalsFor"] - r["goalsAgainst"]), -r["goalsFor"], r["team"].name.lower()))
+    for r in rows.values():
+        r["points"] = r["won"] * pw + r["drawn"] * pd + r["lost"] * pl
+    out = sorted(rows.values(), key=lambda r: (-r["points"], -(r["goalsFor"] - r["goalsAgainst"]), -r["goalsFor"], r["team"].name.lower()))
     for i, r in enumerate(out, 1):
         r.update(position=i, goalDifference=r["goalsFor"] - r["goalsAgainst"], winPct=round(100 * r["won"] / r["played"]) if r["played"] else 0)
     return out
