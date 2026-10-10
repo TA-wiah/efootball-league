@@ -55,8 +55,11 @@ def side_json(t):
     return {**team_brief(t), "org": {"name": t.org.name, "slug": t.org.slug}}
 
 
-def challenge_json(ch, org, mine_ids):
+def challenge_json(ch, org, mine_ids, staff=False):
+    """`staff`: the viewer manages fixtures in `org` (may delete a played friendly hosted there)."""
     st = state(ch)
+    played = bool(ch.match_id and (ch.match.home_score is not None or ch.match.status == "finished"))
+    my_side = ((ch.from_team.org_id == org.id and ch.from_team_id in mine_ids) or (ch.to_team.org_id == org.id and ch.to_team_id in mine_ids))
     if ch.from_team.org_id == ch.to_team.org_id:          # inside one organization: "received" by the other team's managers
         sent = not (ch.to_team_id in mine_ids and ch.from_team_id not in mine_ids)
     else:
@@ -67,7 +70,10 @@ def challenge_json(ch, org, mine_ids):
             "match": {"id": ch.match_id, "slug": ch.match.slug} if ch.match_id else None,
             "internal": ch.from_team.org_id == ch.to_team.org_id,
             "canAnswer": st == "pending" and ch.to_team.org_id == org.id and ch.to_team_id in mine_ids,
-            "canCancel": st == "pending" and ch.from_team.org_id == org.id and ch.from_team_id in mine_ids}
+            "canCancel": st == "pending" and ch.from_team.org_id == org.id and ch.from_team_id in mine_ids,
+            "played": played,
+            # either team's managers, until it's played; after that only the hosting organization's fixtures staff
+            "canDelete": (staff and ch.from_team.org_id == org.id) or (my_side and not played)}
 
 
 def managers_with_email(team):
@@ -101,6 +107,20 @@ def host_series(org):
                                       description=f"Friendly matches arranged by {org.name}.")
 
 
+def delete_friendly(ch):
+    """Remove a challenge and, if it was accepted, its match (screenshots and goals go with it). Teams left with no
+    match in the Friendlies series are taken out of it too."""
+    match = ch.match
+    ch.delete()
+    if not match:
+        return
+    c, entries = match.competition, [e for e in (match.home, match.away) if e]
+    match.delete()
+    for e in entries:
+        if not c.matches.filter(Q(home=e) | Q(away=e)).exists():
+            e.delete()
+
+
 def make_match(ch):
     """The friendly itself, in the challenger organization's "Friendlies" series with both teams entered."""
     c = host_series(ch.from_team.org)
@@ -128,7 +148,8 @@ def org_friendlies(request, user, ip, slug):
     if request.method == "GET":
         rows = (FriendlyChallenge.objects.select_related("from_team__org", "to_team__org", "created_by", "answered_by", "match")
                 .filter(Q(from_team__org=org) | Q(to_team__org=org)).order_by("-created")[:200])
-        return {"challenges": [challenge_json(ch, org, mine_ids) for ch in rows], "teams": [team_brief(t) for t in mine]}
+        staff = can(m.role, "fixtures.manage", org)
+        return {"challenges": [challenge_json(ch, org, mine_ids, staff) for ch in rows], "teams": [team_brief(t) for t in mine]}
     b = body(request)
     mine_t = next((t for t in mine if t.id == b.get("fromTeamId")), None)
     if not mine_t:
@@ -183,11 +204,20 @@ def org_friendly_action(request, user, ip, slug, ch_id, action):
     org, m = access(user, slug, "org.view")
     mine_ids = {t.id for t in manageable(m)}
     with transaction.atomic():
-        ch = (FriendlyChallenge.objects.select_for_update().select_related("from_team__org", "to_team__org")
+        ch = (FriendlyChallenge.objects.select_for_update().select_related("from_team__org", "to_team__org", "match")
               .filter(Q(from_team__org=org) | Q(to_team__org=org), id=ch_id).first())
         if not ch:
             raise ApiError(404, "Challenge not found.")
-        info = challenge_json(ch, org, mine_ids)
+        info = challenge_json(ch, org, mine_ids, can(m.role, "fixtures.manage", org))
+        if action == "delete":
+            if not info["canDelete"]:
+                raise ApiError(403, "A friendly that has been played can only be deleted by the organization hosting it."
+                               if info["played"] else "Only the managers of the two teams can delete this friendly.")
+            pair = f"{ch.from_team.name} v {ch.to_team.name}"
+            delete_friendly(ch)
+            for o in {ch.from_team.org, ch.to_team.org}:
+                log(o, user if o.id == org.id else None, f"deleted the friendly {pair}")
+            return {"ok": True, "deleted": True}
         if action == "cancel":
             if not info["canCancel"]:
                 raise ApiError(403, "Only the challenging team's managers can cancel a waiting challenge.")
