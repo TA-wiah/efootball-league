@@ -96,6 +96,8 @@ urlpatterns = [
     path("api/roles", o.roles),
     path("api/orgs", o.orgs),
     path("api/report/mine", rep.my_matches),
+    path("api/report/<int:match_id>/approve", rep.report_approve),
+    path("api/orgs/<slug:slug>/pending-results", rep.org_pending_results),
     path("api/friendly-teams", fr.team_search),
     path("api/orgs/<slug:slug>/friendlies", fr.org_friendlies),
     path("api/orgs/<slug:slug>/friendlies/<int:ch_id>/<str:action>", fr.org_friendly_action),

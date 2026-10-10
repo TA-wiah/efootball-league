@@ -100,7 +100,7 @@ def member_json(m, me):
     return {"id": m.id, "username": m.user.username, "email": m.user.email if (staff or m.user_id == me.user_id) else None,
             **role_json(m.role), "status": "active", "joined": ms(m.joined), "lastActive": ms(m.last_active),
             "you": m.user_id == me.user_id, "canManage": m.user_id != me.user_id and can_manage(me.role, m.role, me.org),
-            "staff": m.role in STAFF_ROLES, "teams": [{"id": t.id, "name": t.name} for t in m.teams.all()] if m.role in TEAM_ROLES or m.role == PLAYER else []}
+            "staff": m.role in STAFF_ROLES, "teams": [{"id": t.id, "name": t.name} for t in m.teams.all()]}
 
 
 def invitation_json(i):
@@ -512,9 +512,10 @@ def member_detail(request, user, ip, slug, member_id):
     target = org.memberships.select_related("user").filter(id=member_id).first()
     if not target:
         raise ApiError(404, "Member not found.")
-    if target.user_id == user.id:
+    self_teams = target.user_id == user.id and request.method == "PATCH" and set(body(request)) == {"teams"}
+    if target.user_id == user.id and not self_teams:   # you may only set which teams you yourself play for
         raise ApiError(400, "You can't change or remove yourself here. Use “Leave organization” instead.")
-    if not can_manage(m.role, target.role, org):
+    if not self_teams and not can_manage(m.role, target.role, org):
         raise ApiError(403, f"Your role ({ROLE_INFO[m.role][0]}) can't manage a {ROLE_INFO[target.role][0]}.")
     if request.method == "DELETE":
         target.delete()

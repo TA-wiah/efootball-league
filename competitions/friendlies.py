@@ -81,10 +81,10 @@ def challenge_json(ch, org, mine_ids, staff=False):
             "canCancel": st == "pending" and ch.from_team.org_id == org.id and ch.from_team_id in mine_ids,
             "played": played,
             # either team's managers, until it's played; after that only the hosting organization's fixtures staff
-            "canDelete": (staff and ch.from_team.org_id == org.id) or (my_side and not played),
-            # the time and message: the sender while it's waiting; either side (or the host's staff) until it's played
+            # once accepted, a friendly is the hosting organization's to change or remove (teams send results instead)
+            "canDelete": (staff and ch.from_team.org_id == org.id) or (my_side and st != "accepted"),
             "canEdit": (st == "pending" and ch.from_team.org_id == org.id and ch.from_team_id in mine_ids)
-                       or (st == "accepted" and not played and ((staff and ch.from_team.org_id == org.id) or my_side))}
+                       or (st == "accepted" and not played and staff and ch.from_team.org_id == org.id)}
 
 
 def managers_with_email(team, org=None):
@@ -265,8 +265,8 @@ def org_friendly_action(request, user, ip, slug, ch_id, action):
         info = challenge_json(ch, org, mine_ids, can(m.role, "fixtures.manage", org))
         if action == "delete":
             if not info["canDelete"]:
-                raise ApiError(403, "A friendly that has been played can only be deleted by the organization hosting it."
-                               if info["played"] else "Only the managers of the two teams can delete this friendly.")
+                raise ApiError(403, "Once accepted, a friendly can only be deleted by the organization hosting it."
+                               if info["status"] == "accepted" else "Only the managers of the two teams can delete this friendly.")
             pair = f"{ch.from_team.name} v {to_name(ch)}"
             delete_friendly(ch)
             for o in {ch.from_team.org, ch.to_org}:
@@ -275,7 +275,7 @@ def org_friendly_action(request, user, ip, slug, ch_id, action):
         if action == "edit":
             if not info["canEdit"]:
                 raise ApiError(403, "This friendly can't be changed any more." if info["played"] or info["status"] not in ("pending", "accepted")
-                               else "Only the managers of the two teams can change this friendly.")
+                               else "Once accepted, only the organization hosting the friendly can change it.")
             b, now = body(request), timezone.now()
             changes = []
             if "kickoff" in b:

@@ -404,6 +404,15 @@ class PortalTest(Helpers, TestCase):
         self.assertFalse(r.json()["emailed"])
         self.assertIn("/invite/", r.json()["link"])
 
+    def test_anyone_can_also_play_for_a_team(self):
+        boss = self.signup("boss")
+        slug = self.new_org(boss)
+        lions = boss.call("post", f"/api/orgs/{slug}/teams", {"name": "Lions"}).json()["team"]["id"]
+        me = self.member_id(boss, slug, "boss")
+        self.assertEqual(boss.call("patch", f"/api/orgs/{slug}/members/{me}", {"teams": [lions]}).status_code, 200, "the owner plays for Lions too")
+        self.assertEqual(boss.call("patch", f"/api/orgs/{slug}/members/{me}", {"role": "admin"}).status_code, 400, "but can't change their own role")
+        self.assertEqual(Membership.objects.get(org__slug=slug, user__username="boss").teams.count(), 1)
+
     def test_who_can_invite_which_roles(self):
         boss = self.signup("boss")
         slug = self.new_org(boss)
