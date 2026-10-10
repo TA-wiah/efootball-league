@@ -568,10 +568,17 @@ def create_plan(c, org, user, b):
     return {"ok": True, "created": len(created), "rounds": [r[1] for r in rounds], "note": note}
 
 
-@endpoint("POST", login_required=True)
+@endpoint("POST", "DELETE", login_required=True)
 def knockout_plan(request, user, ip, slug, cslug):
     org, m = access(user, slug, "fixtures.manage")
     c = competition_of(org, cslug, request)
+    if request.method == "DELETE":                       # start the knockouts over: every knockout match goes
+        n = c.matches.filter(stage="knockout").count()
+        if not n:
+            raise ApiError(404, "There are no knockout matches to delete.")
+        c.matches.filter(stage="knockout").delete()
+        log(org, user, f"deleted the knockout rounds of {c.name} ({n} matches)")
+        return {"ok": True, "deleted": n}
     return create_plan(c, org, user, body(request))
 
 
@@ -736,9 +743,10 @@ def match_detail(request, user, ip, slug, match_id):
         return {"match": match_json(mt, detail=True)}
     if request.method == "DELETE":
         need(m, "fixtures.manage")
+        name = f"{mt.home.team.name if mt.home else bracket.label(mt.home_from) or 'TBD'} v {mt.away.team.name if mt.away else bracket.label(mt.away_from) or 'TBD'}"
         mt.delete()
         bracket.resolve(mt.competition)
-        log(org, user, f"deleted a match in {mt.competition.name}")
+        log(org, user, f"deleted the match {name} in {mt.competition.name}")
         return {"ok": True}
     b = body(request)
     if set(b) & MATCH_STRUCTURE:

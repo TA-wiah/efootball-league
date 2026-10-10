@@ -414,6 +414,23 @@ class CompetitionApiTest(Helpers, TestCase):
         bracket.resolve(Competition.objects.get(slug=cs))
         self.assertEqual(sum(m["decided"] == "bye" for m in self.ko_matches(url, "Quarter-finals")), 2, "A3 and B3 have 3 points")
 
+    def test_delete_knockout_matches(self):
+        cs, url, e = self.groups_comp()
+        self.owner.call("post", url + "/generate", {"knockout": {"mode": "cross"}})
+        ko = self.ko_matches(url)
+        self.assertEqual(len(ko), 3)
+        self.assertEqual(self.owner.call("delete", f"{self.base}/matches/{ko[0]['id']}").status_code, 200, "one match")
+        self.assertEqual(len(self.ko_matches(url)), 2)
+        viewer = self.signup("viewer1")
+        self.invite_and_join(self.owner, self.slug, viewer, "viewer")
+        self.assertEqual(viewer.call("delete", url + "/knockout-plan").status_code, 403)
+        r = self.owner.call("delete", url + "/knockout-plan")
+        self.assertEqual((r.status_code, r.json()["deleted"]), (200, 2))
+        self.assertEqual(self.ko_matches(url), [])
+        self.assertEqual(self.owner.call("delete", url + "/knockout-plan").status_code, 404)
+        self.assertTrue(any(m["stage"] == "league" for m in self.owner.get(url + "/matches").json()["matches"]), "the group stage stays")
+        self.assertEqual(self.owner.call("post", url + "/knockout-plan", {}).status_code, 200, "a new plan can be set")
+
     def test_knockout_dates_follow_the_group_stage(self):
         from datetime import date, timedelta
         cs, url, e = self.groups_comp()

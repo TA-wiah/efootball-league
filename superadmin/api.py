@@ -444,6 +444,8 @@ def competitions(request, user, ip):
         qs = qs.filter(Q(name__icontains=q) | Q(slug__icontains=q) | Q(org__name__icontains=q) | Q(season__icontains=q))
     if request.GET.get("org"):
         qs = qs.filter(org__slug=request.GET["org"])
+    if request.GET.get("tables"):                        # only competitions that have a league table
+        qs = qs.exclude(format="knockout").exclude(kind="friendly")
     if st in ("active", "completed", "draft"):
         qs = qs.filter(status=st)
     elif st == "upcoming":
@@ -475,7 +477,7 @@ def competition_detail(request, user, ip, cid):
                        "players": e.team.players.count(), "suspended": e.team.suspended} for e in entries],
             "groups": [{"name": g or None, "teams": t} for g, t in sorted(groups.items())],
             "matches": [match_row(m) for m in MATCHES.filter(competition=c).order_by("stage", "round", "kickoff", "id")],
-            "standings": table_payload(c) if c.format != "knockout" else None,
+            "standings": table_payload(c) if c.format != "knockout" and c.kind != "friendly" else None,
             "scorers": [{**s, "team": s["team"].name if s["team"] else None} for s in engine.scorers(events)[:20]],
             "staff": [{"user": who(m.user), "role": m.role, "roleLabel": ROLE_INFO[m.role][0]} for m in
                       Membership.objects.select_related("user").filter(org=c.org, role__in=STAFF + ("editor", "moderator"))],
@@ -619,8 +621,8 @@ def groups(request, user, ip):
 @admin("GET")
 def standings(request, user, ip, cid):
     c = comp_of(cid)
-    if c.format == "knockout":
-        raise ApiError(400, "Knockout-only competitions have no table.")
+    if c.format == "knockout" or c.kind == "friendly":
+        raise ApiError(400, "Knockout-only competitions and friendly series have no table.")
     return table_payload(c)
 
 
