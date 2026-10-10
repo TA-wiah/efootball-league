@@ -153,6 +153,7 @@ urlpatterns = [
     path("api/orgs/<slug:slug>/competitions/<slug:cslug>/dates", c.set_dates),
     path("api/orgs/<slug:slug>/competitions/<slug:cslug>/knockout-plan", c.knockout_plan),
     path("api/orgs/<slug:slug>/competitions/<slug:cslug>/matches", c.comp_matches),
+    path("api/orgs/<slug:slug>/competitions/<slug:cslug>/next-season", c.next_season),
     path("api/orgs/<slug:slug>/competitions/<slug:cslug>/standings", c.standings),
     path("api/orgs/<slug:slug>/competitions/<slug:cslug>/scorers", c.comp_scorers),
     path("api/orgs/<slug:slug>/matches", c.org_matches),
