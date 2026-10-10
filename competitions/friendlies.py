@@ -1,4 +1,7 @@
-"""Friendlies between teams of different organizations: "Challenge a team".
+"""Friendlies: "Challenge a team", inside your organization or against another one.
+
+Inside the organization: whoever manages both teams sets the match straight away; a team manager challenging another of
+the organization's teams waits for that team's managers to accept.
 
 A team's managers pick any team with a public page (or of an organization open to friendlies), propose a kick-off and send a challenge. The other team's managers
 accept or decline. On acceptance the match is created in the challenger organization's "Friendlies" series (a friendly
@@ -50,14 +53,18 @@ def side_json(t):
 
 
 def challenge_json(ch, org, mine_ids):
-    sent = ch.from_team.org_id == org.id
     st = state(ch)
+    if ch.from_team.org_id == ch.to_team.org_id:          # inside one organization: "received" by the other team's managers
+        sent = not (ch.to_team_id in mine_ids and ch.from_team_id not in mine_ids)
+    else:
+        sent = ch.from_team.org_id == org.id
     return {"id": ch.id, "direction": "sent" if sent else "received", "from": side_json(ch.from_team), "to": side_json(ch.to_team),
             "kickoff": ch.kickoff.isoformat(), "message": ch.message or None, "status": st, "created": ms(ch.created),
             "by": getattr(ch.created_by, "username", None), "answeredBy": getattr(ch.answered_by, "username", None),
             "match": {"id": ch.match_id, "slug": ch.match.slug} if ch.match_id else None,
-            "canAnswer": not sent and st == "pending" and ch.to_team_id in mine_ids,
-            "canCancel": sent and st == "pending" and ch.from_team_id in mine_ids}
+            "internal": ch.from_team.org_id == ch.to_team.org_id,
+            "canAnswer": st == "pending" and ch.to_team.org_id == org.id and ch.to_team_id in mine_ids,
+            "canCancel": st == "pending" and ch.from_team.org_id == org.id and ch.from_team_id in mine_ids}
 
 
 def managers_with_email(team):
@@ -91,6 +98,15 @@ def host_series(org):
                                       description=f"Friendly matches arranged by {org.name}.")
 
 
+def make_match(ch):
+    """The friendly itself, in the challenger organization's "Friendlies" series with both teams entered."""
+    c = host_series(ch.from_team.org)
+    home, _ = Entry.objects.get_or_create(competition=c, team=ch.from_team)
+    away, _ = Entry.objects.get_or_create(competition=c, team=ch.to_team)
+    return Match.objects.create(competition=c, stage="league", round=1, round_name="Friendly", home=home, away=away, kickoff=ch.kickoff,
+                                slug=engine.unique_slug(Match, f"{ch.from_team.name} v {ch.to_team.name} friendly", "match", limit=120))
+
+
 @endpoint("GET", login_required=True)
 def team_search(request, user, ip):
     """Teams that can be challenged (see challengeable), found by team or organization name."""
@@ -114,11 +130,13 @@ def org_friendlies(request, user, ip, slug):
     mine_t = next((t for t in mine if t.id == b.get("fromTeamId")), None)
     if not mine_t:
         raise ApiError(403, "Choose one of the teams you manage.")
-    other = challengeable().filter(id=b.get("toTeamId") if isinstance(b.get("toTeamId"), int) else -1).first()
+    tid = b.get("toTeamId") if isinstance(b.get("toTeamId"), int) else -1
+    other = (org.teams.select_related("org").filter(id=tid, suspended=False).first()      # one of our own teams
+             or challengeable().exclude(org=org).filter(id=tid).first())
     if not other:
         raise ApiError(404, "Team not found. Search for the team by name.")
-    if other.org_id == org.id:
-        raise ApiError(400, "That team is in your own organization: add the friendly from Fixtures instead.")
+    if other.id == mine_t.id:
+        raise ApiError(400, "A team can't play itself. Choose another opponent.")
     kickoff = moment(b, "kickoff")
     now = timezone.now()
     if not kickoff or kickoff < now or kickoff > now + timezone.timedelta(days=MAX_DAYS):
@@ -128,7 +146,21 @@ def org_friendlies(request, user, ip, slug):
         raise ApiError(409, "There's already a challenge waiting between these two teams.")
     if hit(f"friendly:{org.id}", 30, 3600):
         raise ApiError(429, "Too many challenges. Try again later.")
+    if other.id in mine_ids:                         # you manage both teams: no need to ask, the match is set straight away
+        with transaction.atomic():
+            ch = FriendlyChallenge.objects.create(from_team=mine_t, to_team=other, kickoff=kickoff, message=text(b, "message", 300), created_by=user,
+                                                  status="accepted", answered_by=user, answered=now)
+            ch.match = make_match(ch)
+            ch.save(update_fields=["match"])
+        log(org, user, f"arranged a friendly: {mine_t.name} v {other.name}")
+        return {"ok": True, "challenge": challenge_json(ch, org, mine_ids)}
     ch = FriendlyChallenge.objects.create(from_team=mine_t, to_team=other, kickoff=kickoff, message=text(b, "message", 300), created_by=user)
+    if other.org_id == org.id:
+        log(org, user, f"challenged {other.name} to a friendly against {mine_t.name}")
+        notify(other, f"{mine_t.name} challenged {other.name} to a friendly",
+               [f"{mine_t.name} wants to play {other.name}.", f"Proposed kick-off: {kickoff:%a %d %b %Y, %H:%M} UTC."]
+               + ([f"Message: {ch.message}"] if ch.message else []) + ["Accept or decline it in the Friendlies page."], request, org.slug)
+        return {"ok": True, "challenge": challenge_json(ch, org, mine_ids)}
     log(org, user, f"challenged {other.name} ({other.org.name}) to a friendly against {mine_t.name}")
     log(other.org, None, f"{mine_t.name} ({org.name}) challenged {other.name} to a friendly")
     notify(other, f"{mine_t.name} challenged {other.name} to a friendly",
@@ -158,11 +190,7 @@ def org_friendly_action(request, user, ip, slug, ch_id, action):
                                if info["status"] == "pending" else f"This challenge is {info['status']}.")
             ch.status = "accepted" if action == "accept" else "declined"
             if action == "accept":
-                c = host_series(ch.from_team.org)
-                home, _ = Entry.objects.get_or_create(competition=c, team=ch.from_team)
-                away, _ = Entry.objects.get_or_create(competition=c, team=ch.to_team)
-                ch.match = Match.objects.create(competition=c, stage="league", round=1, round_name="Friendly", home=home, away=away,
-                                                kickoff=ch.kickoff, slug=engine.unique_slug(Match, f"{ch.from_team.name} v {ch.to_team.name} friendly", "match", limit=120))
+                ch.match = make_match(ch)
         else:
             raise ApiError(404, "Unknown action.")
         ch.answered_by, ch.answered = user, timezone.now()

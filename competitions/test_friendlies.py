@@ -62,8 +62,6 @@ class FriendliesTest(Helpers, TestCase):
 
     def test_decline_cancel_and_own_team(self):
         url = f"/api/orgs/{self.a}/friendlies"
-        own = self.team(self.boss, self.a, "Leopards")
-        self.assertEqual(self.boss.call("post", url, {"fromTeamId": self.lions, "toTeamId": own, "kickoff": self.soon()}).status_code, 404, "no public page")
         ch = self.boss.call("post", url, {"fromTeamId": self.lions, "toTeamId": self.tigers, "kickoff": self.soon()}).json()["challenge"]
         self.assertEqual(self.chief.call("post", f"/api/orgs/{self.b}/friendlies/{ch['id']}/decline").json()["challenge"]["status"], "declined")
         ch = self.boss.call("post", url, {"fromTeamId": self.lions, "toTeamId": self.tigers, "kickoff": self.soon()}).json()["challenge"]
@@ -84,6 +82,27 @@ class FriendliesTest(Helpers, TestCase):
         self.assertEqual(sorted(t["name"] for t in self.boss.get("/api/friendly-teams?q=kumasi").json()["teams"]), ["Hidden Hawks", "Tigers"],
                          "found by the organization's name too")
         self.assertEqual(self.boss.call("post", url, {"fromTeamId": self.lions, "toTeamId": hidden, "kickoff": self.soon()}).status_code, 200)
+
+    def test_friendlies_inside_the_organization(self):
+        url = f"/api/orgs/{self.a}/friendlies"
+        leopards = self.team(self.boss, self.a, "Leopards")                # private: no public page needed inside the organization
+        self.assertEqual(self.boss.call("post", url, {"fromTeamId": self.lions, "toTeamId": self.lions, "kickoff": self.soon()}).status_code, 400)
+        # the owner manages both teams: the match is set straight away
+        ch = self.boss.call("post", url, {"fromTeamId": self.lions, "toTeamId": leopards, "kickoff": self.soon()}).json()["challenge"]
+        self.assertEqual((ch["status"], ch["internal"], ch["to"]["name"]), ("accepted", True, "Leopards"))
+        m = Match.objects.get(id=ch["match"]["id"])
+        self.assertEqual((m.competition.kind, m.home.team.name, m.away.team.name), ("friendly", "Lions", "Leopards"))
+        # a team manager of Lions challenges Leopards: Leopards' managers (here the owner) answer
+        tm = self.signup("tm1")
+        self.invite_and_join(self.boss, self.a, tm, "team_manager")
+        mid = self.member_id(self.boss, self.a, "tm1")
+        self.boss.call("patch", f"/api/orgs/{self.a}/members/{mid}", {"teams": [self.lions]})
+        ch = tm.call("post", url, {"fromTeamId": self.lions, "toTeamId": leopards, "kickoff": self.soon(6)}).json()["challenge"]
+        self.assertEqual((ch["status"], ch["canCancel"], ch["canAnswer"]), ("pending", True, False))
+        self.assertEqual(tm.call("post", f"{url}/{ch['id']}/accept").status_code, 403, "can't accept for a team they don't manage")
+        theirs = next(c for c in self.boss.get(url).json()["challenges"] if c["id"] == ch["id"])
+        self.assertTrue(theirs["canAnswer"])
+        self.assertEqual(self.boss.call("post", f"{url}/{ch['id']}/accept").json()["challenge"]["status"], "accepted")
 
     def test_friendly_series_is_always_a_plain_series_and_counts_less(self):
         r = self.boss.call("post", f"/api/orgs/{self.a}/competitions", {"name": "Summer Friendlies", "kind": "friendly", "format": "groups_knockout", "visibility": "public"})
