@@ -134,7 +134,8 @@ class Match(models.Model):
     finished_at = models.DateTimeField(null=True, blank=True)   # when the result was entered (for analytics)
     home_checkin = models.DateTimeField(null=True, blank=True)  # the team pressed "We're here" (or sent a screenshot)
     away_checkin = models.DateTimeField(null=True, blank=True)
-    decided = models.CharField(max_length=10, blank=True)       # "walkover" or "no_show" when the system settled it
+    decided = models.CharField(max_length=10, blank=True)
+    reminded = models.DateTimeField(null=True, blank=True)        # when the match reminder went out (once)       # "walkover" or "no_show" when the system settled it
 
     class Meta:
         ordering = ["round", "kickoff", "id"]

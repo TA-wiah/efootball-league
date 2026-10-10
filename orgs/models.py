@@ -31,7 +31,8 @@ class Organization(models.Model):
     website = models.JSONField(default=dict, blank=True)              # public website settings, see WEBSITE_DEFAULTS
     permissions = models.JSONField(default=dict, blank=True)          # owner's overrides: {permission: [roles]}
     in_rankings = models.BooleanField(default=True)                   # include our teams in the platform rankings
-    open_to_friendlies = models.BooleanField(default=False)           # all our teams can be found and challenged, private ones too
+    open_to_friendlies = models.BooleanField(default=False)
+    auto_sms_reminders = models.BooleanField(default=False)           # text match reminders automatically (uses SMS credits)           # all our teams can be found and challenged, private ones too
 
     def __str__(self):
         return self.name
