@@ -105,6 +105,17 @@ def match_view(m, linkable):
             "competition": {"name": m.competition.name, "slug": m.competition.slug}}
 
 
+def bracket_rounds(ko, linkable):
+    """[(round name, pairs)]: each pair holds the two ties that meet in the next round, each tie its legs. The page
+    draws the connector lines between them."""
+    out = []
+    for name, games in group_by(ko, lambda m: m.round_name or f"Round {m.round}"):
+        ties = [legs for _, legs in group_by(games, lambda m: m.slot or f"m{m.id}")]
+        views = [[match_view(m, linkable) for m in tie] for tie in ties]
+        out.append((name, [views[i:i + 2] for i in range(0, len(views), 2)]))
+    return out
+
+
 def group_by(items, key):
     out = OrderedDict()
     for it in items:
@@ -176,8 +187,8 @@ def competition(request, slug, tab=""):
     if tab == "results":
         ctx["sections"] = [(k, [match_view(m, linkable) for m in v]) for k, v in group_by(results, day_label)]
     if tab == "knockouts":
-        ko = [m for m in matches if m.stage == "knockout"]
-        ctx["rounds"] = group_by([match_view(m, linkable) for m in sorted(ko, key=lambda m: (m.round, m.slot, m.leg, m.id))], lambda m: m["round"])
+        ko = sorted([m for m in matches if m.stage == "knockout"], key=lambda m: (m.round, m.slot or 0, m.leg, m.id))
+        ctx["rounds"] = bracket_rounds(ko, linkable)
     if tab == "teams":
         ctx["teams"] = [{**team_view(e.team, linkable), "group": e.group, "city": e.team.city} for e in entries]
     if not c.hidden and c.visibility == "public" and tab in ("", "table"):
@@ -239,6 +250,18 @@ def match(request, slug):
     return page(request, "match.html", ctx, index=c.visibility == "public" and not c.hidden, private=c.hidden)
 
 
+def friendly_view(t, matches, linkable):
+    """A team's friendlies: won-drawn-lost, the next ones and the latest results."""
+    played = [x for x in matches if x.status == "finished" and x.home_score is not None]
+    rec = {"W": 0, "D": 0, "L": 0}
+    for x in played:
+        mine, theirs = (x.home_score, x.away_score) if x.home and x.home.team_id == t.id else (x.away_score, x.home_score)
+        rec["W" if mine > theirs else "L" if mine < theirs else "D"] += 1
+    nxt = [x for x in matches if x.status in ("scheduled", "live", "postponed")][:4]
+    return {"record": rec, "played": len(played), "next": [match_view(x, linkable) for x in nxt],
+            "recent": [match_view(x, linkable) for x in reversed(played)][:8]} if matches else None
+
+
 # ---------- team ----------
 def team(request, slug):
     t = Team.objects.select_related("org").filter(slug=slug).first()
@@ -251,6 +274,8 @@ def team(request, slug):
     comp_ids = [c.id for c in public_comps] if not member else list(Competition.objects.filter(entries__team=t).values_list("id", flat=True))
     ms = list(MATCHES.filter(competition_id__in=comp_ids).filter(Q(home__team=t) | Q(away__team=t)).order_by("kickoff", "round", "id"))
     linkable = public_team_ids({x.home.team_id for x in ms if x.home} | {x.away.team_id for x in ms if x.away} | {t.id})
+    friendly = [x for x in ms if x.competition.kind == "friendly"]
+    ms = [x for x in ms if x.competition.kind != "friendly"]              # friendlies have their own section
     finished = [x for x in ms if x.status == "finished"]
     form = []
     for x in finished[-5:]:
@@ -264,7 +289,7 @@ def team(request, slug):
            list(Competition.objects.filter(id__in=comp_ids)), "upcoming": [match_view(x, linkable) for x in ms if x.status in ("scheduled", "live", "postponed")][:8],
            "recent": [match_view(x, linkable) for x in reversed(finished)][:8], "form": form, "squad": [s for s in squad if s[1]],
            "title": t.name, "description": t.description[:180] or f"{t.name}: fixtures, results and squad.", "logo": logo("team", t),
-           "share_image": logo("team", t) or org_logo(t.org)}
+           "share_image": logo("team", t) or org_logo(t.org), "friendlies": friendly_view(t, friendly, linkable)}
     return page(request, "team.html", ctx, index=bool(public_comps), private=not public_comps)
 
 

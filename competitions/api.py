@@ -101,6 +101,21 @@ def comp_json(c, extra=False):
     return d
 
 
+def team_friendlies(t):
+    """The team's friendlies (any organization's Friendlies series), latest first."""
+    ms = (Match.objects.select_related("competition__org", "home__team", "away__team").filter(competition__kind="friendly")
+          .filter(Q(home__team=t) | Q(away__team=t)).order_by("-kickoff", "-id")[:30])
+    out = []
+    for m in ms:
+        home = bool(m.home and m.home.team_id == t.id)
+        opp = (m.away if home else m.home)
+        out.append({"id": m.id, "slug": m.slug, "kickoff": iso(m.kickoff), "status": m.status, "decided": m.decided or None,
+                    "opponent": team_brief(opp.team) if opp else None, "opponentOrg": opp.team.org.name if opp else None, "home": home,
+                    "mine": m.home_score if home else m.away_score, "theirs": m.away_score if home else m.home_score,
+                    "host": m.competition.org.slug, "public": m.competition.visibility != "private"})
+    return out
+
+
 def team_json(t, players=False):
     d = {**team_brief(t), "city": t.city, "venue": t.venue, "founded": t.founded, "colors": t.colors, "description": t.description,
          "playerCount": t.players.count()}
@@ -872,7 +887,7 @@ def team_detail(request, user, ip, slug, team_id):
         mine = m.teams.filter(id=t.id).exists()
         people = [{"id": x.id, "username": x.user.username, "role": x.role, "roleLabel": ROLE_INFO[x.role][0]}
                   for x in t.assigned_staff.select_related("user").order_by("role", "user__username")]
-        return {"team": {**team_json(t, players=True), "members": people, "mine": mine,
+        return {"team": {**team_json(t, players=True), "members": people, "mine": mine, "friendlies": team_friendlies(t),
                          "inviteRoles": team_invite_roles(m) if (mine or can(m.role, "members.invite", org)) else []}}
     if request.method == "PATCH":
         org, m, t = team_access(user, slug, team_id)
