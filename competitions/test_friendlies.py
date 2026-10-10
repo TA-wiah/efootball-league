@@ -72,6 +72,19 @@ class FriendliesTest(Helpers, TestCase):
         outsider = self.signup("nosy")
         self.assertEqual(outsider.get(url).status_code, 404, "other people can't see an organization's challenges")
 
+    def test_private_teams_only_when_their_organization_allows_it(self):
+        hidden = self.team(self.chief, self.b, "Hidden Hawks")               # in no public competition
+        url = f"/api/orgs/{self.a}/friendlies"
+        self.assertEqual(self.boss.get("/api/friendly-teams?q=hawks").json()["teams"], [])
+        self.assertEqual(self.boss.call("post", url, {"fromTeamId": self.lions, "toTeamId": hidden, "kickoff": self.soon()}).status_code, 404)
+        self.assertIn(self.boss.call("patch", f"/api/orgs/{self.b}", {"openToFriendlies": True}).status_code, (403, 404), "only their own admins")
+        self.assertTrue(self.chief.call("patch", f"/api/orgs/{self.b}", {"openToFriendlies": True}).json()["org"]["openToFriendlies"])
+        found = self.boss.get("/api/friendly-teams?q=hawks").json()["teams"]
+        self.assertEqual([(t["name"], t["org"]["name"]) for t in found], [("Hidden Hawks", "Kumasi Cup")])
+        self.assertEqual(sorted(t["name"] for t in self.boss.get("/api/friendly-teams?q=kumasi").json()["teams"]), ["Hidden Hawks", "Tigers"],
+                         "found by the organization's name too")
+        self.assertEqual(self.boss.call("post", url, {"fromTeamId": self.lions, "toTeamId": hidden, "kickoff": self.soon()}).status_code, 200)
+
     def test_friendly_series_is_always_a_plain_series_and_counts_less(self):
         r = self.boss.call("post", f"/api/orgs/{self.a}/competitions", {"name": "Summer Friendlies", "kind": "friendly", "format": "groups_knockout", "visibility": "public"})
         c = Competition.objects.get(slug=r.json()["competition"]["slug"])
