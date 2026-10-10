@@ -24,7 +24,9 @@ from .api import moment, team_brief
 from .models import Competition, Entry, FriendlyChallenge, Match, Team
 from .public import listed
 
-MAX_DAYS = 180
+MAX_DAYS = 730            # how far ahead a friendly can be planned (two years: in practice, any time)
+OPEN_HOURS = 24          # a challenge stays open this long after its proposed kick-off ("play now" included)
+PAST_DAYS = 365          # whoever manages both teams can also record a friendly already played
 
 
 def manageable(m):
@@ -45,7 +47,8 @@ def challengeable():
 
 
 def state(ch):
-    return "expired" if ch.status == "pending" and ch.kickoff < timezone.now() else ch.status
+    late = ch.kickoff + timezone.timedelta(hours=OPEN_HOURS) < timezone.now()
+    return "expired" if ch.status == "pending" and late else ch.status
 
 
 def side_json(t):
@@ -137,16 +140,21 @@ def org_friendlies(request, user, ip, slug):
         raise ApiError(404, "Team not found. Search for the team by name.")
     if other.id == mine_t.id:
         raise ApiError(400, "A team can't play itself. Choose another opponent.")
-    kickoff = moment(b, "kickoff")
     now = timezone.now()
-    if not kickoff or kickoff < now or kickoff > now + timezone.timedelta(days=MAX_DAYS):
-        raise ApiError(400, f"Pick a kick-off in the future (within {MAX_DAYS} days).")
-    if FriendlyChallenge.objects.filter(status="pending", kickoff__gt=now).filter(
+    kickoff = now if b.get("kickoff") == "now" else moment(b, "kickoff")
+    both = other.id in mine_ids
+    earliest = now - (timezone.timedelta(days=PAST_DAYS) if both else timezone.timedelta(minutes=30))
+    if not kickoff or kickoff > now + timezone.timedelta(days=MAX_DAYS):
+        raise ApiError(400, "Choose when the friendly is played.")
+    if kickoff < earliest:
+        raise ApiError(400, "That time has already passed. Pick now or a later time." if not both
+                       else f"A friendly already played can be recorded up to {PAST_DAYS} days back.")
+    if FriendlyChallenge.objects.filter(status="pending", kickoff__gt=now - timezone.timedelta(hours=OPEN_HOURS)).filter(
             Q(from_team=mine_t, to_team=other) | Q(from_team=other, to_team=mine_t)).exists():
         raise ApiError(409, "There's already a challenge waiting between these two teams.")
     if hit(f"friendly:{org.id}", 30, 3600):
         raise ApiError(429, "Too many challenges. Try again later.")
-    if other.id in mine_ids:                         # you manage both teams: no need to ask, the match is set straight away
+    if both:                                         # you manage both teams: no need to ask, the match is set straight away
         with transaction.atomic():
             ch = FriendlyChallenge.objects.create(from_team=mine_t, to_team=other, kickoff=kickoff, message=text(b, "message", 300), created_by=user,
                                                   status="accepted", answered_by=user, answered=now)
@@ -190,6 +198,8 @@ def org_friendly_action(request, user, ip, slug, ch_id, action):
                                if info["status"] == "pending" else f"This challenge is {info['status']}.")
             ch.status = "accepted" if action == "accept" else "declined"
             if action == "accept":
+                if ch.kickoff < timezone.now():          # accepted after the proposed time: they play now
+                    ch.kickoff = timezone.now()
                 ch.match = make_match(ch)
         else:
             raise ApiError(404, "Unknown action.")
