@@ -142,8 +142,11 @@ def standings_view(c, linkable, only_group=None):
         for r in rows:
             r["team"] = team_view(r["team"], linkable)
             r["qualifies"], r["wildcard"], r["short"] = (mk.get(r["entryId"]) == k for k in ("q", "wc", "short"))
+            r["zone"] = engine.zone(c, r["position"], len(rows))
         thirds = engine.thirds_for(c, len(tables))
         groups.append({"name": g, "rows": rows, "through": c.qualifiers_per_group if ko else 0, "thirds": thirds,
+                       "up": c.promote_places if c.format == "league" else 0, "down": c.relegate_places if c.format == "league" else 0,
+                       "upper": c.upper.name if c.upper_id else "", "lower": c.lower.name if c.lower_id else "",
                        "min3": c.third_min_points if ko and (c.qualifiers_per_group >= 3 or thirds) else 0})
     return groups
 

@@ -3,6 +3,7 @@
 Every endpoint starts with `access(user, org_slug, perm)` (membership + permission, checked on the server), and every
 object is looked up *inside that organization*, so an ID from another organization is simply "not found".
 """
+import re
 from datetime import date, datetime, timedelta, timezone as dt_tz
 
 from django.db import transaction
@@ -95,7 +96,10 @@ def comp_json(c, extra=False):
         d["schedule"] = {**engine.SCHEDULE_DEFAULT, **(c.schedule or {})}
         d.update({"rules": c.rules, "pointsWin": c.points_win, "pointsDraw": c.points_draw, "pointsLoss": c.points_loss,
                   "tiebreakers": engine.clean_tiebreakers(c.tiebreakers or engine.DEFAULT_TIEBREAKERS), "legs": c.legs,
-                  "maxTeams": c.max_teams, "qualifiersPerGroup": c.qualifiers_per_group, "thirdMinPoints": c.third_min_points, "bestThirds": "auto" if c.best_thirds_auto else c.best_thirds,
+                  "maxTeams": c.max_teams, "qualifiersPerGroup": c.qualifiers_per_group, "thirdMinPoints": c.third_min_points,
+                  "promotePlaces": c.promote_places, "relegatePlaces": c.relegate_places,
+                  "upper": {"slug": c.upper.slug, "name": c.upper.name} if c.upper_id else None,
+                  "lower": {"slug": c.lower.slug, "name": c.lower.name} if c.lower_id else None, "bestThirds": "auto" if c.best_thirds_auto else c.best_thirds,
                   "teams": c.entries.count(), "matches": c.matches.count(),
                   "finished": c.matches.filter(status="finished").count()})
     return d
@@ -200,7 +204,8 @@ def summary(request, user, ip, slug):
 
 # ---------- competitions ----------
 COMP_STRUCTURE = {"name", "country", "region", "season", "kind", "format", "visibility", "status", "startDate", "endDate", "pointsWin",
-                  "pointsDraw", "pointsLoss", "tiebreakers", "legs", "maxTeams", "qualifiersPerGroup", "thirdMinPoints", "bestThirds", "schedule", "money"}
+                  "pointsDraw", "pointsLoss", "tiebreakers", "legs", "maxTeams", "qualifiersPerGroup", "thirdMinPoints", "bestThirds", "schedule", "money",
+                  "promotePlaces", "relegatePlaces", "upperSlug", "lowerSlug"}
 COMP_CONTENT = {"description", "rules"}
 
 
@@ -232,6 +237,101 @@ def clean_money(m):
             raise ApiError(400, "Give every prize a name, e.g. Champion.")
         clean.append({"label": str(p["label"]).strip()[:40], "amount": amt(p.get("amount"), str(p["label"]).strip()[:40] or "The prize")})
     return {"currency": cur, "entryFee": amt(fee, "The entry fee") if fee not in (None, "") else None, "prizes": clean}
+
+
+def link_divisions(c, b):
+    """The division above and below (leagues of the same organization), kept consistent both ways."""
+    for key, field, back in (("upperSlug", "upper", "lower"), ("lowerSlug", "lower", "upper")):
+        if key not in b:
+            continue
+        old = getattr(c, field)
+        new = None
+        if b[key]:
+            new = Competition.objects.filter(org=c.org, slug=str(b[key])[:80], format="league").exclude(id=c.id).exclude(kind="friendly").first()
+            if not new:
+                raise ApiError(400, "Choose a league of this organization for the division above or below.")
+        if old and old != new and getattr(old, back + "_id") == c.id:
+            setattr(old, back, None)
+            old.save(update_fields=[back])
+        setattr(c, field, new)
+        c.save(update_fields=[field])
+        if new:
+            setattr(new, back, c)
+            new.save(update_fields=[back])
+
+
+def division_chain(c):
+    """All linked divisions from the top down."""
+    top, seen = c, {c.id}
+    while top.upper_id and top.upper_id not in seen and len(seen) < 12:
+        top = top.upper
+        seen.add(top.id)
+    chain, cur, seen = [], top, set()
+    while cur and cur.id not in seen and len(chain) < 12:
+        chain.append(cur)
+        seen.add(cur.id)
+        cur = cur.lower
+    return chain
+
+
+def next_label(season):
+    m = re.fullmatch(r"(\d{4})(?:([/-])(\d{2,4}))?", (season or "").strip())
+    if not m:
+        return (season + " (next)").strip() if season else str(timezone.localdate().year + 1)
+    a = int(m.group(1)) + 1
+    if not m.group(3):
+        return str(a)
+    width = len(m.group(3))
+    return f"{a}{m.group(2)}{str(int(m.group(3)) + 1).zfill(width)[-width:]}"
+
+
+@endpoint("POST", login_required=True)
+def next_season(request, user, ip, slug, cslug):
+    """End the season for all linked divisions: the next season's leagues with teams promoted and relegated."""
+    org, m = access(user, slug, "competitions.manage")
+    c = competition_of(org, cslug, request)
+    if c.format != "league":
+        raise ApiError(400, "Only leagues move on to a next season with promotion and relegation.")
+    chain = division_chain(c)
+    tables = []
+    for d in chain:
+        games = list(d.matches.filter(stage="league"))
+        if not games or any(g.status not in ("finished", "cancelled") for g in games):
+            raise ApiError(400, f"{d.name} isn't finished yet: every match needs a result (or to be cancelled) first.")
+        rows = engine.standings(d, list(d.entries.select_related("team")), [g for g in games if g.status == "finished"])
+        tables.append([r["team"] for r in rows])
+    label = text(body(request), "season", 30) or next_label(c.season)
+    new_teams = []
+    for i, d in enumerate(chain):
+        teams = tables[i]
+        up = d.promote_places if i > 0 else 0                 # promotion only where there's a division above
+        down = d.relegate_places if i < len(chain) - 1 else 0
+        stay = teams[up:len(teams) - down if down else len(teams)]
+        from_above = tables[i - 1][len(tables[i - 1]) - chain[i - 1].relegate_places:] if i > 0 and chain[i - 1].relegate_places else []
+        from_below = tables[i + 1][:chain[i + 1].promote_places] if i < len(chain) - 1 else []
+        new_teams.append(list(from_above) + list(stay) + list(from_below))
+    created = []
+    with transaction.atomic():
+        for d, teams in zip(chain, new_teams):
+            n = Competition.objects.create(
+                org=org, created_by=user, name=d.name, season=label, kind=d.kind, format="league", visibility=d.visibility, status="draft",
+                description=d.description, country=d.country, region=d.region, rules=d.rules, points_win=d.points_win, points_draw=d.points_draw,
+                points_loss=d.points_loss, tiebreakers=d.tiebreakers, legs=d.legs, schedule=d.schedule, money=d.money,
+                promote_places=d.promote_places, relegate_places=d.relegate_places,
+                slug=engine.unique_slug(Competition, f"{d.name} {label}", "competition"))
+            for t in teams:
+                Entry.objects.create(competition=n, team=t)
+            created.append(n)
+        for i, n in enumerate(created):
+            n.upper = created[i - 1] if i > 0 else None
+            n.lower = created[i + 1] if i < len(created) - 1 else None
+            n.save(update_fields=["upper", "lower"])
+        for d in chain:
+            if d.status != "completed":
+                d.status = "completed"
+                d.save(update_fields=["status"])
+    log(org, user, f"started season {label}: " + ", ".join(n.name for n in created))
+    return {"ok": True, "season": label, "competitions": [{"slug": n.slug, "name": n.name, "teams": n.entries.count()} for n in created]}
 
 
 def apply_competition(c, b):
@@ -276,6 +376,10 @@ def apply_competition(c, b):
         c.qualifiers_per_group = num(b, "qualifiersPerGroup", 0, 32, allow_null=False)
     if "thirdMinPoints" in b:
         c.third_min_points = num(b, "thirdMinPoints", 0, 999, allow_null=False)
+    if "promotePlaces" in b:
+        c.promote_places = num(b, "promotePlaces", 0, 20, allow_null=False)
+    if "relegatePlaces" in b:
+        c.relegate_places = num(b, "relegatePlaces", 0, 20, allow_null=False)
     if "bestThirds" in b:
         c.best_thirds_auto = b["bestThirds"] == "auto"
         c.best_thirds = 0 if c.best_thirds_auto else num(b, "bestThirds", 0, 32, allow_null=False)
@@ -294,6 +398,7 @@ def competitions(request, user, ip, slug):
         raise ApiError(400, "An organization can have at most 200 competitions.")
     c.slug = engine.unique_slug(Competition, c.name, "competition")
     c.save()
+    link_divisions(c, b)
     log(org, user, f"created the competition {c.name}")
     return {"ok": True, "competition": comp_json(c, extra=True)}
 
@@ -322,6 +427,7 @@ def competition_detail(request, user, ip, slug, cslug):
     before = {"status": c.status, "visibility": c.visibility}
     apply_competition(c, b)
     c.save()
+    link_divisions(c, b)
     after = {"status": c.status, "visibility": c.visibility}
     changed = before != after
     log(org, user, f"updated the competition {c.name}", old=before if changed else None, new=after if changed else None)
@@ -829,12 +935,14 @@ def table_payload(c):
     groups = sorted({e.group for e in entries})
     tables = {g: engine.standings(c, [e for e in entries if e.group == g], matches) for g in groups}   # only matches within each group count
     mk = engine.marks(c, tables)
-    out = [{"name": g or None, "rows": [{**r, "team": team_brief(r["team"]), "qualifies": mk.get(r["entryId"]) == "q",
+    out = [{"name": g or None, "rows": [{**r, "team": team_brief(r["team"]), "qualifies": mk.get(r["entryId"]) == "q", "zone": engine.zone(c, r["position"], len(tables[g])),
                                          "wildcard": mk.get(r["entryId"]) == "wc", "short": mk.get(r["entryId"]) == "short"} for r in tables[g]]}
            for g in groups]
     return {"competition": comp_json(c), "groups": out, "qualifiersPerGroup": c.qualifiers_per_group if c.format == "groups_knockout" else 0,
             "thirdMinPoints": c.third_min_points if c.format == "groups_knockout" and (c.qualifiers_per_group >= 3 or engine.thirds_for(c, len(groups))) else 0,
             "bestThirds": engine.thirds_for(c, len(groups)),
+            "promotePlaces": c.promote_places if c.format == "league" else 0, "relegatePlaces": c.relegate_places if c.format == "league" else 0,
+            "upper": c.upper.name if c.upper_id else None, "lower": c.lower.name if c.lower_id else None,
             "pointsSystem": {"win": c.points_win, "draw": c.points_draw, "loss": c.points_loss},
             "tiebreakers": [engine.CRITERIA[k] for k in engine.clean_tiebreakers(c.tiebreakers or engine.DEFAULT_TIEBREAKERS)]}
 

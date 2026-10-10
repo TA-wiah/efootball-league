@@ -226,6 +226,17 @@ def thirds_for(comp, n_groups):
     return comp.best_thirds or 0
 
 
+def zone(comp, position, size):
+    """Promotion ("up") or relegation ("down") place in a league table, or ""."""
+    if comp.format != "league" or comp.kind == "friendly" or not size:
+        return ""
+    if comp.promote_places and position <= comp.promote_places:
+        return "up"
+    if comp.relegate_places and position > size - comp.relegate_places:
+        return "down"
+    return ""
+
+
 def best_next(comp, rows_by_group):
     """The best teams from the place after the qualifying ones (e.g. the best thirds), ranked across all groups by points,
     goal difference and goals scored. From 3rd place down they need the minimum points too."""

@@ -431,6 +431,37 @@ class CompetitionApiTest(Helpers, TestCase):
         self.assertTrue(any(m["stage"] == "league" for m in self.owner.get(url + "/matches").json()["matches"]), "the group stage stays")
         self.assertEqual(self.owner.call("post", url + "/knockout-plan", {}).status_code, 200, "a new plan can be set")
 
+    def test_divisions_promotion_relegation_and_next_season(self):
+        from competitions.models import Competition, Match
+        def league(name, teams, **extra):
+            cs = self.comp(name=name, season="2026/27", **extra)
+            ids = self.teams(teams)
+            self.owner.call("post", f"{self.base}/competitions/{cs}/entries", {"teamIds": ids})
+            self.owner.call("post", f"{self.base}/competitions/{cs}/generate", {})
+            return cs
+        top = league("Premier", ["P1", "P2", "P3", "P4"], relegatePlaces=1)
+        low = league("Division One", ["D1", "D2", "D3", "D4"], promotePlaces=1)
+        r = self.owner.call("patch", f"{self.base}/competitions/{top}", {"lowerSlug": low})
+        self.assertEqual(r.json()["competition"]["lower"]["slug"], low)
+        self.assertEqual(self.owner.get(f"{self.base}/competitions/{low}").json()["competition"]["upper"]["slug"], top, "linked both ways")
+        self.assertEqual(self.owner.call("post", f"{self.base}/competitions/{top}/next-season", {}).status_code, 400, "not finished yet")
+        goals = {"P1": 4, "P2": 3, "P3": 2, "P4": 0, "D1": 4, "D2": 3, "D3": 2, "D4": 0}
+        for m in Match.objects.filter(competition__slug__in=[top, low]).select_related("home__team", "away__team"):
+            self.owner.call("patch", f"{self.base}/matches/{m.id}", {"homeScore": goals[m.home.team.name], "awayScore": goals[m.away.team.name]})
+        table = self.owner.get(f"{self.base}/competitions/{top}/standings").json()
+        self.assertEqual({r["team"]["name"]: r["zone"] for r in table["groups"][0]["rows"]}["P4"], "down")
+        r = self.owner.call("post", f"{self.base}/competitions/{low}/next-season", {})
+        self.assertEqual(r.status_code, 200, r.json())
+        self.assertEqual(r.json()["season"], "2027/28")
+        new = [Competition.objects.get(slug=x["slug"]) for x in r.json()["competitions"]]
+        names = lambda c: sorted(e.team.name for e in c.entries.select_related("team"))
+        self.assertEqual((new[0].name, names(new[0])), ("Premier", ["D1", "P1", "P2", "P3"]))
+        self.assertEqual((new[1].name, names(new[1])), ("Division One", ["D2", "D3", "D4", "P4"]))
+        self.assertEqual((new[0].lower_id, new[1].upper_id), (new[1].id, new[0].id))
+        self.assertEqual(Competition.objects.get(slug=top).status, "completed")
+        page = __import__("django.test", fromlist=["Client"]).Client().get(f"/competition/{top}/table").content.decode()
+        self.assertIn("relegated to Division One", page)
+
     def test_knockout_dates_follow_the_group_stage(self):
         from datetime import date, timedelta
         cs, url, e = self.groups_comp()

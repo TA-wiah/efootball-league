@@ -1,7 +1,7 @@
 <div class="grp">{% if g.name %}<h3 class="grp-h">Group {{ g.name }}</h3>{% endif %}
 <div class="tbl"><table class="st">
   <thead><tr><th>#</th><th class="tl">Team</th><th><abbr title="Played">P</abbr></th><th><abbr title="Won">W</abbr></th><th><abbr title="Drawn">D</abbr></th><th><abbr title="Lost">L</abbr></th><th><abbr title="Goals for">GF</abbr></th><th><abbr title="Goals against">GA</abbr></th><th><abbr title="Goal difference">GD</abbr></th><th><abbr title="Points">Pts</abbr></th><th class="hide-s">Form</th></tr></thead>
-  <tbody>{% for r in g.rows %}<tr class="{% if r.qualifies %}q{% elif r.wildcard %}wc{% elif r.short %}short{% endif %}{% if r.highlight %} hl{% endif %}">
+  <tbody>{% for r in g.rows %}<tr class="{% if r.qualifies %}q{% elif r.wildcard %}wc{% elif r.short %}short{% endif %}{% if r.zone %} {{ r.zone }}{% endif %}{% if r.highlight %} hl{% endif %}">
     <td>{{ r.position }}</td>
     <td class="tl"><span class="tm">{% include "public/_crest.html" with t=r.team size=22 %}{% if r.team.link %}<a href="/team/{{ r.team.slug }}">{{ r.team.name }}</a>{% else %}<span>{{ r.team.name }}</span>{% endif %}{% if r.adjustment %} <small class="note">({% if r.adjustment > 0 %}+{% endif %}{{ r.adjustment }} pts)</small>{% endif %}</span></td>
     <td>{{ r.played }}</td><td>{{ r.won }}</td><td>{{ r.drawn }}</td><td>{{ r.lost }}</td><td>{{ r.goalsFor }}</td><td>{{ r.goalsAgainst }}</td>
@@ -9,4 +9,5 @@
     <td class="hide-s">{% for f in r.form %}<span class="fm {{ f }}">{{ f }}</span>{% endfor %}</td>
   </tr>{% empty %}<tr><td colspan="11" class="note">No teams yet.</td></tr>{% endfor %}</tbody>
 </table></div>
+{% if g.up or g.down %}<p class="note grp-n">{% if g.up %}<span class="zk up"></span> Top {{ g.up }}: {% if g.upper %}promoted to {{ g.upper }}{% else %}promotion places{% endif %}{% endif %}{% if g.up and g.down %} · {% endif %}{% if g.down %}<span class="zk down"></span> Bottom {{ g.down }}: {% if g.lower %}relegated to {{ g.lower }}{% else %}relegation places{% endif %}{% endif %}</p>{% endif %}
 {% if g.through %}<p class="note grp-n">Top {{ g.through }} go{% if g.through == 1 %}es{% endif %} through{% if g.thirds %} + the best {{ g.thirds }} from the next place (green){% endif %}{% if g.min3 %} · 3rd place needs {{ g.min3 }}+ points{% endif %}</p>{% endif %}</div>

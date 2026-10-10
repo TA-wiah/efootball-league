@@ -53,6 +53,11 @@ class Competition(Logo):
     best_thirds = models.PositiveSmallIntegerField(default=0)        # the best N teams from the next place also go through
     best_thirds_auto = models.BooleanField(default=False)            # …or as many as needed to make 4, 8, 16…
     third_min_points = models.PositiveSmallIntegerField(default=0)   # with 3+ going through: 3rd place needs this many points
+    # leagues with promotion and relegation: the zones, and the divisions above and below (for "Start next season")
+    promote_places = models.PositiveSmallIntegerField(default=0)
+    relegate_places = models.PositiveSmallIntegerField(default=0)
+    upper = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    lower = models.ForeignKey("self", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+")
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
