@@ -232,8 +232,9 @@ def my_matches(request, user, ip):
     """Matches of the teams this person reports for: from 30 days ago to 60 days ahead."""
     settle_overdue()
     team_ids = set()
+    playing = bool(request.GET.get("playing"))            # only the teams you're on, not every team you manage
     for mb in Membership.objects.select_related("org").filter(user=user):
-        if can(mb.role, "org.settings", mb.org) or can(mb.role, "teams.manage", mb.org):
+        if not playing and (can(mb.role, "org.settings", mb.org) or can(mb.role, "teams.manage", mb.org)):
             team_ids |= set(Team.objects.filter(org=mb.org).values_list("id", flat=True))
         team_ids |= set(mb.teams.values_list("id", flat=True))
     now = timezone.now()

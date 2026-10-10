@@ -948,6 +948,21 @@ def table_payload(c):
 
 
 @endpoint("GET", login_required=True)
+def org_rankings(request, user, ip, slug):
+    """Where this organization's teams stand in the platform rankings (players, coaches and team managers: their own teams)."""
+    from .rankings import positions, settings_
+    org, m = access(user, slug, "org.view")
+    s = settings_()
+    if not s["enabled"]:
+        return {"enabled": False}
+    team_only = m.role in ("player", "team_manager", "coach")
+    teams = list((m.teams.all() if team_only else org.teams.all()).select_related("org").filter(suspended=False).order_by("name")[:100])
+    pos = positions(teams)
+    rows = sorted([{**team_brief(t), **pos[t.id]} for t in teams], key=lambda r: (r["world"] is None, r["world"] or 0, -r["played"], r["name"].lower()))
+    return {"enabled": True, "minMatches": s["min_matches"], "inRankings": org.in_rankings, "teams": rows}
+
+
+@endpoint("GET", login_required=True)
 def comp_scorers(request, user, ip, slug, cslug):
     org, m = access(user, slug, "org.view")
     c = competition_of(org, cslug, request)

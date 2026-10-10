@@ -293,8 +293,9 @@ def team(request, slug):
     players = list(t.players.filter(active=True).order_by("number", "name"))
     order = ["GK", "DF", "MF", "FW", ""]
     squad = [(POS_L[p] if p else "Squad", [pl for pl in players if pl.position == p]) for p in order]
-    from .rankings import team_rank
-    ctx = {"t": team_view(t, {t.id}), "team": t, "rank": team_rank(t.id), "competitions": public_comps if not member else
+    from .rankings import positions, settings_ as rk_settings
+    pos = positions([t])[t.id] if rk_settings()["enabled"] and t.org.in_rankings else None
+    ctx = {"t": team_view(t, {t.id}), "team": t, "rank": pos if pos and pos["world"] else None, "competitions": public_comps if not member else
            list(Competition.objects.filter(id__in=comp_ids)), "upcoming": [match_view(x, linkable) for x in ms if x.status in ("scheduled", "live", "postponed")][:8],
            "recent": [match_view(x, linkable) for x in reversed(finished)][:8], "form": form, "squad": [s for s in squad if s[1]],
            "title": t.name, "description": t.description[:180] or f"{t.name}: fixtures, results and squad.", "logo": logo("team", t),
@@ -497,7 +498,7 @@ def rankings_page(request, tab=""):
             break
     area = ", ".join(x for x in (region, country) if x) or "Worldwide"
     ctx = {"tab": tab, "rows": rows[:200], "players": players, "countries": countries, "country": country, "regions": regions, "region": region,
-           "area": area, "min_matches": cfg["min_matches"], "podium": podium, "year": data.get("year"),
+           "area": area, "min_matches": cfg["min_matches"], "podium": podium, "year": data.get("year"), "friendly_weight": cfg["friendly_weight"],
            "poty_name": store_name("poty"),
            "awards": [{**a, "t": team_view(a["team"], public_team_ids([a["team"].id])), "org": a["team"].org}
                       for a in awards(where, cfg["min_matches"])["awards"]] if tab == "awards" else [],

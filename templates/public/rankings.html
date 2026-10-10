@@ -7,8 +7,11 @@
 .rk tr:nth-child(-n+3) td:first-child{color:var(--gold)}
 .rk .elo{font-family:var(--cond);font-weight:800;font-size:20px;color:var(--gold)}
 .rkhead{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.how summary{cursor:pointer;list-style:none}.how summary::-webkit-details-marker{display:none}.howg{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-top:12px}
+.howg>div{background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:12px;padding:12px 14px}.howg p{margin:6px 0 0;color:var(--tx2);font-size:14px}
 .rkf{display:flex;gap:8px;align-items:center}.rkf select{padding:9px 12px;border-radius:9px;border:1px solid var(--line2);background:rgba(0,0,0,.2);color:var(--tx);font:inherit}
 </style>
+
 {% if preview %}<div class="banner">Preview for super admins: rankings are switched off, so visitors can't see this page. Turn them on in Admin panel → Platform settings.</div>{% endif %}
 <div class="rkhead"><div><h1 class="page-h">{% if tab == "awards" %}Awards{% elif tab %}Player rankings{% else %}Team rankings{% endif %}</h1>
   <p class="note" style="margin:0 0 14px;font-size:15px"><b style="color:var(--tx)">{{ area }}</b> · across every league and tournament on the platform · {{ matches }} match{{ matches|pluralize:"es" }} counted</p></div>
@@ -17,6 +20,15 @@
     <noscript><button class="btn sm">Show</button></noscript></form>{% endif %}
 </div>
 <nav class="tabs" style="margin:0 0 16px" aria-label="Rankings"><a href="/rankings{% if country %}?country={{ country|urlencode }}{% if region %}&amp;region={{ region|urlencode }}{% endif %}{% endif %}" class="{% if not tab %}on{% endif %}">Teams</a><a href="/rankings/players{% if country %}?country={{ country|urlencode }}{% if region %}&amp;region={{ region|urlencode }}{% endif %}{% endif %}" class="{% if tab == 'players' %}on{% endif %}">Players</a><a href="/rankings/awards{% if country %}?country={{ country|urlencode }}{% if region %}&amp;region={{ region|urlencode }}{% endif %}{% endif %}" class="{% if tab == 'awards' %}on{% endif %}">Awards</a></nav>
+{% if tab != "awards" %}<details class="card how" id="how"{% if not rows and not players %} open{% endif %}><summary><b>How the rankings work</b> <span class="note">(tap to read)</span></summary>
+  <div class="howg">
+    <div><b>⭐ Every team has a rating</b><p>Everyone starts at <b>1500</b>. Win and your rating goes up; lose and it goes down. The points move from the loser to the winner, so beating a strong team earns much more than beating a weak one, and a bigger win counts a little more.</p></div>
+    <div><b>🔢 Example</b><p>Two teams both on 1500: the winner goes to about <b>1516</b>, the loser to 1484. If a 1400 team beats a 1600 team, the winner jumps about <b>24</b> points: a surprise is worth more.</p></div>
+    <div><b>🌍 World, country, region</b><p><b>World</b> is everyone on the platform. Choose a <b>country</b> (or a region inside it) at the top to see only teams from there: the number is the team's place in that list. The country and region come from each organization's profile.</p></div>
+    <div><b>✅ What counts</b><p>Results in <b>public</b> competitions. A draw on penalties counts as a draw. Friendlies count {% if friendly_weight == 0 %}<b>not at all</b>{% elif friendly_weight == 1 %}<b>fully</b>{% else %}<b>half</b>{% endif %}. Walkovers, forfeits and abandoned matches don't count.</p></div>
+    <div><b>❓ Not on the list?</b><p>A team appears after <b>{{ min_matches }}</b> match{{ min_matches|pluralize:"es" }} in public competitions. Private competitions don't count, and an organization can choose to keep its teams out (Organization settings).</p></div>
+    <div><b>👟 Players</b><p>Players are ranked by goals, then assists, from the goals and assists organizers enter on match pages.</p></div>
+  </div></details>{% endif %}
 {% if tab == "awards" %}
 <section class="card"><div class="gh">Awards {{ year }}{% if area != "Worldwide" %} · {{ area }}{% endif %}</div>
   <div class="awards">{% for a in awards %}<div class="award"><div class="an">🏆 {{ a.name }}</div>{% include "public/_crest.html" with t=a.t size=48 %}
@@ -34,7 +46,7 @@
     <td class="hide-s">{% for f in r.form %}<span class="fm {{ f }}">{{ f }}</span>{% endfor %}</td>
   </tr>{% empty %}<tr><td colspan="9" class="note">No team{% if area != "Worldwide" %} in {{ area }}{% endif %} has played {{ min_matches }} matches in a public competition yet.</td></tr>{% endfor %}</tbody>
 </table></div>
-<p class="note">Teams are rated like chess players: everyone starts at 1500, and each result moves points from the loser to the winner. Beating a stronger team earns more, and bigger wins count a little more. Matches decided on penalties count as draws. Teams appear once they've played {{ min_matches }} matches in public competitions.</p></section>
+</section>
 {% else %}
 {% if podium %}<section class="card poty"><div class="gh">{{ poty_name }} {{ year }}{% if area != "Worldwide" %} · {{ area }}{% endif %}</div>
   <div class="podium">{% for p in podium %}<div class="pod p{{ forloop.counter }}"><div class="medal">{% if forloop.first %}🥇{% elif forloop.counter == 2 %}🥈{% else %}🥉{% endif %}</div>
