@@ -46,6 +46,10 @@ def challengeable():
             .filter(Q(id__in=public) | Q(org__open_to_friendlies=True)))
 
 
+def to_name(ch):
+    return ch.to_team.name if ch.to_team_id else f"{ch.to_org.name} (their choice of team)"
+
+
 def state(ch):
     late = ch.kickoff + timezone.timedelta(hours=OPEN_HOURS) < timezone.now()
     return "expired" if ch.status == "pending" and late else ch.status
@@ -59,38 +63,43 @@ def challenge_json(ch, org, mine_ids, staff=False):
     """`staff`: the viewer manages fixtures in `org` (may delete a played friendly hosted there)."""
     st = state(ch)
     played = bool(ch.match_id and (ch.match.home_score is not None or ch.match.status == "finished"))
-    my_side = ((ch.from_team.org_id == org.id and ch.from_team_id in mine_ids) or (ch.to_team.org_id == org.id and ch.to_team_id in mine_ids))
-    if ch.from_team.org_id == ch.to_team.org_id:          # inside one organization: "received" by the other team's managers
+    their_side = ch.to_org_id == org.id and (ch.to_team_id in mine_ids if ch.to_team_id else bool(mine_ids))
+    my_side = (ch.from_team.org_id == org.id and ch.from_team_id in mine_ids) or their_side
+    internal = bool(ch.to_team_id) and ch.from_team.org_id == ch.to_org_id
+    if internal:                                          # inside one organization: "received" by the other team's managers
         sent = not (ch.to_team_id in mine_ids and ch.from_team_id not in mine_ids)
     else:
         sent = ch.from_team.org_id == org.id
-    return {"id": ch.id, "direction": "sent" if sent else "received", "from": side_json(ch.from_team), "to": side_json(ch.to_team),
+    to = side_json(ch.to_team) if ch.to_team_id else {"name": "Their choice of team", "choice": True, "logo": None,
+                                                       "org": {"name": ch.to_org.name, "slug": ch.to_org.slug}}
+    return {"id": ch.id, "direction": "sent" if sent else "received", "from": side_json(ch.from_team), "to": to,
             "kickoff": ch.kickoff.isoformat(), "message": ch.message or None, "status": st, "created": ms(ch.created),
             "by": getattr(ch.created_by, "username", None), "answeredBy": getattr(ch.answered_by, "username", None),
             "match": {"id": ch.match_id, "slug": ch.match.slug} if ch.match_id else None,
-            "internal": ch.from_team.org_id == ch.to_team.org_id, "host": ch.from_team.org.slug,
-            "canAnswer": st == "pending" and ch.to_team.org_id == org.id and ch.to_team_id in mine_ids,
+            "internal": internal, "host": ch.from_team.org.slug,
+            "canAnswer": st == "pending" and their_side,
             "canCancel": st == "pending" and ch.from_team.org_id == org.id and ch.from_team_id in mine_ids,
             "played": played,
             # either team's managers, until it's played; after that only the hosting organization's fixtures staff
             "canDelete": (staff and ch.from_team.org_id == org.id) or (my_side and not played)}
 
 
-def managers_with_email(team):
-    """Who to tell about a challenge: people in the team's organization who manage it."""
+def managers_with_email(team, org=None):
+    """Who to tell about a challenge: people who manage the team (or, for a challenge to a whole organization, the
+    organization's team managers in general)."""
     out = []
-    for mb in Membership.objects.select_related("user", "org").filter(org_id=team.org_id).exclude(user__email=""):
-        if can(mb.role, "teams.manage", mb.org) or (can(mb.role, "teams.manage_assigned", mb.org) and mb.teams.filter(id=team.id).exists()):
+    for mb in Membership.objects.select_related("user", "org").filter(org_id=team.org_id if team else org.id).exclude(user__email=""):
+        if can(mb.role, "teams.manage", mb.org) or (team and can(mb.role, "teams.manage_assigned", mb.org) and mb.teams.filter(id=team.id).exists()):
             out.append(mb.user.email)
     return out[:20]
 
 
-def notify(team, subject, lines, request, org_slug):
+def notify(team, subject, lines, request, org_slug, org=None):
     if not emailer.ready():
         return
     link = f"{site_url(request)}/app/org/{org_slug}/friendlies"
-    txt, html = emailer.body(subject, lines, link, "Open friendlies", "You get this because you manage this team.")
-    for to in managers_with_email(team):
+    txt, html = emailer.body(subject, lines, link, "Open friendlies", "You get this because you manage teams there.")
+    for to in managers_with_email(team, org):
         try:
             emailer.send(to, subject, txt, html)
         except emailer.MailError:
@@ -132,12 +141,17 @@ def make_match(ch):
 
 @endpoint("GET", login_required=True)
 def team_search(request, user, ip):
-    """Teams that can be challenged (see challengeable), found by team or organization name."""
+    """Teams that can be challenged (see challengeable), found by team or organization name, and the organizations
+    themselves (challenge them and they choose which team plays)."""
     q = (request.GET.get("q") or "").strip()[:60]
     if len(q) < 2:
-        return {"teams": []}
+        return {"teams": [], "orgs": []}
     teams = challengeable().filter(Q(name__icontains=q) | Q(org__name__icontains=q)).order_by("name")[:20]
-    return {"teams": [side_json(t) for t in teams]}
+    orgs = {}
+    for t in challengeable().filter(org__name__icontains=q).order_by("org__name")[:200]:
+        o = orgs.setdefault(t.org_id, {"name": t.org.name, "slug": t.org.slug, "teams": 0})
+        o["teams"] += 1
+    return {"teams": [side_json(t) for t in teams], "orgs": list(orgs.values())[:8]}
 
 
 @endpoint("GET", "POST", login_required=True)
@@ -146,14 +160,16 @@ def org_friendlies(request, user, ip, slug):
     mine = manageable(m)
     mine_ids = {t.id for t in mine}
     if request.method == "GET":
-        rows = (FriendlyChallenge.objects.select_related("from_team__org", "to_team__org", "created_by", "answered_by", "match")
-                .filter(Q(from_team__org=org) | Q(to_team__org=org)).order_by("-created")[:200])
+        rows = (FriendlyChallenge.objects.select_related("from_team__org", "to_team__org", "to_org", "created_by", "answered_by", "match")
+                .filter(Q(from_team__org=org) | Q(to_org=org)).order_by("-created")[:200])
         staff = can(m.role, "fixtures.manage", org)
         return {"challenges": [challenge_json(ch, org, mine_ids, staff) for ch in rows], "teams": [team_brief(t) for t in mine]}
     b = body(request)
     mine_t = next((t for t in mine if t.id == b.get("fromTeamId")), None)
     if not mine_t:
         raise ApiError(403, "Choose one of the teams you manage.")
+    if b.get("toOrg"):                               # a whole organization: they choose which team plays
+        return challenge_org(request, user, org, mine_t, mine_ids, b)
     tid = b.get("toTeamId") if isinstance(b.get("toTeamId"), int) else -1
     other = (org.teams.select_related("org").filter(id=tid, suspended=False).first()      # one of our own teams
              or challengeable().exclude(org=org).filter(id=tid).first())
@@ -177,13 +193,13 @@ def org_friendlies(request, user, ip, slug):
         raise ApiError(429, "Too many challenges. Try again later.")
     if both:                                         # you manage both teams: no need to ask, the match is set straight away
         with transaction.atomic():
-            ch = FriendlyChallenge.objects.create(from_team=mine_t, to_team=other, kickoff=kickoff, message=text(b, "message", 300), created_by=user,
-                                                  status="accepted", answered_by=user, answered=now)
+            ch = FriendlyChallenge.objects.create(from_team=mine_t, to_team=other, to_org=other.org, kickoff=kickoff, message=text(b, "message", 300),
+                                                  created_by=user, status="accepted", answered_by=user, answered=now)
             ch.match = make_match(ch)
             ch.save(update_fields=["match"])
         log(org, user, f"arranged a friendly: {mine_t.name} v {other.name}")
         return {"ok": True, "challenge": challenge_json(ch, org, mine_ids)}
-    ch = FriendlyChallenge.objects.create(from_team=mine_t, to_team=other, kickoff=kickoff, message=text(b, "message", 300), created_by=user)
+    ch = FriendlyChallenge.objects.create(from_team=mine_t, to_team=other, to_org=other.org, kickoff=kickoff, message=text(b, "message", 300), created_by=user)
     if other.org_id == org.id:
         log(org, user, f"challenged {other.name} to a friendly against {mine_t.name}")
         notify(other, f"{mine_t.name} challenged {other.name} to a friendly",
@@ -199,13 +215,44 @@ def org_friendlies(request, user, ip, slug):
     return {"ok": True, "challenge": challenge_json(ch, org, mine_ids)}
 
 
+def kickoff_of(b, now):
+    kickoff = now if b.get("kickoff") == "now" else moment(b, "kickoff")
+    if not kickoff or kickoff > now + timezone.timedelta(days=MAX_DAYS):
+        raise ApiError(400, "Choose when the friendly is played.")
+    if kickoff < now - timezone.timedelta(minutes=30):
+        raise ApiError(400, "That time has already passed. Pick now or a later time.")
+    return kickoff
+
+
+def challenge_org(request, user, org, mine_t, mine_ids, b):
+    from orgs.models import Organization
+    other = Organization.objects.filter(slug=str(b["toOrg"])[:80], status="active").exclude(id=org.id).first()
+    if not other or not challengeable().filter(org=other).exists():
+        raise ApiError(404, "Organization not found. Search for it by name.")
+    now = timezone.now()
+    kickoff = kickoff_of(b, now)
+    if FriendlyChallenge.objects.filter(status="pending", from_team=mine_t, to_org=other, to_team__isnull=True,
+                                        kickoff__gt=now - timezone.timedelta(hours=OPEN_HOURS)).exists():
+        raise ApiError(409, f"{mine_t.name} already has a challenge waiting for {other.name}.")
+    if hit(f"friendly:{org.id}", 30, 3600):
+        raise ApiError(429, "Too many challenges. Try again later.")
+    ch = FriendlyChallenge.objects.create(from_team=mine_t, to_org=other, kickoff=kickoff, message=text(b, "message", 300), created_by=user)
+    log(org, user, f"challenged {other.name} to a friendly against {mine_t.name} (they choose their team)")
+    log(other, None, f"{mine_t.name} ({org.name}) challenged {other.name} to a friendly: choose a team to play")
+    notify(None, f"{mine_t.name} challenged {other.name} to a friendly",
+           [f"{mine_t.name} from {org.name} wants to play one of your teams: you choose which.", f"Proposed kick-off: {kickoff:%a %d %b %Y, %H:%M} UTC."]
+           + ([f"Message: {ch.message}"] if ch.message else []) + ["Pick your team and accept, or decline, in your organization's Friendlies page."],
+           request, other.slug, org=other)
+    return {"ok": True, "challenge": challenge_json(ch, org, mine_ids)}
+
+
 @endpoint("POST", login_required=True)
 def org_friendly_action(request, user, ip, slug, ch_id, action):
     org, m = access(user, slug, "org.view")
     mine_ids = {t.id for t in manageable(m)}
     with transaction.atomic():
-        ch = (FriendlyChallenge.objects.select_for_update().select_related("from_team__org", "to_team__org", "match")
-              .filter(Q(from_team__org=org) | Q(to_team__org=org), id=ch_id).first())
+        ch = (FriendlyChallenge.objects.select_for_update().select_related("from_team__org", "to_team__org", "to_org", "match")
+              .filter(Q(from_team__org=org) | Q(to_org=org), id=ch_id).first())
         if not ch:
             raise ApiError(404, "Challenge not found.")
         info = challenge_json(ch, org, mine_ids, can(m.role, "fixtures.manage", org))
@@ -213,9 +260,9 @@ def org_friendly_action(request, user, ip, slug, ch_id, action):
             if not info["canDelete"]:
                 raise ApiError(403, "A friendly that has been played can only be deleted by the organization hosting it."
                                if info["played"] else "Only the managers of the two teams can delete this friendly.")
-            pair = f"{ch.from_team.name} v {ch.to_team.name}"
+            pair = f"{ch.from_team.name} v {to_name(ch)}"
             delete_friendly(ch)
-            for o in {ch.from_team.org, ch.to_team.org}:
+            for o in {ch.from_team.org, ch.to_org}:
                 log(o, user if o.id == org.id else None, f"deleted the friendly {pair}")
             return {"ok": True, "deleted": True}
         if action == "cancel":
@@ -227,6 +274,11 @@ def org_friendly_action(request, user, ip, slug, ch_id, action):
                 raise ApiError(403, "Only the challenged team's managers can answer a waiting challenge."
                                if info["status"] == "pending" else f"This challenge is {info['status']}.")
             ch.status = "accepted" if action == "accept" else "declined"
+            if action == "accept" and not ch.to_team_id:     # a challenge to the organization: they pick the team
+                b = body(request)
+                ch.to_team = next((t for t in manageable(m) if t.id == b.get("teamId")), None)
+                if not ch.to_team:
+                    raise ApiError(400, "Choose which of your teams plays.")
             if action == "accept":
                 if ch.kickoff < timezone.now():          # accepted after the proposed time: they play now
                     ch.kickoff = timezone.now()
@@ -235,10 +287,10 @@ def org_friendly_action(request, user, ip, slug, ch_id, action):
             raise ApiError(404, "Unknown action.")
         ch.answered_by, ch.answered = user, timezone.now()
         ch.save()
-    pair = f"{ch.from_team.name} v {ch.to_team.name}"
-    for o in {ch.from_team.org, ch.to_team.org}:
+    pair = f"{ch.from_team.name} v {to_name(ch)}"
+    for o in {ch.from_team.org, ch.to_org}:
         log(o, user if o.id == org.id else None, f"friendly {pair}: {ch.status}")
     if action in ("accept", "decline"):
-        notify(ch.from_team, f"{ch.to_team.name} {ch.status} your friendly", [f"{pair} on {ch.kickoff:%a %d %b %Y, %H:%M} UTC: {ch.status}."]
+        notify(ch.from_team, f"{to_name(ch)} {ch.status} your friendly", [f"{pair} on {ch.kickoff:%a %d %b %Y, %H:%M} UTC: {ch.status}."]
                + (["The match is in your Friendlies series. Good luck!"] if ch.status == "accepted" else []), request, ch.from_team.org.slug)
     return {"ok": True, "challenge": challenge_json(ch, org, mine_ids)}

@@ -216,7 +216,8 @@ def match(request, slug):
                          "other": match_view(other, linkable)}
         elif other:
             aggregate = {"other": match_view(other, linkable)}
-    table = standings_view(c, public_team_ids(c.entries.values_list("team_id", flat=True)), only_group=m.group) if m.stage == "league" and c.format != "knockout" else []
+    table = (standings_view(c, public_team_ids(c.entries.values_list("team_id", flat=True)), only_group=m.group)
+             if m.stage == "league" and c.format != "knockout" and c.kind != "friendly" else [])
     ids = {m.home_id, m.away_id}
     for g in table:
         for r in g["rows"]:
@@ -373,7 +374,7 @@ def organization(request, slug):
     if s["show_results"]:
         ctx["recent"] = [match_view(x, linkable) for x in ms.filter(status="finished").order_by("-kickoff")[:8]]
     if s["show_standings"]:
-        ctx["tables"] = [{"c": c, "groups": standings_view(c, linkable)} for c in comps if c.format != "knockout"][:4]
+        ctx["tables"] = [{"c": c, "groups": standings_view(c, linkable)} for c in comps if c.format != "knockout" and c.kind != "friendly"][:4]
     if s["show_brackets"]:
         brackets = []
         for c in comps:
