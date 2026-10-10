@@ -50,7 +50,7 @@ class RankingsTest(Helpers, TestCase):
         self.assertLess(data["teams"][-1]["rating"], 1500)
         self.assertAlmostEqual(sum(r["rating"] for r in data["teams"]), 1500 * 6, places=6, msg="points move, never appear")
         team_page = Client().get(f"/team/{data['teams'][0]['team'].slug}").content.decode()
-        self.assertIn("Ranked #1 on the platform", team_page)
+        self.assertIn("Ranked #1 in the world", team_page)
         # an organization can keep its teams out; private competitions never count
         self.b.call("patch", f"/api/orgs/{self.sb}", {"inRankings": False})
         html = Client().get("/rankings").content.decode()
@@ -100,6 +100,24 @@ class RankingsTest(Helpers, TestCase):
         a = {x["key"]: x for x in rankings.awards(lambda o: True, 1)["awards"]}
         self.assertEqual((a["poty"]["who"], a["assists"]["who"], a["boot"]["team"].name), ("Kofi Mensah", "Ama Owusu", m.home.team.name))
         self.assertNotEqual(a["fairplay"]["team"].name, m.home.team.name, "the team with the red card doesn't win fair play")
+
+    def test_world_country_and_region_places_on_the_dashboard(self):
+        b1, c1 = self.league(self.a, self.sa, ["Lions", "Tigers"])          # Kasoa League: Central, Ghana
+        self.b.call("patch", f"/api/orgs/{self.sb}", {"country": "Nigeria", "region": "Lagos"})
+        b2, c2 = self.league(self.b, self.sb, ["Eagles", "Hawks"])
+        self.play(self.a, b1, c1, "Lions")
+        self.play(self.b, b2, c2, "Eagles")
+        self.assertEqual(self.a.get(f"/api/orgs/{self.sa}/rankings").json(), {"enabled": False})
+        self.root.call("patch", "/api/admin/settings", {"section": "rankings", "changes": {"enabled": True, "min_matches": 1}})
+        rows = {r["name"]: r for r in self.a.get(f"/api/orgs/{self.sa}/rankings").json()["teams"]}
+        self.assertEqual(set(rows), {"Lions", "Tigers"}, "only this organization's teams")
+        lions = rows["Lions"]
+        self.assertIn(lions["world"], (1, 2))
+        self.assertEqual((lions["inCountry"], lions["country"], lions["inRegion"], lions["region"]), (1, "Ghana", 1, "Central"))
+        self.assertEqual(rows["Tigers"]["inCountry"], 2)
+        page = Client().get(f"/team/{Match.objects.filter(competition__slug=c1).first().competition.entries.get(team__name='Lions').team.slug}").content.decode()
+        self.assertIn("in the world · #1 in Ghana · #1 in Central", page)
+        self.assertIn("How the rankings work", Client().get("/rankings").content.decode())
 
     def test_margin_and_penalties(self):
         self.assertEqual((rankings.margin_factor(1), rankings.margin_factor(2), rankings.margin_factor(3)), (1.0, 1.5, 1.75))

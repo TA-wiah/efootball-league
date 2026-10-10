@@ -100,6 +100,7 @@ urlpatterns = [
     path("api/orgs/<slug:slug>/pending-results", rep.org_pending_results),
     path("api/friendly-teams", fr.team_search),
     path("api/orgs/<slug:slug>/friendlies", fr.org_friendlies),
+    path("api/orgs/<slug:slug>/rankings", c.org_rankings),
     path("api/orgs/<slug:slug>/friendly-board", fr.friendly_board),
     path("api/orgs/<slug:slug>/friendly-board/<int:ch_id>/<str:action>", fr.friendly_board_action),
     path("api/orgs/<slug:slug>/friendlies/<int:ch_id>/<str:action>", fr.org_friendly_action),

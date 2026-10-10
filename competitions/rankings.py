@@ -146,6 +146,30 @@ def awards(where, min_matches):
     return {"year": data["year"], "awards": out}
 
 
+def positions(teams):
+    """For each team: its place worldwide, in its organization's country and region (among ranked teams), its rating
+    and matches played; or how many more matches it needs to be ranked. {team id: {...}}"""
+    s = settings_()
+    data = compute()
+    ranked = [r for r in data["teams"] if r["played"] >= s["min_matches"]]
+    rows = {r["team"].id: r for r in data["teams"]}
+    out = {}
+    for t in teams:
+        org, r = t.org, rows.get(t.id)
+        info = {"rating": round(r["rating"]) if r else None, "played": r["played"] if r else 0, "country": org.country or "", "region": org.region or "",
+                "world": None, "inCountry": None, "inRegion": None, "needed": max(0, s["min_matches"] - (r["played"] if r else 0)),
+                "form": r["form"] if r else []}
+        if r and r["played"] >= s["min_matches"]:
+            same = lambda o, k: getattr(o, k).lower() == getattr(org, k).lower()
+            info["world"] = next(i for i, x in enumerate(ranked, 1) if x["team"].id == t.id)
+            if org.country:
+                info["inCountry"] = [x["team"].id for x in ranked if same(x["team"].org, "country")].index(t.id) + 1
+                if org.region:
+                    info["inRegion"] = [x["team"].id for x in ranked if same(x["team"].org, "country") and same(x["team"].org, "region")].index(t.id) + 1
+        out[t.id] = info
+    return out
+
+
 def team_rank(team_id):
     """(position, rating) for a team that qualifies, else None."""
     s = settings_()
