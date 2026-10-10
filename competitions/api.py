@@ -959,7 +959,20 @@ def org_rankings(request, user, ip, slug):
     teams = list((m.teams.all() if team_only else org.teams.all()).select_related("org").filter(suspended=False).order_by("name")[:100])
     pos = positions(teams)
     rows = sorted([{**team_brief(t), **pos[t.id]} for t in teams], key=lambda r: (r["world"] is None, r["world"] or 0, -r["played"], r["name"].lower()))
-    return {"enabled": True, "minMatches": s["min_matches"], "inRankings": org.in_rankings, "teams": rows}
+    # players: their place among every player on the platform, and among players from the same country
+    from .rankings import compute
+    allp = compute()["players"]
+    ids = {t.id for t in teams}
+    country = (org.country or "").lower()
+    in_country = [p for p in allp if p["team"] and country and (p["team"].org.country or "").lower() == country]
+    players = []
+    for i, p in enumerate(allp, 1):
+        if p["team"] and p["team"].id in ids:
+            players.append({"name": p["name"], "team": team_brief(p["team"]), "goals": p["goals"], "assists": p["assists"], "world": i,
+                            "inCountry": next((j for j, x in enumerate(in_country, 1) if x is p), None), "country": org.country or ""})
+        if len(players) >= 15:
+            break
+    return {"enabled": True, "minMatches": s["min_matches"], "inRankings": org.in_rankings, "teams": rows, "players": players}
 
 
 @endpoint("GET", login_required=True)
