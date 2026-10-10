@@ -138,11 +138,12 @@ class FriendliesTest(Helpers, TestCase):
         self.assertTrue(ch["canDelete"])
         self.assertEqual(self.chief.call("post", f"{theirs}/{ch['id']}/delete").status_code, 200)
         self.assertEqual(self.boss.get(url).json()["challenges"], [])
-        # accepted, not played: the other team's managers can delete it, match and all
+        # accepted: the other team can't delete it any more; the hosting organization can, match and all
         ch = self.boss.call("post", url, {"fromTeamId": self.lions, "toTeamId": self.tigers, "kickoff": self.soon()}).json()["challenge"]
         mid = self.chief.call("post", f"{theirs}/{ch['id']}/accept").json()["challenge"]["match"]["id"]
         series = Match.objects.get(id=mid).competition
-        self.assertEqual(self.chief.call("post", f"{theirs}/{ch['id']}/delete").status_code, 200)
+        self.assertEqual(self.chief.call("post", f"{theirs}/{ch['id']}/delete").status_code, 403)
+        self.assertEqual(self.boss.call("post", f"{url}/{ch['id']}/delete").status_code, 200)
         self.assertFalse(Match.objects.filter(id=mid).exists())
         self.assertEqual(series.entries.count(), 0, "teams with no friendly left are taken out of the series")
         # played: only the hosting organization's staff can delete it
@@ -237,10 +238,11 @@ class FriendliesTest(Helpers, TestCase):
         r = self.boss.call("post", f"{url}/{ch['id']}/edit", {"kickoff": later.isoformat(), "message": "Moved to Friday"}).json()["challenge"]
         self.assertEqual((r["message"], r["kickoff"][:16]), ("Moved to Friday", later.isoformat()[:16]))
         self.assertEqual(self.boss.call("post", f"{url}/{ch['id']}/edit", {"kickoff": (timezone.now() - timedelta(days=1)).isoformat()}).status_code, 400)
-        # accepted: either side moves the time, and the match moves with it
+        # accepted: only the hosting organization moves the time, and the match moves with it
         mid = self.chief.call("post", f"{theirs}/{ch['id']}/accept").json()["challenge"]["match"]["id"]
         sooner = (timezone.now() + timedelta(days=2)).replace(microsecond=0)
-        self.assertEqual(self.chief.call("post", f"{theirs}/{ch['id']}/edit", {"kickoff": sooner.isoformat()}).status_code, 200)
+        self.assertEqual(self.chief.call("post", f"{theirs}/{ch['id']}/edit", {"kickoff": sooner.isoformat()}).status_code, 403)
+        self.assertEqual(self.boss.call("post", f"{url}/{ch['id']}/edit", {"kickoff": sooner.isoformat()}).status_code, 200)
         self.assertEqual(Match.objects.get(id=mid).kickoff, sooner)
         # played: no more editing (the result is changed with Enter result)
         self.boss.call("patch", f"/api/orgs/{self.a}/matches/{mid}", {"homeScore": 1, "awayScore": 1, "status": "finished"})
@@ -258,6 +260,26 @@ class FriendliesTest(Helpers, TestCase):
         self.assertEqual([(c["from"]["name"], c["to"]["name"]) for c in mine["challenges"]], [("Lions", "Leopards")])
         self.assertEqual(mine["teams"], [], "a player can't send challenges for the club")
         self.assertEqual(len(self.boss.get(url).json()["challenges"]), 2, "the owner sees them all")
+
+    def test_teams_submit_results_with_screenshots_organization_confirms(self):
+        url, theirs = f"/api/orgs/{self.a}/friendlies", f"/api/orgs/{self.b}/friendlies"
+        ch = self.boss.call("post", url, {"fromTeamId": self.lions, "toTeamId": self.tigers, "kickoff": self.soon()}).json()["challenge"]
+        mid = self.chief.call("post", f"{theirs}/{ch['id']}/accept").json()["challenge"]["match"]["id"]
+        tm = self.signup("tm_tigers")                     # a team manager of Tigers sends their result
+        link = self.chief.call("post", f"/api/orgs/{self.b}/teams/{self.tigers}/invitations", {"role": "team_manager"}).json()["link"]
+        tm.call("post", "/api/invitations/" + link.rsplit("/", 1)[1] + "/accept")
+        png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+        self.assertEqual(tm.call("post", f"/api/report/{mid}/proof", {"kind": "result", "image": png}).status_code, 400, "the score is needed")
+        self.assertEqual(tm.call("patch", f"/api/orgs/{self.a}/matches/{mid}", {"homeScore": 0, "awayScore": 5}).status_code, 404, "no direct editing")
+        r = tm.call("post", f"/api/report/{mid}/proof", {"kind": "result", "image": png, "homeScore": 1, "awayScore": 2})
+        self.assertEqual(r.status_code, 200, r.json())
+        claim = r.json()["claims"][0]
+        self.assertEqual(tm.call("post", f"/api/report/{mid}/approve", {"proofId": claim["id"]}).status_code, 403, "teams can't confirm")
+        waiting = self.boss.get(f"/api/orgs/{self.a}/pending-results").json()["matches"]
+        self.assertEqual([(x["id"], x["claims"][0]["awayScore"]) for x in waiting], [(mid, 2)])
+        r = self.boss.call("post", f"/api/report/{mid}/approve", {"proofId": claim["id"]}).json()
+        self.assertEqual((r["match"]["homeScore"], r["match"]["awayScore"], r["match"]["status"], r["claims"]), (1, 2, "finished", []))
+        self.assertEqual(self.boss.get(f"/api/orgs/{self.a}/pending-results").json()["matches"], [])
 
     def test_friendly_series_is_always_a_plain_series_and_counts_less(self):
         r = self.boss.call("post", f"/api/orgs/{self.a}/competitions", {"name": "Summer Friendlies", "kind": "friendly", "format": "groups_knockout", "visibility": "public"})

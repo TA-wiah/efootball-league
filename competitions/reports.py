@@ -94,7 +94,10 @@ def report_json(m, sides, staff):
             "checkinOpen": bool(opens and opens <= now and (dl is None or now <= dl) and m.status in ("scheduled", "live")),
             "checkinOpens": opens.isoformat() if opens else None, "deadline": dl.isoformat() if dl else None,
             "whatsapp": whatsapp_link(m) if is_pro(m) else None, "kinds": MatchProof.KINDS,
-            "proofs": [proof_json(p) for p in m.proofs.select_related("uploaded_by").defer("image")]}
+            "proofs": [proof_json(p) for p in m.proofs.select_related("uploaded_by").defer("image")],
+            # results the teams sent: waiting for the organization while the match has no score
+            "claims": [proof_json(p) for p in m.proofs.select_related("uploaded_by").defer("image").filter(kind="result", home_score__isnull=False)]
+                      if m.home_score is None else []}
 
 
 def side_of(b, sides):
@@ -148,7 +151,9 @@ def report_proof(request, user, ip, match_id):
     except ValueError as e:
         raise ApiError(400, str(e)) from None
     hs = as_ = None
-    if kind == "result" and b.get("homeScore") not in (None, "") and b.get("awayScore") not in (None, ""):
+    if kind == "result" and (b.get("homeScore") in (None, "") or b.get("awayScore") in (None, "")):
+        raise ApiError(400, "Enter the score shown on the result screenshot.")
+    if kind == "result":
         try:
             hs, as_ = int(b["homeScore"]), int(b["awayScore"])
         except (TypeError, ValueError):
@@ -163,6 +168,43 @@ def report_proof(request, user, ip, match_id):
     log(m.competition.org, user, f"{team} sent a screenshot ({MatchProof.KINDS[kind].lower()}) for match #{m.id}"
                                  + (f", saying {hs}-{as_}" if hs is not None else ""))
     return {"ok": True, "proof": proof_json(p), **report_json(m, sides, staff)}
+
+
+@endpoint("POST", login_required=True)
+def report_approve(request, user, ip, match_id):
+    """The organization confirms a result a team sent (with its screenshot)."""
+    m, sides, staff = match_for(user, match_id)
+    if not staff:
+        raise ApiError(403, "Only the organization running the competition confirms results.")
+    p = m.proofs.select_related("uploaded_by").filter(id=body(request).get("proofId"), kind="result", home_score__isnull=False).first()
+    if not p:
+        raise ApiError(404, "That result isn't here any more.")
+    team = (m.home if p.side == "home" else m.away).team.name
+    m.home_score, m.away_score, m.decided = p.home_score, p.away_score, ""
+    if m.status != "finished":
+        m.status, m.finished_at = "finished", timezone.now()
+    m.notes = (m.notes + "\n" if m.notes else "") + f"Result confirmed from {team}'s screenshot."
+    m.save()
+    bracket.resolve(m.competition)
+    log(m.competition.org, user, f"confirmed {m.home.team.name} {p.home_score}–{p.away_score} {m.away.team.name} from {team}'s screenshot")
+    return report_json(m, sides, staff)
+
+
+def pending_results(org):
+    """Matches of this organization's competitions where a team sent a result and no score is in yet."""
+    qs = (Match.objects.select_related("competition", "home__team", "away__team")
+          .filter(competition__org=org, home_score__isnull=True, proofs__kind="result", proofs__home_score__isnull=False).distinct().order_by("kickoff")[:30])
+    return [{"id": m.id, "home": m.home.team.name if m.home else "?", "away": m.away.team.name if m.away else "?", "competition": m.competition.name,
+             "kickoff": m.kickoff.isoformat() if m.kickoff else None,
+             "claims": [{"side": p.side, "homeScore": p.home_score, "awayScore": p.away_score} for p in m.proofs.filter(kind="result", home_score__isnull=False)]}
+            for m in qs]
+
+
+@endpoint("GET", login_required=True)
+def org_pending_results(request, user, ip, slug):
+    from orgs.api import access
+    org, mb = access(user, slug, "results.enter")
+    return {"matches": pending_results(org)}
 
 
 @endpoint("DELETE", login_required=True)
