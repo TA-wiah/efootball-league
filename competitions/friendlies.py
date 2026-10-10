@@ -81,7 +81,10 @@ def challenge_json(ch, org, mine_ids, staff=False):
             "canCancel": st == "pending" and ch.from_team.org_id == org.id and ch.from_team_id in mine_ids,
             "played": played,
             # either team's managers, until it's played; after that only the hosting organization's fixtures staff
-            "canDelete": (staff and ch.from_team.org_id == org.id) or (my_side and not played)}
+            "canDelete": (staff and ch.from_team.org_id == org.id) or (my_side and not played),
+            # the time and message: the sender while it's waiting; either side (or the host's staff) until it's played
+            "canEdit": (st == "pending" and ch.from_team.org_id == org.id and ch.from_team_id in mine_ids)
+                       or (st == "accepted" and not played and ((staff and ch.from_team.org_id == org.id) or my_side))}
 
 
 def managers_with_email(team, org=None):
@@ -265,6 +268,37 @@ def org_friendly_action(request, user, ip, slug, ch_id, action):
             for o in {ch.from_team.org, ch.to_org}:
                 log(o, user if o.id == org.id else None, f"deleted the friendly {pair}")
             return {"ok": True, "deleted": True}
+        if action == "edit":
+            if not info["canEdit"]:
+                raise ApiError(403, "This friendly can't be changed any more." if info["played"] or info["status"] not in ("pending", "accepted")
+                               else "Only the managers of the two teams can change this friendly.")
+            b, now = body(request), timezone.now()
+            changes = []
+            if "kickoff" in b:
+                both = ch.from_team_id in mine_ids and ch.to_team_id in mine_ids
+                kickoff = now if b.get("kickoff") == "now" else moment(b, "kickoff")
+                earliest = now - (timezone.timedelta(days=PAST_DAYS) if both else timezone.timedelta(minutes=30))
+                if not kickoff or kickoff > now + timezone.timedelta(days=MAX_DAYS):
+                    raise ApiError(400, "Choose when the friendly is played.")
+                if kickoff < earliest:
+                    raise ApiError(400, "That time has already passed. Pick now or a later time.")
+                if kickoff != ch.kickoff:
+                    ch.kickoff = kickoff
+                    changes.append(f"kick-off {kickoff:%a %d %b %Y, %H:%M} UTC")
+                    if ch.match_id:
+                        ch.match.kickoff = kickoff
+                        ch.match.save(update_fields=["kickoff"])
+            if "message" in b:
+                ch.message = text(b, "message", 300)
+            ch.save()
+            pair = f"{ch.from_team.name} v {to_name(ch)}"
+            for o in {ch.from_team.org, ch.to_org}:
+                log(o, user if o.id == org.id else None, f"changed the friendly {pair}" + (f": {', '.join(changes)}" if changes else ""))
+            if changes:                                  # tell the other side
+                other = ch.to_team if ch.from_team.org_id == org.id and ch.from_team_id in mine_ids else ch.from_team
+                notify(other, f"Friendly {pair}: new time", [f"{pair} is now on {ch.kickoff:%a %d %b %Y, %H:%M} UTC.", f"Changed by {user.username}."],
+                       request, (other.org.slug if other else ch.to_org.slug), org=None if other else ch.to_org)
+            return {"ok": True, "challenge": challenge_json(ch, org, mine_ids, can(m.role, "fixtures.manage", org))}
         if action == "cancel":
             if not info["canCancel"]:
                 raise ApiError(403, "Only the challenging team's managers can cancel a waiting challenge.")
