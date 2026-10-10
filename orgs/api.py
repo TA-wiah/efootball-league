@@ -80,7 +80,7 @@ def org_json(org):
     return {"id": org.id, "name": org.name, "slug": org.slug, "description": org.description, "country": org.country,
             "region": org.region, "created": ms(org.created), "status": org.status, "kind": org.kind, "kindLabel": KIND_L.get(org.kind, "Organization"),
             "timezone": org.timezone, "brandColor": org.brand_color or None, "logo": org_logo(org), "website": org.site(),
-            "inRankings": org.in_rankings, "openToFriendlies": org.open_to_friendlies}
+            "inRankings": org.in_rankings, "openToFriendlies": org.open_to_friendlies, "autoSmsReminders": org.auto_sms_reminders}
 
 
 def org_card(m):
@@ -228,6 +228,8 @@ def join(user, inv):
 def me(request, user, ip):
     from competitions.reports import settle_overdue
     settle_overdue()                                  # quick when there's nothing due; runs at most every 5 minutes
+    from competitions.reminders import send_due
+    send_due()                                        # match reminders (at most every 10 minutes)
     orgs = []
     if user:
         for m in Membership.objects.select_related("org").filter(user=user).order_by("org__name"):
@@ -448,6 +450,8 @@ def org_detail(request, user, ip, slug):
             org.in_rankings = b["inRankings"] is True
         if "openToFriendlies" in b:
             org.open_to_friendlies = b["openToFriendlies"] is True
+        if "autoSmsReminders" in b:
+            org.auto_sms_reminders = b["autoSmsReminders"] is True
         org.save()
         log(org, user, "updated the organization settings")
         return {"ok": True, "org": org_json(org)}

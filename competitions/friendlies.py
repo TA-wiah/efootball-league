@@ -101,19 +101,19 @@ def challenge_json(ch, org, mine_ids, staff=False):
 
 
 def managers_with_email(team, org=None):
-    """Who to tell about a challenge: people who manage the team (or, for a challenge to a whole organization, the
-    organization's team managers in general)."""
+    """Who to tell about a challenge: everyone on the team (players, coaches, team managers) and the people who manage
+    all teams; for a challenge to a whole organization, its team managers in general."""
     out = []
     for mb in Membership.objects.select_related("user", "org").filter(org_id=team.org_id if team else org.id).exclude(user__email=""):
-        if can(mb.role, "teams.manage", mb.org) or (team and can(mb.role, "teams.manage_assigned", mb.org) and mb.teams.filter(id=team.id).exists()):
+        if can(mb.role, "teams.manage", mb.org) or (team and mb.teams.filter(id=team.id).exists()):
             out.append(mb.user.email)
-    return out[:20]
+    return list(dict.fromkeys(out))[:30]
 
 
-def notify(team, subject, lines, request, org_slug, org=None):
+def notify(team, subject, lines, request, org_slug, org=None, page="friendlies"):
     if not emailer.ready():
         return
-    link = f"{site_url(request)}/app/org/{org_slug}/friendlies"
+    link = f"{site_url(request)}/app/org/{org_slug}/{page}"
     txt, html = emailer.body(subject, lines, link, "Open friendlies", "You get this because you manage teams there.")
     for to in managers_with_email(team, org):
         try:
@@ -287,11 +287,17 @@ def friendly_board(request, user, ip, slug):
         live = (FriendlyChallenge.objects.select_related("from_team__org", "created_by")
                 .filter(from_team__org=org, to_org=org, to_team__isnull=True, status="pending", kickoff__gt=now - timezone.timedelta(hours=OPEN_HOURS))
                 .order_by("kickoff"))
+        direct = (FriendlyChallenge.objects.select_related("from_team__org", "to_team__org", "to_org", "match", "created_by")
+                  .filter(from_team__org=org, to_team__org=org, status="pending", kickoff__gt=now - timezone.timedelta(hours=OPEN_HOURS))
+                  .filter(Q(from_team_id__in=ids) | Q(to_team_id__in=ids)).order_by("kickoff"))
         agreed = (FriendlyChallenge.objects.select_related("from_team__org", "to_team__org", "to_org", "match")
                   .filter(status="accepted", match__isnull=False).filter(Q(from_team_id__in=ids) | Q(to_team_id__in=ids))
                   .exclude(match__status__in=["finished", "cancelled"]).order_by("kickoff")[:30])
         assigned = set(m.teams.values_list("id", flat=True))
-        return {"teams": [team_brief(t) for t in teams], "open": [board_json(ch, ids, user, assigned) for ch in live],
+        org_teams = [{**team_brief(t), "players": t.players.filter(active=True).count(), "mine": t.id in ids} for t in org.teams.filter(suspended=False).order_by("name")]
+        return {"teams": [team_brief(t) for t in teams], "open": [board_json(ch, ids, user, assigned) for ch in live], "orgTeams": org_teams,
+                "incoming": [{**board_json(ch, ids), "to": side_json(ch.to_team)} for ch in direct if ch.to_team_id in ids and ch.from_team_id not in ids],
+                "outgoing": [{**board_json(ch, ids), "to": side_json(ch.to_team)} for ch in direct if ch.from_team_id in ids],
                 "upcoming": [{"id": ch.match_id, "home": ch.from_team.name, "away": ch.to_team.name, "kickoff": ch.match.kickoff.isoformat() if ch.match.kickoff else None}
                              for ch in agreed]}
     b = body(request)
@@ -299,6 +305,22 @@ def friendly_board(request, user, ip, slug):
     if not team:
         raise ApiError(403, "Choose one of your teams.")
     kickoff = kickoff_of(b, now)
+    if b.get("toTeamId"):                            # a particular team of the organization: they approve or decline
+        other = org.teams.filter(id=b["toTeamId"] if isinstance(b["toTeamId"], int) else -1, suspended=False).first()
+        if not other or other.id == team.id:
+            raise ApiError(400, "Choose another team of the organization to play.")
+        if FriendlyChallenge.objects.filter(status="pending", kickoff__gt=now - timezone.timedelta(hours=OPEN_HOURS)).filter(
+                Q(from_team=team, to_team=other) | Q(from_team=other, to_team=team)).exists():
+            raise ApiError(409, "There's already a challenge waiting between these two teams.")
+        if hit(f"friendly:{org.id}", 30, 3600):
+            raise ApiError(429, "Too many challenges. Try again later.")
+        ch = FriendlyChallenge.objects.create(from_team=team, to_team=other, to_org=org, kickoff=kickoff, message=text(b, "message", 300), created_by=user)
+        log(org, user, f"{team.name} challenged {other.name} to a friendly")
+        notify(other, f"{team.name} challenged {other.name} to a friendly",
+               [f"{team.name} wants to play {other.name}.", f"Proposed kick-off: {kickoff:%a %d %b %Y, %H:%M} UTC."]
+               + ([f"Message: {ch.message}"] if ch.message else []) + ["Approve or decline it on the Find a friendly page."],
+               request, org.slug, page="findfriendly")
+        return {"ok": True, "challenge": challenge_json(ch, org, ids)}
     if FriendlyChallenge.objects.filter(from_team=team, to_org=org, to_team__isnull=True, status="pending",
                                         kickoff__gt=now - timezone.timedelta(hours=OPEN_HOURS)).count() >= 3:
         raise ApiError(409, f"{team.name} already has 3 open requests. Cancel one first.")
@@ -314,10 +336,33 @@ def friendly_board_action(request, user, ip, slug, ch_id, action):
     org, m = access(user, slug, "org.view")
     ids = {t.id for t in my_teams(m)}
     with transaction.atomic():
-        ch = (FriendlyChallenge.objects.select_for_update().select_related("from_team__org", "to_org")
-              .filter(id=ch_id, from_team__org=org, to_org=org, to_team__isnull=True).first())
+        ch = (FriendlyChallenge.objects.select_for_update().select_related("from_team__org", "to_org", "to_team")
+              .filter(id=ch_id, from_team__org=org, to_org=org).first())
         if not ch or state(ch) != "pending":
             raise ApiError(404, "That request isn't open any more.")
+        if ch.to_team_id:                            # a challenge to a particular team: they approve or decline
+            if action == "cancel":
+                if ch.from_team_id not in ids:
+                    raise ApiError(403, "Only the challenging team can cancel it.")
+                ch.status = "cancelled"
+            elif action in ("approve", "decline"):
+                if ch.to_team_id not in ids:
+                    raise ApiError(403, "Only the challenged team can answer it.")
+                ch.status = "accepted" if action == "approve" else "declined"
+                ch.answered_by, ch.answered = user, timezone.now()
+                if action == "approve":
+                    if ch.kickoff < timezone.now():
+                        ch.kickoff = timezone.now()
+                    ch.match = make_match(ch)
+            else:
+                raise ApiError(404, "Unknown action.")
+            ch.save()
+            pair = f"{ch.from_team.name} v {ch.to_team.name}"
+            log(org, user, f"friendly {pair}: {ch.status}")
+            if action in ("approve", "decline"):
+                notify(ch.from_team, f"{ch.to_team.name} {ch.status} your friendly", [f"{pair} on {ch.kickoff:%a %d %b %Y, %H:%M} UTC: {ch.status}."]
+                       + (["The match is set. Good luck!"] if ch.status == "accepted" else []), request, org.slug, page="findfriendly")
+            return {"ok": True, "status": ch.status, "match": {"id": ch.match_id, "slug": ch.match.slug} if ch.match_id else None}
         if action == "cancel":
             if ch.from_team_id not in ids:
                 raise ApiError(403, "Only that team can cancel its request.")

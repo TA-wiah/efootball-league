@@ -324,6 +324,67 @@ class FriendliesTest(Helpers, TestCase):
         self.assertEqual(rows, {"Lions": (4, 1), "Leopards": (1, 2)})
         self.assertIn("<th>Pts</th>", Client().get(f"/competition/{c.slug}/table").content.decode())
 
+    def join_team(self, name, team, role, email=None):
+        who = self.signup(name, email)
+        link = self.boss.call("post", f"/api/orgs/{self.a}/teams/{team}/invitations", {"role": role}).json()["link"]
+        who.call("post", "/api/invitations/" + link.rsplit("/", 1)[1] + "/accept")
+        return who
+
+    def test_find_a_friendly_challenge_a_team_they_approve_everyone_emailed(self):
+        from unittest import mock
+        from league import emailer
+        board = f"/api/orgs/{self.a}/friendly-board"
+        leopards = self.team(self.boss, self.a, "Leopards")
+        p1 = self.join_team("lion_p", self.lions, "player")
+        p2 = self.join_team("leo_p", leopards, "player", "leo_p@example.com")
+        teams = {t["name"]: t for t in p1.get(board).json()["orgTeams"]}
+        self.assertEqual((teams["Lions"]["mine"], teams["Leopards"]["mine"]), (True, False))
+        mails = []
+        with mock.patch.object(emailer, "ready", lambda cfg=None: True), mock.patch.object(emailer, "send", lambda to, subj, t, h: mails.append((to, subj))):
+            r = p1.call("post", board, {"teamId": self.lions, "toTeamId": leopards, "kickoff": self.soon()})
+            self.assertEqual(r.status_code, 200, r.json())
+            self.assertIn(("leo_p@example.com", "Lions challenged Leopards to a friendly"), mails, "the other team's player is told")
+            cid = r.json()["challenge"]["id"]
+            self.assertEqual([x["to"]["name"] for x in p1.get(board).json()["outgoing"]], ["Leopards"])
+            self.assertEqual(p1.call("post", f"{board}/{cid}/approve").status_code, 403, "only the challenged team answers")
+            self.assertEqual([x["team"]["name"] for x in p2.get(board).json()["incoming"]], ["Lions"])
+            r = p2.call("post", f"{board}/{cid}/approve")
+        self.assertEqual(r.json()["status"], "accepted")
+        m = Match.objects.get(id=r.json()["match"]["id"])
+        self.assertEqual((m.home.team.name, m.away.team.name), ("Lions", "Leopards"))
+        # decline and cancel
+        cid = p1.call("post", board, {"teamId": self.lions, "toTeamId": leopards, "kickoff": self.soon(3)}).json()["challenge"]["id"]
+        self.assertEqual(p2.call("post", f"{board}/{cid}/decline").json()["status"], "declined")
+        cid = p1.call("post", board, {"teamId": self.lions, "toTeamId": leopards, "kickoff": self.soon(4)}).json()["challenge"]["id"]
+        self.assertEqual(p1.call("post", f"{board}/{cid}/cancel").json()["status"], "cancelled")
+        self.assertEqual(p1.call("post", board, {"teamId": self.lions, "toTeamId": self.lions, "kickoff": self.soon()}).status_code, 400)
+
+    def test_match_reminders_email_and_sms(self):
+        from unittest import mock
+        from league import emailer
+        from orgs.models import Organization
+        from sms.models import SmsAccount, SmsMessage
+        from . import reminders
+        leopards = self.team(self.boss, self.a, "Leopards")
+        p1 = self.join_team("lion_r", self.lions, "player", "lion_r@example.com")
+        from league.models import Admin
+        Admin.objects.filter(username="lion_r").update(phone="0241234567")
+        mid = self.boss.call("post", f"/api/orgs/{self.a}/friendlies", {"fromTeamId": self.lions, "toTeamId": leopards,
+                                                                       "kickoff": (timezone.now() + timedelta(hours=2)).isoformat()}).json()["challenge"]["match"]["id"]
+        Organization.objects.filter(slug=self.a).update(auto_sms_reminders=True)
+        SmsAccount.objects.update_or_create(org=Organization.objects.get(slug=self.a), defaults={"credits": 10})
+        store.update("sms", {"enabled": True, "provider": "console", "sender": "League"})
+        mails = []
+        with mock.patch.object(emailer, "ready", lambda cfg=None: True), mock.patch.object(emailer, "send", lambda to, subj, t, h: mails.append((to, subj))):
+            self.assertEqual(reminders.send_due(force=True), 1)
+            self.assertEqual(reminders.send_due(force=True), 0, "once per match")
+        self.assertIn(("lion_r@example.com", "Match reminder: Lions v Leopards"), mails)
+        self.assertIsNotNone(Match.objects.get(id=mid).reminded)
+        sms = SmsMessage.objects.filter(org__slug=self.a, kind="reminder")
+        self.assertEqual(sms.count(), 1)
+        self.assertIn("Lions v Leopards", sms[0].body)
+        self.assertLess(SmsAccount.objects.get(org__slug=self.a).credits, 10, "the organization's credits pay for it")
+
     def test_friendly_series_is_always_a_plain_series_and_counts_less(self):
         r = self.boss.call("post", f"/api/orgs/{self.a}/competitions", {"name": "Summer Friendlies", "kind": "friendly", "format": "groups_knockout", "visibility": "public"})
         c = Competition.objects.get(slug=r.json()["competition"]["slug"])
