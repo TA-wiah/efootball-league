@@ -83,6 +83,24 @@ class RankingsTest(Helpers, TestCase):
         for name in homes:
             self.assertIn(name, podium)
 
+    def test_awards_with_names_set_by_the_super_admin(self):
+        b1, c1 = self.league(self.a, self.sa, ["Lions", "Tigers"])
+        b2, c2 = self.league(self.b, self.sb, ["Eagles", "Hawks"])
+        self.play(self.a, b1, c1, "Lions")
+        self.play(self.b, b2, c2, "Eagles")
+        m = Match.objects.filter(competition__slug=c1).select_related("home__team").first()
+        self.a.call("post", f"{b1}/matches/{m.id}/events", {"kind": "goal", "side": "home", "minute": 5, "playerName": "Kofi Mensah", "assistName": "Ama Owusu"})
+        self.a.call("post", f"{b1}/matches/{m.id}/events", {"kind": "red", "side": "home", "minute": 50, "playerName": "Yaw"})
+        self.root.call("patch", "/api/admin/settings", {"section": "rankings", "changes": {"enabled": True, "min_matches": 1, "award_poty": "Golden Ball"}})
+        self.assertEqual(self.root.call("patch", "/api/admin/settings", {"section": "rankings", "changes": {"award_boot": "x"}}).status_code, 400)
+        html = Client().get("/rankings/awards").content.decode()
+        for text in ("Golden Ball", "Golden Boot", "Best Playmaker", "Best Defence", "Team of the Year", "Fair Play Award", "Kofi Mensah", "Ama Owusu", "Kasoa League"):
+            self.assertIn(text, html)
+        self.assertIn("Golden Ball", Client().get("/rankings/players").content.decode(), "the podium uses the same name")
+        a = {x["key"]: x for x in rankings.awards(lambda o: True, 1)["awards"]}
+        self.assertEqual((a["poty"]["who"], a["assists"]["who"], a["boot"]["team"].name), ("Kofi Mensah", "Ama Owusu", m.home.team.name))
+        self.assertNotEqual(a["fairplay"]["team"].name, m.home.team.name, "the team with the red card doesn't win fair play")
+
     def test_margin_and_penalties(self):
         self.assertEqual((rankings.margin_factor(1), rankings.margin_factor(2), rankings.margin_factor(3)), (1.0, 1.5, 1.75))
 

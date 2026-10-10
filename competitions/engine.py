@@ -285,6 +285,24 @@ def standings(comp, entries, matches):
              "adjustment": r["entry"].points_adjustment, "form": r["form"][-5:]} for i, r in enumerate(ranked)]
 
 
+def friendly_table(matches):
+    """A friendly series' table: no points, just how each team has done (most wins, then goal difference, goals)."""
+    rows = {}
+    for m in matches:
+        if m.status != "finished" or m.home_score is None or m.away_score is None or not m.home or not m.away:
+            continue
+        for e, gf, ga in ((m.home, m.home_score, m.away_score), (m.away, m.away_score, m.home_score)):
+            r = rows.setdefault(e.team_id, {"team": e.team, "played": 0, "won": 0, "drawn": 0, "lost": 0, "goalsFor": 0, "goalsAgainst": 0})
+            r["played"] += 1
+            r["goalsFor"] += gf
+            r["goalsAgainst"] += ga
+            r["won" if gf > ga else "lost" if gf < ga else "drawn"] += 1
+    out = sorted(rows.values(), key=lambda r: (-r["won"], -(r["goalsFor"] - r["goalsAgainst"]), -r["goalsFor"], r["team"].name.lower()))
+    for i, r in enumerate(out, 1):
+        r.update(position=i, goalDifference=r["goalsFor"] - r["goalsAgainst"], winPct=round(100 * r["won"] / r["played"]) if r["played"] else 0)
+    return out
+
+
 def head_to_head(matches):
     """For a friendly series: each pair of teams that met, with wins, draws and goals. Penalties count as a draw."""
     pairs = {}
