@@ -175,7 +175,7 @@ def competition(request, slug, tab=""):
         ctx["groups"] = standings_view(c, linkable)
     if tab in ("", "table") and c.kind == "friendly":
         ctx["h2h"] = [{**p, "a": team_view(p["a"], linkable), "b": team_view(p["b"], linkable)} for p in engine.head_to_head(matches)]
-        ctx["ftable"] = [{**r, "t": team_view(r["team"], linkable)} for r in engine.friendly_table(matches)]
+        ctx["ftable"] = [{**r, "t": team_view(r["team"], linkable)} for r in engine.friendly_table(matches, c)]
     if tab == "":
         ctx["upcoming"] = [match_view(m, linkable) for m in upcoming[:6]]
         ctx["recent"] = [match_view(m, linkable) for m in results[:6]]
