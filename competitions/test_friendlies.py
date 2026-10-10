@@ -154,6 +154,33 @@ class FriendliesTest(Helpers, TestCase):
         self.assertFalse(Match.objects.filter(id=mid).exists())
         self.assertEqual(self.boss.call("post", f"{url}/{ch['id']}/delete").status_code, 404)
 
+    def test_how_a_match_ended(self):
+        url = f"/api/orgs/{self.a}/friendlies"
+        leopards = self.team(self.boss, self.a, "Leopards")
+        mid = self.boss.call("post", url, {"fromTeamId": self.lions, "toTeamId": leopards, "kickoff": "now"}).json()["challenge"]["match"]["id"]
+        murl = f"/api/orgs/{self.a}/matches/{mid}"
+        self.assertEqual(self.boss.call("patch", murl, {"decided": "forfeit"}).status_code, 400, "needs the score that stands")
+        self.assertEqual(self.boss.call("patch", murl, {"decided": "nonsense", "homeScore": 1, "awayScore": 0}).status_code, 400)
+        # no screenshots needed: the organizer just records it
+        r = self.boss.call("patch", murl, {"homeScore": 3, "awayScore": 0, "status": "finished", "decided": "disconnect", "notes": "Leopards lost connection at 70'"})
+        self.assertEqual(r.status_code, 200, r.json())
+        self.assertEqual((r.json()["match"]["decided"], r.json()["match"]["homeScore"]), ("disconnect", 3))
+        page = Client().get(f"/match/{Match.objects.get(id=mid).slug}").content.decode()
+        self.assertIn("Connection dropped", page)
+        self.assertIn("Leopards lost connection", page)
+        # a forfeit doesn't move the rankings; a connection-dropped win does
+        store.update("rankings", {"enabled": True, "friendly_weight": "1"})
+        lions = lambda: next((round(t["rating"]) for t in rankings.compute()["teams"] if t["team"].name == "Lions"), None)
+        self.assertGreater(lions(), 1500)
+        self.boss.call("patch", murl, {"decided": "forfeit"})
+        self.assertIsNone(lions())
+        # abandoned: no result
+        r = self.boss.call("patch", murl, {"decided": "abandoned"}).json()["match"]
+        self.assertEqual((r["status"], r["homeScore"], r["decided"]), ("cancelled", None, "abandoned"))
+        # changing the score later without saying how it ended keeps it a normal result
+        r = self.boss.call("patch", murl, {"homeScore": 2, "awayScore": 2, "status": "finished", "decided": ""}).json()["match"]
+        self.assertEqual((r["decided"], r["homeScore"]), (None, 2))
+
     def test_friendly_series_is_always_a_plain_series_and_counts_less(self):
         r = self.boss.call("post", f"/api/orgs/{self.a}/competitions", {"name": "Summer Friendlies", "kind": "friendly", "format": "groups_knockout", "visibility": "public"})
         c = Competition.objects.get(slug=r.json()["competition"]["slug"])

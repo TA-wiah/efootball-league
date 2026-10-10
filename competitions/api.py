@@ -615,7 +615,10 @@ def draw(request, user, ip, slug, cslug):
 
 # ---------- matches ----------
 MATCH_STRUCTURE = {"stage", "group", "round", "roundName", "leg", "homeId", "awayId"}
-MATCH_RESULT = {"kickoff", "venue", "referee", "status", "homeScore", "awayScore", "homePens", "awayPens", "notes"}
+MATCH_RESULT = {"kickoff", "venue", "referee", "status", "homeScore", "awayScore", "homePens", "awayPens", "notes", "decided"}
+# How a match ended when it wasn't simply played out (set by whoever enters results; the score says who won)
+ENDED = {"": "Played normally", "disconnect": "Connection dropped", "forfeit": "Forfeit", "walkover": "Walkover (didn't show up)",
+         "abandoned": "Abandoned (no result)"}
 
 
 def apply_match(mt, b):
@@ -731,7 +734,16 @@ def match_detail(request, user, ip, slug, match_id):
     apply_match(mt, b)
     if mt.status == "finished" and before["status"] != "finished":
         mt.finished_at = timezone.now()
-    if set(b) & {"homeScore", "awayScore", "status"} and mt.decided:
+    if "decided" in b:
+        if b["decided"] not in ENDED:
+            raise ApiError(400, "Choose how the match ended.")
+        mt.decided = b["decided"]
+        if mt.decided == "abandoned":                     # no result: it doesn't count anywhere
+            mt.home_score = mt.away_score = mt.home_pens = mt.away_pens = None
+            mt.status = "cancelled"
+        elif mt.decided and (mt.home_score is None or mt.away_score is None):
+            raise ApiError(400, "Enter the score too (e.g. 3–0 for the team that wins it).")
+    elif set(b) & {"homeScore", "awayScore", "status"} and mt.decided:
         mt.decided = ""                                   # entered by hand: no longer a walkover / no show
     mt.save()
     bracket.resolve(mt.competition)                       # a finished group or tie fills in the next knockout matches
