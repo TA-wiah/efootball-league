@@ -128,6 +128,32 @@ class FriendliesTest(Helpers, TestCase):
         r = self.boss.call("post", url, {"fromTeamId": self.lions, "toTeamId": leopards, "kickoff": past})
         self.assertEqual(r.json()["challenge"]["status"], "accepted")
 
+    def test_delete(self):
+        url, theirs = f"/api/orgs/{self.a}/friendlies", f"/api/orgs/{self.b}/friendlies"
+        # a waiting challenge: either side can delete it
+        ch = self.boss.call("post", url, {"fromTeamId": self.lions, "toTeamId": self.tigers, "kickoff": self.soon()}).json()["challenge"]
+        self.assertTrue(ch["canDelete"])
+        self.assertEqual(self.chief.call("post", f"{theirs}/{ch['id']}/delete").status_code, 200)
+        self.assertEqual(self.boss.get(url).json()["challenges"], [])
+        # accepted, not played: the other team's managers can delete it, match and all
+        ch = self.boss.call("post", url, {"fromTeamId": self.lions, "toTeamId": self.tigers, "kickoff": self.soon()}).json()["challenge"]
+        mid = self.chief.call("post", f"{theirs}/{ch['id']}/accept").json()["challenge"]["match"]["id"]
+        series = Match.objects.get(id=mid).competition
+        self.assertEqual(self.chief.call("post", f"{theirs}/{ch['id']}/delete").status_code, 200)
+        self.assertFalse(Match.objects.filter(id=mid).exists())
+        self.assertEqual(series.entries.count(), 0, "teams with no friendly left are taken out of the series")
+        # played: only the hosting organization's staff can delete it
+        ch = self.boss.call("post", url, {"fromTeamId": self.lions, "toTeamId": self.tigers, "kickoff": self.soon()}).json()["challenge"]
+        mid = self.chief.call("post", f"{theirs}/{ch['id']}/accept").json()["challenge"]["match"]["id"]
+        self.boss.call("patch", f"/api/orgs/{self.a}/matches/{mid}", {"homeScore": 3, "awayScore": 0})
+        r = self.chief.call("post", f"{theirs}/{ch['id']}/delete")
+        self.assertEqual(r.status_code, 403)
+        self.assertIn("organization hosting it", r.json()["error"])
+        self.assertFalse(next(c for c in self.chief.get(theirs).json()["challenges"] if c["id"] == ch["id"])["canDelete"])
+        self.assertEqual(self.boss.call("post", f"{url}/{ch['id']}/delete").status_code, 200)
+        self.assertFalse(Match.objects.filter(id=mid).exists())
+        self.assertEqual(self.boss.call("post", f"{url}/{ch['id']}/delete").status_code, 404)
+
     def test_friendly_series_is_always_a_plain_series_and_counts_less(self):
         r = self.boss.call("post", f"/api/orgs/{self.a}/competitions", {"name": "Summer Friendlies", "kind": "friendly", "format": "groups_knockout", "visibility": "public"})
         c = Competition.objects.get(slug=r.json()["competition"]["slug"])
