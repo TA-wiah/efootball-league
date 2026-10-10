@@ -11,6 +11,7 @@ Teams are rated with Elo (the system used for chess and in the World Football El
 Organizations can keep their teams out, and a super admin can switch rankings off entirely.
 """
 from django.db.models import Max, Q
+from django.utils import timezone
 
 from superadmin import store
 
@@ -45,7 +46,7 @@ def compute():
     """{teams: [...], players: [...]} in ranking order (cached until a match changes)."""
     qs = _played()
     weight = settings_()["friendly_weight"]                 # friendlies move ratings less (or not at all)
-    key = (qs.count(), qs.aggregate(m=Max("updated"))["m"], MatchEvent.objects.filter(match__in=qs).count(), weight)
+    key = (qs.count(), qs.aggregate(m=Max("updated"))["m"], MatchEvent.objects.filter(match__in=qs).count(), weight, timezone.localdate().year)
     if _cache["key"] == key:
         return _cache["data"]
     teams = {}
@@ -76,10 +77,16 @@ def compute():
             r["form"] = (r["form"] + [res])[-5:]
             r["last"] = m.kickoff or m.finished_at
     ranked = sorted(teams.values(), key=lambda r: (-r["rating"], -r["played"], r["team"].name.lower()))
-    events = MatchEvent.objects.select_related("player", "assist", "match__home__team__org", "match__away__team__org").filter(match__in=qs)
+    events = list(MatchEvent.objects.select_related("player", "assist", "match__competition", "match__home__team__org", "match__away__team__org")
+                  .filter(match__in=qs))
     from .engine import scorers
     players = [p for p in scorers(events) if p["goals"] or p["assists"]]
-    data = {"teams": ranked, "players": players, "matches": len(games)}
+    # Player of the Year: this calendar year's competitive matches (friendlies don't count)
+    year = timezone.localdate().year
+    when = lambda m: m.kickoff or m.finished_at
+    this_year = [e for e in events if e.match.competition.kind != "friendly" and when(e.match) and timezone.localtime(when(e.match)).year == year]
+    data = {"teams": ranked, "players": players, "matches": len(games), "year": year,
+            "year_players": [p for p in scorers(this_year) if p["goals"] or p["assists"]]}
     _cache.update(key=key, data=data)
     return data
 

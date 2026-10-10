@@ -479,9 +479,16 @@ def rankings_page(request, tab=""):
             players.append({**p, "position": len(players) + 1, "t": team_view(team, set()) if team else None, "org": team.org if team else None})
         if len(players) >= 100:
             break
+    podium = []                                       # Player of the Year: name, team and organization (same names stay apart)
+    for p in data.get("year_players", []):
+        team = p["team"]
+        if team and where(team.org):
+            podium.append({**p, "t": team_view(team, public_team_ids([team.id])), "org": team.org})
+        if len(podium) == 3:
+            break
     area = ", ".join(x for x in (region, country) if x) or "Worldwide"
     ctx = {"tab": tab, "rows": rows[:200], "players": players, "countries": countries, "country": country, "regions": regions, "region": region,
-           "area": area, "min_matches": cfg["min_matches"],
+           "area": area, "min_matches": cfg["min_matches"], "podium": podium, "year": data.get("year"),
            "matches": data["matches"], "preview": not cfg["enabled"], "nav": "rankings",
            "title": ("Player rankings" if tab else "Team rankings") + ("" if area == "Worldwide" else f": {area}"), "description": "The best teams and players across every league and tournament on the platform."}
     return page(request, "rankings.html", ctx, index=cfg["enabled"], private=not cfg["enabled"], banner=False)
