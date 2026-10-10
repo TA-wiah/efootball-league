@@ -234,7 +234,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--gold);outline:0}
 .toast{background:#0b2a1a;border-color:var(--pitch)}
 .grp-h{margin:18px 0 6px;background:var(--gold);color:var(--ink);text-align:center;font-family:var(--cond);font-size:21px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;padding:6px 10px;border-radius:8px}
 .st tr.q .tm>span{color:var(--gold)}
-.st tr.short td{opacity:.45}.st tr.wc td:first-child{box-shadow:inset 3px 0 #5fe39a}.st tr.wc .tm>span{color:#5fe39a}</style></head><body>
+.st tr.short td{opacity:.45}.combo{position:relative}.sugg{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:30;background:var(--card);border:1px solid var(--line2);border-radius:12px;box-shadow:0 16px 40px -12px rgba(0,0,0,.7);max-height:280px;overflow-y:auto;padding:4px}
+.sugg button{display:flex;width:100%;align-items:center;gap:10px;padding:8px 10px;border:0;border-radius:8px;background:none;color:var(--tx);font:inherit;text-align:left;cursor:pointer}.sugg button:hover,.sugg button.on{background:var(--card2)}.sugg small{display:block;color:var(--soft);font-size:12px}.sugg .note{margin:8px 10px}.st tr.wc td:first-child{box-shadow:inset 3px 0 #5fe39a}.st tr.wc .tm>span{color:#5fe39a}</style></head><body>
 <header class="top"><a class="brand" href="/"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 13v3M8 20h8M9.5 20l.5-4h4l.5 4"/></svg><span>Competition Manager</span></a><nav id="topnav" aria-label="Account"></nav></header>
 <main class="w" id="main"><div class="card note">Loading…</div></main>
 <div class="toast" id="toast" role="status" hidden></div>
@@ -1401,6 +1402,8 @@ function reportView(id){document.title="Match report · Competition Manager";UM(
         shrinkShot(files[i++],function(img){api("/api/report/"+id+"/proof","POST",Object.assign({image:img},base)).then(function(r){if(r.ok)sent++;else toast(r.data.error,true);next()})})};next()}})};
   load()}
 // ---------- friendlies against other organizations' teams ----------
+function frDay(n){var d=new Date(Date.now()+n*864e5);return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2)}
+function frTimes(){var o="";for(var m=6*60;m<24*60;m+=15){var t=("0"+Math.floor(m/60)).slice(-2)+":"+("0"+m%60).slice(-2);o+='<option value="'+t+'"'+(t==="20:00"?" selected":"")+'>'+t+'</option>'}return o}
 function friendliesSec(){Promise.all([api(api0("/friendlies")),api(api0("/teams"))]).then(function(res){var r=res[0];if(!r.ok)return fail(r);var d=r.data,mine=d.teams,cs=d.challenges,pick=null,where="ours",ours=(res[1].ok?res[1].data.teams:[]).filter(function(t){return!t.suspended});
   var row=function(c){var other=c.direction==="sent"?c.to:c.from,me=c.direction==="sent"?c.from:c.to;
     return'<tr><td><b>'+esc(me.name)+'</b> v <b>'+esc(other.name)+'</b><small>'+esc(c.internal?"Our organization":other.org.name)+(c.message?' · “'+esc(c.message)+'”':'')+'</small></td><td style="white-space:nowrap">'+esc(when(c.kickoff))+'</td><td><span class="pill '+({accepted:"finished",pending:"scheduled"}[c.status]||"cancelled")+'">'+esc({pending:"Waiting",accepted:"Accepted",declined:"Declined",cancelled:"Cancelled",expired:"Expired"}[c.status])+'</span></td><td style="text-align:right;white-space:nowrap">'+
@@ -1410,10 +1413,10 @@ function friendliesSec(){Promise.all([api(api0("/friendlies")),api(api0("/teams"
   var list=function(title,xs,empty){return'<div class="card"><div class="gh">'+title+' · '+xs.length+'</div>'+(xs.length?'<div class="tbl"><table class="dt"><tbody>'+xs.map(row).join("")+'</tbody></table></div>':'<p class="note">'+empty+'</p>')+'</div>'};
   var recv=cs.filter(function(c){return c.direction==="received"}),sent=cs.filter(function(c){return c.direction==="sent"});
   $("sec").innerHTML='<p class="note" style="margin-top:0">Arrange a friendly with another of your teams, or challenge a team from another organization. The match goes into your “Friendlies” series: results and head-to-head, no league table.</p>'+
-    (mine.length?'<form class="card" id="frf" novalidate><div class="gh">Challenge a team</div><div class="row"><label for="frm">Your team<select id="frm">'+mine.map(function(t){return'<option value="'+t.id+'">'+esc(t.name)+'</option>'}).join("")+'</select></label><label for="frk">Kick-off<input id="frk" type="datetime-local"></label></div>'+
+    (mine.length?'<form class="card" id="frf" novalidate><div class="gh">Challenge a team</div><div class="row"><label for="frm">Your team<select id="frm">'+mine.map(function(t){return'<option value="'+t.id+'">'+esc(t.name)+'</option>'}).join("")+'</select></label><label for="frd">Date<input id="frd" type="date" value="'+frDay(1)+'" min="'+frDay(0)+'" max="'+frDay(180)+'"></label><label for="frt">Time<select id="frt">'+frTimes()+'</select></label></div>'+
       '<div class="chips" style="margin-top:12px"><button type="button" class="chip on" data-where="ours">Our organization</button><button type="button" class="chip" data-where="other">Another organization</button></div>'+
       '<label for="fro" id="frol">Opponent<select id="fro"></select></label>'+
-      '<div id="frsearch" hidden><label for="frq">Their team<input id="frq" type="search" placeholder="Type at least 2 letters of the team or organization name" autocomplete="off"></label><div id="frres" class="kits" style="max-height:220px"></div><div id="frpick" class="note"></div></div>'+
+      '<div id="frsearch" hidden><label for="frq">Their team</label><div class="combo"><input id="frq" type="search" placeholder="Type the team or organization name" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="frres" aria-autocomplete="list"><div id="frres" class="sugg" role="listbox" hidden></div></div><div id="frpick" class="note"></div></div>'+
       '<label for="frmsg">Message (optional)<input id="frmsg" maxlength="300" placeholder="e.g. Fancy a warm-up before the season?"></label><div class="actions"><button class="btn" id="frgo">'+ic("mail")+' Send the challenge</button></div></form>'
       :'<div class="card"><p class="note" style="margin:0">Only people who manage a team can send challenges.</p></div>')+
     list("Challenges for you",recv,"No challenges yet.")+'<p class="note">Accepting a challenge puts the match on the challenging organization’s public “Friendlies” page, with both teams’ names and logos.</p>'+list("Challenges you sent",sent,"You haven’t challenged anyone yet.");
@@ -1424,13 +1427,26 @@ function friendliesSec(){Promise.all([api(api0("/friendlies")),api(api0("/teams"
     $("frgo").innerHTML=ic("mail")+(mine.some(function(t){return t.id===+val("fro")})?" Set the friendly":" Send the challenge")};
   $("frm").onchange=oppo;$("fro").onchange=oppo;oppo();
   document.querySelectorAll("[data-where]").forEach(function(b){b.onclick=function(){where=b.dataset.where;document.querySelectorAll("[data-where]").forEach(function(x){x.classList.toggle("on",x===b)});
-    $("frol").hidden=where!=="ours";$("frsearch").hidden=where==="ours";if(where==="ours")oppo();else $("frgo").innerHTML=ic("mail")+" Send the challenge"}});
-  $("frq").oninput=function(){clearTimeout(t0);var q=this.value.trim();if(q.length<2){$("frres").innerHTML="";return}t0=setTimeout(function(){api("/api/friendly-teams?q="+encodeURIComponent(q)).then(function(x){if(!x.ok)return;
-    var ts=x.data.teams.filter(function(t){return t.org.slug!==ORG.org.slug});$("frres").innerHTML=ts.length?ts.map(function(t,i){return'<button type="button" data-pick="'+i+'">'+crest(t,22)+'<span>'+esc(t.name)+'<small style="display:block;color:var(--soft)">'+esc(t.org.name)+'</small></span></button>'}).join(""):'<p class="note">No team found. Teams in private competitions only show up when their organization allows friendly challenges.</p>';
-    $("frres").querySelectorAll("[data-pick]").forEach(function(b){b.onclick=function(){pick=ts[+b.dataset.pick];$("frpick").innerHTML='Challenging <b>'+esc(pick.name)+'</b> ('+esc(pick.org.name)+')';$("frres").innerHTML="";$("frq").value=pick.name}})})},250)};
+    $("frol").style.display=where==="ours"?"":"none";$("frsearch").hidden=where==="ours";if(where==="ours")oppo();else $("frgo").innerHTML=ic("mail")+" Send the challenge"}});
+  var box=$("frres"),inp=$("frq"),found=[],hi=-1;
+  var shut=function(){box.hidden=true;inp.setAttribute("aria-expanded","false");hi=-1};
+  var choose=function(i){pick=found[i];if(!pick)return;inp.value=pick.name;$("frpick").innerHTML=crest(pick,20)+' Challenging <b>'+esc(pick.name)+'</b> · '+esc(pick.org.name);shut()};
+  var mark=function(){box.querySelectorAll("[data-pick]").forEach(function(b,i){b.classList.toggle("on",i===hi);if(i===hi)b.scrollIntoView({block:"nearest"})})};
+  inp.oninput=function(){clearTimeout(t0);pick=null;$("frpick").innerHTML="";var q=this.value.trim();if(q.length<2){shut();return}
+    t0=setTimeout(function(){api("/api/friendly-teams?q="+encodeURIComponent(q)).then(function(x){if(!x.ok||inp.value.trim()!==q)return;
+      found=x.data.teams.filter(function(t){return t.org.slug!==ORG.org.slug});hi=found.length?0:-1;
+      box.innerHTML=found.length?found.map(function(t,i){return'<button type="button" role="option" data-pick="'+i+'">'+crest(t,26)+'<span><b>'+esc(t.name)+'</b><small>'+esc(t.org.name)+'</small></span></button>'}).join("")
+        :'<p class="note">No team found. Teams only in private competitions show up when their organization allows friendly challenges.</p>';
+      box.hidden=false;inp.setAttribute("aria-expanded","true");mark();
+      box.querySelectorAll("[data-pick]").forEach(function(b){b.onmousedown=function(e){e.preventDefault();choose(+b.dataset.pick)}})})},200)};
+  inp.onkeydown=function(e){if(box.hidden)return;if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();if(found.length){hi=(hi+(e.key==="ArrowDown"?1:found.length-1))%found.length;mark()}}
+    else if(e.key==="Enter"){e.preventDefault();if(hi>=0)choose(hi)}else if(e.key==="Escape")shut()};
+  inp.onblur=function(){setTimeout(shut,150)};inp.onfocus=function(){if(found.length&&!pick&&inp.value.trim().length>=2){box.hidden=false;mark()}};
   $("frf").onsubmit=function(e){e.preventDefault();var to=where==="ours"?ours.filter(function(t){return t.id===+val("fro")})[0]:pick;
-    if(!to){toast(where==="ours"?"Choose the opponent":"Search for their team and pick it",true);return}if(!val("frk")){toast("Choose the kick-off",true);return}var b=$("frgo");busy(b,true,"Sending…");
-    api(api0("/friendlies"),"POST",{fromTeamId:+val("frm"),toTeamId:to.id,kickoff:new Date(val("frk")).toISOString(),message:val("frmsg")}).then(function(x){busy(b,false);
+    if(!to){toast(where==="ours"?"Choose the opponent":"Type their team’s name and pick it from the list",true);return}
+    var ko=new Date(val("frd")+"T"+val("frt"));if(!val("frd")||isNaN(ko)){toast("Choose the date",true);return}if(ko<new Date()){toast("That time has already passed. Pick a later date or time.",true);return}
+    var b=$("frgo");busy(b,true,"Sending…");
+    api(api0("/friendlies"),"POST",{fromTeamId:+val("frm"),toTeamId:to.id,kickoff:ko.toISOString(),message:val("frmsg")}).then(function(x){busy(b,false);
       toast(x.ok?(x.data.challenge.status==="accepted"?"Friendly set: "+x.data.challenge.from.name+" v "+to.name:"Challenge sent to "+to.name):x.data.error,!x.ok);if(x.ok)friendliesSec()})}})}
 function myMatchesView(){document.title="My matches · Competition Manager";
   UM('<div class="ph"><div><h1>My matches</h1><p>Your teams’ fixtures. Before kick-off press “We’re here”, then send screenshots of the start, the end and the result.</p></div></div><div id="mm">'+LOADING+'</div>',{key:"matches"});
