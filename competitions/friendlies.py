@@ -1,6 +1,6 @@
 """Friendlies between teams of different organizations: "Challenge a team".
 
-A team's managers pick any team with a public page, propose a kick-off and send a challenge. The other team's managers
+A team's managers pick any team with a public page (or of an organization open to friendlies), propose a kick-off and send a challenge. The other team's managers
 accept or decline. On acceptance the match is created in the challenger organization's "Friendlies" series (a friendly
 series: no league table, results and head-to-head only), with both teams entered, so both sides can check in, send
 screenshots and follow it like any other match.
@@ -31,6 +31,14 @@ def manageable(m):
     if can(m.role, "teams.manage_assigned", m.org):
         return list(m.teams.filter(suspended=False).order_by("name"))
     return []
+
+
+def challengeable():
+    """Teams that can be found and challenged: those with a public page, and every team of an organization that chose
+    "Let other organizations challenge all our teams" (private competitions included; only the team is shown)."""
+    public = Entry.objects.filter(listed("competition__")).values("team_id")
+    return (Team.objects.select_related("org").filter(suspended=False, org__status="active")
+            .filter(Q(id__in=public) | Q(org__open_to_friendlies=True)))
 
 
 def state(ch):
@@ -85,13 +93,11 @@ def host_series(org):
 
 @endpoint("GET", login_required=True)
 def team_search(request, user, ip):
-    """Teams that can be challenged: those with a public page (playing in a public competition), any organization."""
+    """Teams that can be challenged (see challengeable), found by team or organization name."""
     q = (request.GET.get("q") or "").strip()[:60]
     if len(q) < 2:
         return {"teams": []}
-    ids = (Entry.objects.filter(listed("competition__"), team__suspended=False, team__name__icontains=q)
-           .values_list("team_id", flat=True).distinct()[:40])
-    teams = Team.objects.select_related("org").filter(id__in=list(ids), org__status="active").order_by("name")[:20]
+    teams = challengeable().filter(Q(name__icontains=q) | Q(org__name__icontains=q)).order_by("name")[:20]
     return {"teams": [side_json(t) for t in teams]}
 
 
@@ -108,10 +114,9 @@ def org_friendlies(request, user, ip, slug):
     mine_t = next((t for t in mine if t.id == b.get("fromTeamId")), None)
     if not mine_t:
         raise ApiError(403, "Choose one of the teams you manage.")
-    other = Team.objects.select_related("org").filter(id=b.get("toTeamId") if isinstance(b.get("toTeamId"), int) else -1,
-                                                       suspended=False, org__status="active").first()
-    if not other or not Entry.objects.filter(listed("competition__"), team=other).exists():
-        raise ApiError(404, "Team not found. Search for a team with a public page.")
+    other = challengeable().filter(id=b.get("toTeamId") if isinstance(b.get("toTeamId"), int) else -1).first()
+    if not other:
+        raise ApiError(404, "Team not found. Search for the team by name.")
     if other.org_id == org.id:
         raise ApiError(400, "That team is in your own organization: add the friendly from Fixtures instead.")
     kickoff = moment(b, "kickoff")
