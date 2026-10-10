@@ -605,7 +605,17 @@ function pendingResultsCard(){if(!has("results.enter"))return;api(api0("/pending
   box.innerHTML='<div class="card" style="border-color:var(--gold)"><div class="gh">RESULTS TO APPROVE · '+r.data.matches.length+'</div><p class="note" style="margin-top:0">Teams sent these results with screenshots. Check them and confirm.</p><div class="tbl"><table class="dt"><tbody>'+r.data.matches.map(function(m){
     return'<tr><td><b>'+esc(m.home)+' v '+esc(m.away)+'</b><small>'+esc(m.competition)+(m.kickoff?' · '+esc(when(m.kickoff)):'')+'</small></td><td>'+m.claims.map(function(c){return'<span class="pill">'+esc(c.side==="home"?m.home:m.away)+' says '+c.homeScore+'–'+c.awayScore+'</span>'}).join(" ")+'</td><td style="text-align:right"><a class="btn sm" href="/app/report/'+m.id+'" data-nav>Check & approve</a></td></tr>'}).join("")+'</tbody></table></div></div>';
   var sec=$("sec");if(sec)sec.insertBefore(box.firstChild,sec.firstChild)})}
-function overview(){var o=ORG.org;if(teamOnly())return playerOverview();setTimeout(pendingResultsCard,400);
+// staff dashboard: friendly challenges waiting for this organization's answer
+function pendingFriendliesCard(){if(!has("teams.manage")&&!has("teams.manage_assigned"))return;api(api0("/friendlies")).then(function(r){if(!r.ok)return;
+  var cs=r.data.challenges.filter(function(c){return c.canAnswer}),mine=r.data.teams;if(!cs.length)return;var box=document.createElement("div");
+  box.innerHTML='<div class="card" style="border-color:var(--gold)"><div class="gh">FRIENDLY APPROVALS · '+cs.length+'</div><p class="note" style="margin-top:0">Teams waiting for your answer. Approve to set the match; both teams are told.</p><div class="tbl"><table class="dt"><tbody>'+cs.map(function(c){
+    return'<tr><td style="white-space:nowrap">'+esc(when(c.kickoff))+'</td><td>'+crest(c.from,22)+' <b>'+esc(c.from.name)+'</b> v <b>'+esc(c.to.name)+'</b><small>'+esc(c.internal?"Inside "+ORG.org.name:c.from.org.name)+(c.message?' · “'+esc(c.message)+'”':'')+'</small></td><td style="text-align:right;white-space:nowrap">'+
+      (c.to.choice?'<select data-fapt="'+c.id+'" aria-label="Which of your teams plays" style="width:auto;display:inline-block;margin:0 6px 4px 0">'+mine.map(function(t){return'<option value="'+t.id+'">'+esc(t.name)+'</option>'}).join("")+'</select>':'')+
+      '<button type="button" class="btn sm" data-fapa="'+c.id+'">'+ic("check")+' Approve</button> <button type="button" class="btn bad sm" data-fapd="'+c.id+'">Decline</button></td></tr>'}).join("")+'</tbody></table></div><p class="note"><a href="'+app0("/friendlies")+'" data-nav>All friendlies</a></p></div>';
+  var card=box.firstChild,sec=$("sec");if(!sec)return;sec.insertBefore(card,sec.firstChild);
+  card.querySelectorAll("[data-fapa],[data-fapd]").forEach(function(b){b.onclick=function(){var id=b.dataset.fapa||b.dataset.fapd,ok=!!b.dataset.fapa,sel=card.querySelector('[data-fapt="'+id+'"]');busy(b,true,"…");
+    api(api0("/friendlies/"+id+"/"+(ok?"accept":"decline")),"POST",ok&&sel?{teamId:+sel.value}:{}).then(function(x){busy(b,false);toast(x.ok?(ok?"Approved: the match is set":"Declined"):x.data.error,!x.ok);if(x.ok){card.remove();pendingFriendliesCard()}})}})})}
+function overview(){var o=ORG.org;if(teamOnly())return playerOverview();setTimeout(pendingResultsCard,400);setTimeout(pendingFriendliesCard,450);
   api(api0("/summary")).then(function(r){if(!r.ok)return fail(r);var s=r.data;
     var K=function(v,label,path,sub,cls){return'<a class="kpi'+(cls?" "+cls:"")+'" href="'+app0(path)+'" data-nav><span>'+label+'</span><b>'+n(v)+'</b>'+(sub?'<small>'+sub+'</small>':'')+'</a>'};
     var qa=[];
