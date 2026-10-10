@@ -209,6 +209,21 @@ class FriendliesTest(Helpers, TestCase):
         org_page = Client().get(f"/org/{self.a}").content.decode()
         self.assertNotIn('id="standings"', org_page, "the organization page has no standings for friendlies")
 
+    def test_friendlies_on_team_pages(self):
+        url = f"/api/orgs/{self.a}/friendlies"
+        ch = self.boss.call("post", url, {"fromTeamId": self.lions, "toTeamId": self.tigers, "kickoff": self.soon()}).json()["challenge"]
+        mid = self.chief.call("post", f"/api/orgs/{self.b}/friendlies/{ch['id']}/accept").json()["challenge"]["match"]["id"]
+        self.boss.call("patch", f"/api/orgs/{self.a}/matches/{mid}", {"homeScore": 1, "awayScore": 2, "status": "finished"})
+        # the other organization's dashboard shows it on its team
+        fr = self.chief.get(f"/api/orgs/{self.b}/teams/{self.tigers}").json()["team"]["friendlies"]
+        self.assertEqual([(f["opponent"]["name"], f["mine"], f["theirs"], f["home"]) for f in fr], [("Lions", 2, 1, False)])
+        # the public team page: its own Friendlies section, and it doesn't count in the form
+        from .models import Team
+        page = Client().get(f"/team/{Team.objects.get(id=self.tigers).slug}").content.decode()
+        self.assertIn("Friendlies</div>", page)
+        self.assertIn("1</b> won", page)
+        self.assertNotIn('class="fm W"', page, "not in the league form")
+
     def test_friendly_series_is_always_a_plain_series_and_counts_less(self):
         r = self.boss.call("post", f"/api/orgs/{self.a}/competitions", {"name": "Summer Friendlies", "kind": "friendly", "format": "groups_knockout", "visibility": "public"})
         c = Competition.objects.get(slug=r.json()["competition"]["slug"])

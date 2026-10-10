@@ -12,6 +12,8 @@
   <div>
     <section class="card"><div class="gh">Upcoming matches</div>{% for m in upcoming %}{% include "public/_match.html" with show_comp=1 %}{% empty %}<p class="note">No upcoming matches.</p>{% endfor %}</section>
     <section class="card"><div class="gh">Recent results</div>{% for m in recent %}{% include "public/_match.html" with show_comp=1 %}{% empty %}<p class="note">No results yet.</p>{% endfor %}</section>
+    {% if friendlies %}<section class="card"><div class="gh">Friendlies</div><p class="note" style="margin-top:0"><b style="color:var(--tx)">{{ friendlies.record.W }}</b> won · <b style="color:var(--tx)">{{ friendlies.record.D }}</b> drawn · <b style="color:var(--tx)">{{ friendlies.record.L }}</b> lost{% if friendlies.played %} ({{ friendlies.played }} played){% endif %}. Friendlies don't count in the form above.</p>
+      {% for m in friendlies.next %}{% include "public/_match.html" %}{% endfor %}{% for m in friendlies.recent %}{% include "public/_match.html" %}{% endfor %}</section>{% endif %}
   </div>
   <div>
     {% if team.description %}<section class="card"><div class="gh">About</div><p style="margin:0;white-space:pre-wrap">{{ team.description }}</p></section>{% endif %}
