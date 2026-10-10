@@ -17,7 +17,7 @@ from league.http import ApiError, body, endpoint, ms, site_url, text
 from league.logic import hit
 from orgs.api import access, log
 from orgs.models import Membership
-from orgs.permissions import can
+from orgs.permissions import PLAYER, can
 
 from . import engine
 from .api import moment, team_brief
@@ -164,7 +164,11 @@ def org_friendlies(request, user, ip, slug):
     mine_ids = {t.id for t in mine}
     if request.method == "GET":
         rows = (FriendlyChallenge.objects.select_related("from_team__org", "to_team__org", "to_org", "created_by", "answered_by", "match")
-                .filter(Q(from_team__org=org) | Q(to_org=org)).order_by("-created")[:200])
+                .filter(Q(from_team__org=org) | Q(to_org=org)).order_by("-created"))
+        if m.role == PLAYER:                             # a player follows their own teams' friendlies only
+            ids = list(m.teams.values_list("id", flat=True))
+            rows = rows.filter(Q(from_team_id__in=ids) | Q(to_team_id__in=ids))
+        rows = rows[:200]
         staff = can(m.role, "fixtures.manage", org)
         return {"challenges": [challenge_json(ch, org, mine_ids, staff) for ch in rows], "teams": [team_brief(t) for t in mine]}
     b = body(request)

@@ -246,6 +246,19 @@ class FriendliesTest(Helpers, TestCase):
         self.boss.call("patch", f"/api/orgs/{self.a}/matches/{mid}", {"homeScore": 1, "awayScore": 1, "status": "finished"})
         self.assertEqual(self.boss.call("post", f"{url}/{ch['id']}/edit", {"message": "late"}).status_code, 403)
 
+    def test_a_player_sees_only_their_teams_friendlies(self):
+        url = f"/api/orgs/{self.a}/friendlies"
+        leopards, bulls = self.team(self.boss, self.a, "Leopards"), self.team(self.boss, self.a, "Bulls")
+        self.boss.call("post", url, {"fromTeamId": self.lions, "toTeamId": leopards, "kickoff": self.soon()})
+        self.boss.call("post", url, {"fromTeamId": bulls, "toTeamId": leopards, "kickoff": self.soon(2)})
+        kofi = self.signup("kofi_p")
+        link = self.boss.call("post", f"/api/orgs/{self.a}/teams/{self.lions}/invitations", {"role": "player"}).json()["link"]
+        kofi.call("post", "/api/invitations/" + link.rsplit("/", 1)[1] + "/accept")
+        mine = kofi.get(url).json()
+        self.assertEqual([(c["from"]["name"], c["to"]["name"]) for c in mine["challenges"]], [("Lions", "Leopards")])
+        self.assertEqual(mine["teams"], [], "a player can't send challenges for the club")
+        self.assertEqual(len(self.boss.get(url).json()["challenges"]), 2, "the owner sees them all")
+
     def test_friendly_series_is_always_a_plain_series_and_counts_less(self):
         r = self.boss.call("post", f"/api/orgs/{self.a}/competitions", {"name": "Summer Friendlies", "kind": "friendly", "format": "groups_knockout", "visibility": "public"})
         c = Competition.objects.get(slug=r.json()["competition"]["slug"])
