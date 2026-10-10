@@ -1428,11 +1428,13 @@ function friendliesSec(){Promise.all([api(api0("/friendlies")),api(api0("/teams"
     confirmBox("Delete this friendly?",match?(played?"The match and its result are removed for both teams, and it no longer counts in head-to-head or the rankings.":"The match is removed for both teams."):"The challenge is removed from both teams’ lists.",{danger:true,ok:"Delete"}).then(function(ok){if(!ok)return;busy(b,true,"…");
       api(api0("/friendlies/"+b.dataset.fdel+"/delete"),"POST",{}).then(function(x){busy(b,false);toast(x.ok?"Friendly deleted":x.data.error,!x.ok);if(x.ok)friendliesSec()})})}});
   if(!$("frf"))return;var t0=null;
-  var oppo=function(){var me=+val("frm"),xs=ours.filter(function(t){return t.id!==me});$("fro").innerHTML=xs.map(function(t){return'<option value="'+t.id+'">'+esc(t.name)+'</option>'}).join("")||'<option value="">No other team yet</option>';
-    $("frgo").innerHTML=ic("mail")+(mine.some(function(t){return t.id===+val("fro")})?" Set the friendly":" Send the challenge")};
-  $("frm").onchange=oppo;$("fro").onchange=oppo;oppo();
+  // the opponent list: every other team of ours; picking one only updates the button (the choice stays)
+  var label=function(){$("frgo").innerHTML=ic("mail")+(where==="ours"&&mine.some(function(t){return t.id===+val("fro")})?" Set the friendly":" Send the challenge")};
+  var oppo=function(){var me=+val("frm"),keep=val("fro"),xs=ours.filter(function(t){return t.id!==me});
+    $("fro").innerHTML=xs.length?'<option value="">Choose the opponent…</option>'+xs.map(function(t){return'<option value="'+t.id+'"'+(String(t.id)===keep?" selected":"")+'>'+esc(t.name)+'</option>'}).join(""):'<option value="">No other team yet</option>';label()};
+  $("frm").onchange=oppo;$("fro").onchange=label;oppo();
   document.querySelectorAll("[data-where]").forEach(function(b){b.onclick=function(){where=b.dataset.where;document.querySelectorAll("[data-where]").forEach(function(x){x.classList.toggle("on",x===b)});
-    $("frol").style.display=where==="ours"?"":"none";$("frsearch").hidden=where==="ours";if(where==="ours")oppo();else $("frgo").innerHTML=ic("mail")+" Send the challenge"}});
+    $("frol").style.display=where==="ours"?"":"none";$("frsearch").hidden=where==="ours";label()}});
   var box=$("frres"),inp=$("frq"),found=[],hi=-1;
   var shut=function(){box.hidden=true;inp.setAttribute("aria-expanded","false");hi=-1};
   var choose=function(i){pick=found[i];if(!pick)return;inp.value=pick.name;$("frpick").innerHTML=crest(pick,20)+' Challenging <b>'+esc(pick.name)+'</b> · '+esc(pick.org.name);shut()};
