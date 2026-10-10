@@ -68,7 +68,7 @@ def challenge_json(ch, org, mine_ids, staff=False):
             "kickoff": ch.kickoff.isoformat(), "message": ch.message or None, "status": st, "created": ms(ch.created),
             "by": getattr(ch.created_by, "username", None), "answeredBy": getattr(ch.answered_by, "username", None),
             "match": {"id": ch.match_id, "slug": ch.match.slug} if ch.match_id else None,
-            "internal": ch.from_team.org_id == ch.to_team.org_id,
+            "internal": ch.from_team.org_id == ch.to_team.org_id, "host": ch.from_team.org.slug,
             "canAnswer": st == "pending" and ch.to_team.org_id == org.id and ch.to_team_id in mine_ids,
             "canCancel": st == "pending" and ch.from_team.org_id == org.id and ch.from_team_id in mine_ids,
             "played": played,

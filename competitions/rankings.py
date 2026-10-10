@@ -5,6 +5,7 @@ Teams are rated with Elo (the system used for chess and in the World Football El
 - after each match, points move from the loser to the winner. Beating a stronger team moves more points than beating
   a weaker one, and a bigger winning margin counts a little more (×1.5 for two goals, more for three or more);
 - a match decided on penalties counts as a draw;
+- walkovers and forfeits don't count (a win after the opponent's connection dropped does);
 - matches are taken in the order they were played;
 - friendlies count half by default (a super admin can make them count fully or not at all).
 Organizations can keep their teams out, and a super admin can switch rankings off entirely.
@@ -32,7 +33,7 @@ def _played():
                     competition__visibility="public", competition__suspended=False, competition__org__status="active",
                     competition__org__in_rankings=True)
             .exclude(Q(home__team__suspended=True) | Q(away__team__suspended=True))
-            .exclude(decided="walkover"))                     # a walkover isn't a played match: it doesn't move ratings
+            .exclude(decided__in=["walkover", "no_show", "forfeit", "abandoned"]))  # not played out: doesn't move ratings
 
 
 def margin_factor(gd):

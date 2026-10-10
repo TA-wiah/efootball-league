@@ -17,6 +17,9 @@
 {% if whatsapp or report %}<section class="card" style="border-color:rgba(37,211,102,.5)"><div class="gh">Playing in this match?</div><p class="note" style="margin-top:0">Press “We're here” before kick-off and send screenshots of the start, the end and the result. A team that doesn't show up loses by walkover.</p>
   <div class="actions">{% if report %}<a class="btn" href="{{ report }}">Check in &amp; upload screenshots</a>{% endif %}{% if whatsapp %}<a class="btn" href="{{ whatsapp }}" target="_blank" rel="noopener noreferrer" style="background:#25d366;color:#062b16">Send the result on WhatsApp</a>{% endif %}</div></section>{% endif %}
 {% if decided == "bye" %}<section class="card"><span class="pill warn">Bye</span> <span class="note">{{ m.notes|default:"One team goes straight through to the next round." }}</span></section>{% endif %}
+{% if decided == "disconnect" %}<section class="card"><span class="pill warn">Connection dropped</span> <span class="note">{{ m.notes|default:"The result was decided after a team's connection dropped." }}</span></section>{% endif %}
+{% if decided == "forfeit" %}<section class="card"><span class="pill warn">Forfeit</span> <span class="note">{{ m.notes|default:"Awarded: a team forfeited the match." }}</span></section>{% endif %}
+{% if decided == "abandoned" %}<section class="card"><span class="pill cancelled">Abandoned</span> <span class="note">{{ m.notes|default:"The match was stopped and has no result." }}</span></section>{% endif %}
 {% if decided == "walkover" %}<section class="card"><span class="pill warn">Walkover</span> <span class="note">Decided because only one team showed up.</span></section>{% elif decided == "no_show" %}<section class="card"><span class="pill cancelled">Not played</span> <span class="note">Neither team showed up.</span></section>{% endif %}
 
 <div class="two">

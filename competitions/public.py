@@ -99,7 +99,7 @@ def match_view(m, linkable):
     home, away = m.home.team if m.home else None, m.away.team if m.away else None
     return {"slug": m.slug, "home": team_view(home, linkable), "away": team_view(away, linkable), "kickoff": m.kickoff,
             "round": m.round_name or f"Round {m.round}", "group": m.group, "leg": m.leg, "stage": m.stage, "status": m.status,
-            "status_label": STATUS_L[m.status], "played": m.home_score is not None and m.away_score is not None,
+            "status_label": STATUS_L[m.status], "played": m.home_score is not None and m.away_score is not None, "notes": m.notes,
             "home_label": bracket.label(m.home_from) or "To be decided", "away_label": bracket.label(m.away_from) or "To be decided",
             "hs": m.home_score, "as": m.away_score, "hp": m.home_pens, "ap": m.away_pens, "venue": m.venue,
             "competition": {"name": m.competition.name, "slug": m.competition.slug}}
