@@ -285,6 +285,23 @@ def standings(comp, entries, matches):
              "adjustment": r["entry"].points_adjustment, "form": r["form"][-5:]} for i, r in enumerate(ranked)]
 
 
+def head_to_head(matches):
+    """For a friendly series: each pair of teams that met, with wins, draws and goals. Penalties count as a draw."""
+    pairs = {}
+    for m in matches:
+        if m.status != "finished" or m.home_score is None or m.away_score is None or not m.home or not m.away:
+            continue
+        a, b = sorted([m.home, m.away], key=lambda e: e.team.name.lower())
+        p = pairs.setdefault((a.team_id, b.team_id), {"a": a.team, "b": b.team, "played": 0, "aWins": 0, "draws": 0, "bWins": 0, "aGoals": 0, "bGoals": 0, "last": None})
+        ga, gb = (m.home_score, m.away_score) if m.home.team_id == a.team_id else (m.away_score, m.home_score)
+        p["played"] += 1
+        p["aGoals"] += ga
+        p["bGoals"] += gb
+        p["aWins" if ga > gb else "bWins" if gb > ga else "draws"] += 1
+        p["last"] = max(filter(None, [p["last"], m.kickoff]), default=None)
+    return sorted(pairs.values(), key=lambda p: (-p["played"], p["a"].name.lower()))
+
+
 # ---------- top scorers ----------
 def scorers(events):
     """Goals and assists per player from match events (own goals don't count for the scorer)."""

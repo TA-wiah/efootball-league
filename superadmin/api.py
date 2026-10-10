@@ -759,6 +759,8 @@ def platform_settings(request, user, ip):
             check_sms_settings(changes)
         if section == "proleague":
             check_proleague_settings(changes)
+        if section == "rankings" and "friendly_weight" in changes and changes["friendly_weight"] not in ("0", "0.5", "1"):
+            raise ApiError(400, "Friendlies count fully, half or not at all.")
         if section == "rankings" and "min_matches" in changes and (not isinstance(changes["min_matches"], int) or not 1 <= changes["min_matches"] <= 100):
             raise ApiError(400, "The minimum number of matches must be from 1 to 100.")
         if section == "email":

@@ -5,7 +5,8 @@ Teams are rated with Elo (the system used for chess and in the World Football El
 - after each match, points move from the loser to the winner. Beating a stronger team moves more points than beating
   a weaker one, and a bigger winning margin counts a little more (×1.5 for two goals, more for three or more);
 - a match decided on penalties counts as a draw;
-- matches are taken in the order they were played.
+- matches are taken in the order they were played;
+- friendlies count half by default (a super admin can make them count fully or not at all).
 Organizations can keep their teams out, and a super admin can switch rankings off entirely.
 """
 from django.db.models import Max, Q
@@ -20,7 +21,9 @@ _cache = {"key": None, "data": None}
 
 def settings_():
     s = store.get("rankings")
-    return {"enabled": bool(s.get("enabled")), "min_matches": max(1, int(s.get("min_matches") or 3))}
+    w = str(s.get("friendly_weight", "0.5"))
+    return {"enabled": bool(s.get("enabled")), "min_matches": max(1, int(s.get("min_matches") or 3)),
+            "friendly_weight": float(w) if w in ("0", "0.5", "1") else 0.5}
 
 
 def _played():
@@ -40,7 +43,8 @@ def margin_factor(gd):
 def compute():
     """{teams: [...], players: [...]} in ranking order (cached until a match changes)."""
     qs = _played()
-    key = (qs.count(), qs.aggregate(m=Max("updated"))["m"], MatchEvent.objects.filter(match__in=qs).count())
+    weight = settings_()["friendly_weight"]                 # friendlies move ratings less (or not at all)
+    key = (qs.count(), qs.aggregate(m=Max("updated"))["m"], MatchEvent.objects.filter(match__in=qs).count(), weight)
     if _cache["key"] == key:
         return _cache["data"]
     teams = {}
@@ -59,7 +63,7 @@ def compute():
         else:
             score_h = 1.0 if hs > as_ else 0.0 if hs < as_ else 0.5
         expected_h = 1 / (1 + 10 ** ((a["rating"] - h["rating"]) / 400))
-        change = K * margin_factor(hs - as_) * (score_h - expected_h)
+        change = K * (weight if m.competition.kind == "friendly" else 1) * margin_factor(hs - as_) * (score_h - expected_h)
         h["rating"] += change
         a["rating"] -= change
         for r, gf, ga in ((h, hs, as_), (a, as_, hs)):
