@@ -413,6 +413,34 @@ class FriendliesTest(Helpers, TestCase):
         leo.call("post", f"{board}/{cid}/approve")
         self.assertTrue(SmsMessage.objects.filter(org=org, kind="notice", body__contains="Leopards accepted your friendly").exists())
 
+    def test_who_is_told(self):
+        from unittest import mock
+        from league import emailer
+        from league.models import Admin
+        board = f"/api/orgs/{self.a}/friendly-board"
+        leopards, bulls = self.team(self.boss, self.a, "Leopards"), self.team(self.boss, self.a, "Bulls")
+        p1 = self.join_team("lion_w", self.lions, "player", "lion_w@example.com")
+        self.join_team("leo_w", leopards, "player", "leo_w@example.com")
+        self.join_team("bull_w", bulls, "player", "bull_w@example.com")
+        self.join_team("bull_c", bulls, "coach", "bull_coach@example.com")
+        self.boss.call("patch", f"/api/orgs/{self.a}", {"openToFriendlies": True})      # other organizations can find these teams
+        mails = []
+        def told(fn):
+            mails.clear()
+            with mock.patch.object(emailer, "ready", lambda cfg=None: True), mock.patch.object(emailer, "send", lambda to, subj, t, h: mails.append(to)):
+                fn()
+            return sorted(set(mails))
+        # a challenge to a particular team: only that team
+        self.assertEqual(told(lambda: p1.call("post", board, {"teamId": self.lions, "toTeamId": leopards, "kickoff": self.soon()})), ["leo_w@example.com"])
+        # an open request: everyone on the other teams, and the managers (the owner); not the team that posted it
+        self.assertEqual(told(lambda: p1.call("post", board, {"teamId": self.lions, "kickoff": self.soon(2)})),
+                         sorted(["boss@example.com", "bull_coach@example.com", "bull_w@example.com", "leo_w@example.com"]))
+        # a challenge from outside to a particular team: only that team; to the whole organization: everyone there
+        self.assertEqual(told(lambda: self.chief.call("post", f"/api/orgs/{self.b}/friendlies", {"fromTeamId": self.tigers, "toTeamId": self.lions, "kickoff": self.soon()})),
+                         ["lion_w@example.com"])
+        everyone = told(lambda: self.chief.call("post", f"/api/orgs/{self.b}/friendlies", {"fromTeamId": self.tigers, "toOrg": self.a, "kickoff": self.soon(3)}))
+        self.assertEqual(everyone, sorted(["boss@example.com", "bull_coach@example.com", "bull_w@example.com", "leo_w@example.com", "lion_w@example.com"]))
+
     def test_friendly_series_is_always_a_plain_series_and_counts_less(self):
         r = self.boss.call("post", f"/api/orgs/{self.a}/competitions", {"name": "Summer Friendlies", "kind": "friendly", "format": "groups_knockout", "visibility": "public"})
         c = Competition.objects.get(slug=r.json()["competition"]["slug"])
