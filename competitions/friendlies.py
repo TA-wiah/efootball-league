@@ -100,26 +100,45 @@ def challenge_json(ch, org, mine_ids, staff=False):
                        or (st == "accepted" and not played and staff and ch.from_team.org_id == org.id)}
 
 
-def managers_with_email(team, org=None):
-    """Who to tell about a challenge: everyone on the team (players, coaches, team managers) and the people who manage
-    all teams; for a challenge to a whole organization, its team managers in general."""
-    out = []
-    for mb in Membership.objects.select_related("user", "org").filter(org_id=team.org_id if team else org.id).exclude(user__email=""):
-        if can(mb.role, "teams.manage", mb.org) or (team and mb.teams.filter(id=team.id).exists()):
-            out.append(mb.user.email)
-    return list(dict.fromkeys(out))[:30]
-
-
-def notify(team, subject, lines, request, org_slug, org=None, page="friendlies"):
-    """Email everyone on the team, and text them too when their organization turned automatic texts on."""
-    link = f"{site_url(request)}/app/org/{org_slug}/{page}"
+def audience(team=None, org=None, skip=None):
+    """Who hears about a friendly:
+    - about a particular team: only the people on that team (players, coaches, team managers); if nobody is on it
+      yet, the organization's managers instead, so it isn't lost;
+    - for everyone (an open request, or a challenge to the whole organization): everyone on any of the
+      organization's teams, and its managers, except the team that posted it (`skip`)."""
+    qs = Membership.objects.select_related("user", "org").filter(org_id=team.org_id if team else org.id)
     if team:
-        from .reminders import text_team
-        text_team(team, f"{subject}. {lines[1] if len(lines) > 1 else ''} Open: {link}".replace("  ", " "))
+        on_team = list(qs.filter(teams=team).distinct())
+        if on_team:
+            return on_team
+    everyone = [mb for mb in qs.distinct() if can(mb.role, "teams.manage", mb.org) or (not team and mb.teams.exists())]
+    return [mb for mb in everyone if not (skip and mb.teams.filter(id=skip.id).exists())]
+
+
+def managers_with_email(team, org=None, skip=None):
+    return list(dict.fromkeys(mb.user.email for mb in audience(team, org, skip) if mb.user.email))[:200]
+
+
+def text_people(members, org, message):
+    """An SMS to these members when their organization turned automatic texts on (its credits)."""
+    numbers = list(dict.fromkeys(mb.user.phone for mb in members if mb.user.phone))
+    if not numbers or not org.auto_sms_reminders:
+        return
+    try:
+        from sms.api import send_text
+        send_text(org, None, numbers, message[:450], kind="notice")
+    except ApiError:
+        pass                                          # no credits, SMS off…: the emails still go
+
+
+def notify(team, subject, lines, request, org_slug, org=None, page="friendlies", skip=None):
+    """Email (and text, when turned on) the team concerned, or everyone for an open request / whole-organization challenge."""
+    link = f"{site_url(request)}/app/org/{org_slug}/{page}"
+    text_people(audience(team, org, skip), team.org if team else org, f"{subject}. {lines[1] if len(lines) > 1 else ''} Open: {link}".replace("  ", " "))
     if not emailer.ready():
         return
     txt, html = emailer.body(subject, lines, link, "Open friendlies", "You get this because you're on this team or manage teams there.")
-    for to in managers_with_email(team, org):
+    for to in managers_with_email(team, org, skip):
         try:
             emailer.send(to, subject, txt, html)
         except emailer.MailError:
@@ -332,6 +351,9 @@ def friendly_board(request, user, ip, slug):
         raise ApiError(429, "Too many requests. Try again later.")
     ch = FriendlyChallenge.objects.create(from_team=team, to_org=org, kickoff=kickoff, message=text(b, "message", 300), created_by=user)
     log(org, user, f"{team.name} is looking for a friendly ({kickoff:%a %d %b, %H:%M} UTC)")
+    notify(None, f"{team.name} is looking for a friendly", [f"{team.name} wants a friendly: {kickoff:%a %d %b %Y, %H:%M} UTC.",
+                                                           "Any team can take it on the Find a friendly page."] + ([f"Message: {ch.message}"] if ch.message else []),
+           request, org.slug, org=org, page="findfriendly", skip=team)
     return {"ok": True, "request": board_json(ch, ids, user)}
 
 
