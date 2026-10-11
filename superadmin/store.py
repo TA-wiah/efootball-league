@@ -15,7 +15,7 @@ DEFAULTS = {
     "sms": {"enabled": False, "provider": "", "api_key": "", "sender": "", "country_code": "233",
             "credit_price": "0.05", "currency": "GHS", "min_credits": 100},
     # Platform rankings: teams (Elo rating) and players across all organizations, from public competitions.
-    "rankings": {"enabled": False, "min_matches": 3, "friendly_weight": "0.5",
+    "rankings": {"enabled": False, "min_matches": 3, "friendly_weight": "0",
                  # the awards' names (a super admin can rename them)
                  "award_poty": "Player of the Year", "award_boot": "Golden Boot", "award_assists": "Best Playmaker",
                  "award_defence": "Best Defence", "award_team": "Team of the Year", "award_fairplay": "Fair Play Award"},
