@@ -467,6 +467,32 @@ class FriendliesTest(Helpers, TestCase):
         sent = [n for m in SmsMessage.objects.filter(org=org, body__contains="Result confirmed") for n in m.recipients]
         self.assertEqual(sorted(sent), ["233241111111", "233242222222"], "only the two teams that played: not Bulls, not the owner")
 
+    def test_friendly_approved_texts_only_the_team_that_asked(self):
+        from league.models import Admin
+        from orgs.models import Organization
+        from sms.models import SmsAccount, SmsMessage
+        board = f"/api/orgs/{self.a}/friendly-board"
+        leopards, bulls = self.team(self.boss, self.a, "Leopards"), self.team(self.boss, self.a, "Bulls")
+        p1 = self.join_team("lion_a", self.lions, "player")
+        p2 = self.join_team("leo_a", leopards, "player")
+        self.join_team("bull_a", bulls, "player")
+        for name, phone in (("lion_a", "0241111111"), ("leo_a", "0242222222"), ("bull_a", "0243333333"), ("boss", "0244444444")):
+            Admin.objects.filter(username=name).update(phone=phone)
+        org = Organization.objects.get(slug=self.a)
+        Organization.objects.filter(id=org.id).update(auto_sms_reminders=True)
+        SmsAccount.objects.update_or_create(org=org, defaults={"credits": 50})
+        store.update("sms", {"enabled": True, "provider": "console", "sender": "League"})
+        sent = lambda: sorted(n for m in SmsMessage.objects.filter(org=org, body__contains="accepted your friendly") for n in m.recipients)
+        # approved by the challenged team (dashboard / Find a friendly)
+        cid = p1.call("post", board, {"teamId": self.lions, "toTeamId": leopards, "kickoff": self.soon()}).json()["challenge"]["id"]
+        p2.call("post", f"{board}/{cid}/approve")
+        self.assertEqual(sent(), ["233241111111"], "only the Lions, who asked: not the Leopards, the Bulls or the owner")
+        # approved by the organization's staff (Friendlies page / staff dashboard)
+        SmsMessage.objects.all().delete()
+        cid = p1.call("post", board, {"teamId": self.lions, "toTeamId": bulls, "kickoff": self.soon(2)}).json()["challenge"]["id"]
+        self.boss.call("post", f"/api/orgs/{self.a}/friendlies/{cid}/accept")
+        self.assertEqual(sent(), ["233241111111"])
+
     def test_friendly_series_is_always_a_plain_series_and_counts_less(self):
         r = self.boss.call("post", f"/api/orgs/{self.a}/competitions", {"name": "Summer Friendlies", "kind": "friendly", "format": "groups_knockout", "visibility": "public"})
         c = Competition.objects.get(slug=r.json()["competition"]["slug"])
