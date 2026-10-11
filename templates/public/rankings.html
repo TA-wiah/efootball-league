@@ -9,13 +9,18 @@
 .rkhead{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .how summary{cursor:pointer;list-style:none}.how summary::-webkit-details-marker{display:none}.howg{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-top:12px}
 .howg>div{background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:12px;padding:12px 14px}.howg p{margin:6px 0 0;color:var(--tx2);font-size:14px}
+.pitch{display:flex;flex-direction:column;gap:10px;background:linear-gradient(180deg,rgba(19,144,74,.18),rgba(19,144,74,.08));border:1px solid rgba(95,227,154,.25);border-radius:14px;padding:12px}
+.prow{display:flex;flex-direction:column;gap:6px}.plab{font-family:var(--cond);font-size:13px;letter-spacing:1px;text-transform:uppercase;color:#5fe39a;text-align:center}
+.pline{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}.pcard{width:150px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;padding:10px 6px;border-radius:12px;background:var(--card2);border:1px solid var(--line)}
+.pcard b{font-family:var(--cond);font-size:17px;color:var(--tx)}.pcard span{font-size:13px;font-weight:700}.pcard small{font-size:11px;color:var(--soft)}.pcard em{font-style:normal;font-size:11px;color:var(--tx2)}.pcard.empty{opacity:.5}
+.vsw{display:flex;gap:6px;margin:0 0 12px}.vsw a{padding:6px 12px;border-radius:999px;border:1px solid var(--line2);color:var(--tx2);text-decoration:none;font-size:13px;font-weight:700}.vsw a.on{background:var(--gold);color:var(--ink);border-color:var(--gold)}
 .rkf{display:flex;gap:8px;align-items:center}.rkf select{padding:9px 12px;border-radius:9px;border:1px solid var(--line2);background:rgba(0,0,0,.2);color:var(--tx);font:inherit}
 </style>
 
 {% if preview %}<div class="banner">Preview for super admins: rankings are switched off, so visitors can't see this page. Turn them on in Admin panel → Platform settings.</div>{% endif %}
 <div class="rkhead"><div><h1 class="page-h">{% if tab == "awards" %}Awards{% elif tab %}Player rankings{% else %}Team rankings{% endif %}</h1>
   <p class="note" style="margin:0 0 14px;font-size:15px"><b style="color:var(--tx)">{{ area }}</b> · across every league and tournament on the platform · {{ matches }} match{{ matches|pluralize:"es" }} counted</p></div>
-  {% if countries %}<form class="rkf" method="get"><label for="rkc" class="note">Country</label><select id="rkc" name="country"><option value="">Worldwide</option>{% for c in countries %}<option{% if c|lower == country|lower %} selected{% endif %}>{{ c }}</option>{% endfor %}</select>
+  {% if countries and tab != "awards" %}<form class="rkf" method="get">{% if view %}<input type="hidden" name="view" value="{{ view }}">{% endif %}<label for="rkc" class="note">Country</label><select id="rkc" name="country"><option value="">Worldwide</option>{% for c in countries %}<option{% if c|lower == country|lower %} selected{% endif %}>{{ c }}</option>{% endfor %}</select>
     {% if regions %}<label for="rkr" class="note">Region</label><select id="rkr" name="region"><option value="">All of {{ country }}</option>{% for r in regions %}<option{% if r|lower == region|lower %} selected{% endif %}>{{ r }}</option>{% endfor %}</select>{% endif %}
     <noscript><button class="btn sm">Show</button></noscript></form>{% endif %}
 </div>
@@ -30,13 +35,18 @@
     <div><b>👟 Players</b><p>Players are ranked by goals, then assists, from the goals and assists organizers enter on match pages.</p></div>
   </div></details>{% endif %}
 {% if tab == "awards" %}
-<section class="card"><div class="gh">Awards {{ year }}{% if area != "Worldwide" %} · {{ area }}{% endif %}</div>
+<section class="card"><div class="gh">Awards {{ year }} · worldwide</div>
   <div class="awards">{% for a in awards %}<div class="award"><div class="an">🏆 {{ a.name }}</div>{% include "public/_crest.html" with t=a.t size=48 %}
     <b class="aw">{{ a.who }}</b>{% if a.key in "poty boot assists" %}<span class="pt">{% if a.t.link %}<a href="/team/{{ a.t.slug }}">{{ a.t.name }}</a>{% else %}{{ a.t.name }}{% endif %}</span>{% endif %}
     <span class="po">{{ a.org.name }}{% if a.org.country %} · {{ a.org.country }}{% endif %}</span><span class="ps">{{ a.stat }}</span><small class="ah">{{ a.how }}</small></div>
   {% empty %}<p class="note">No awards yet: they come from this year's matches in public competitions (goals, cards and results entered by organizers).</p>{% endfor %}</div>
   <p class="note" style="margin-bottom:0">From {{ year }}'s matches in public competitions across the platform; friendlies don't count. The Team of the Year is the team on top of the team rankings. Best Defence and Fair Play compare teams with {{ min_matches }}+ competition matches this year (at least two teams are needed), and Fair Play appears once organizers record cards on match pages.</p></section>
+{% if xi %}<section class="card"><div class="gh">Team of the Season {{ xi.year }} · worldwide</div>
+  {% if xi.filled %}<div class="pitch">{% for r in xi.rows %}<div class="prow"><div class="plab">{{ r.label }}</div><div class="pline">{% for p in r.players %}<div class="pcard">{% include "public/_crest.html" with t=p.t size=34 %}<b>{{ p.name }}</b><span>{{ p.t.name }}</span><small>{{ p.org.name }}</small><em>{{ p.stat }}</em></div>{% endfor %}{% for i in "1234"|make_list|slice:r.missing %}<div class="pcard empty"><b>—</b><small>Not enough data yet</small></div>{% endfor %}</div></div>{% endfor %}</div>{% else %}<p class="note">Not enough data yet.</p>{% endif %}
+  <p class="note" style="margin-bottom:0">The year's best XI (4-3-3) from every public competition; friendlies don't count. Forwards: goals. Midfielders: assists and goals. Defenders and goalkeeper: their team's defence (clean sheets, fewest goals conceded). Positions come from each team's squad list, so add your players' positions (Teams → squad) to be picked.</p></section>{% endif %}
 {% elif not tab %}
+<div class="vsw" role="group" aria-label="Which matches"><a href="/rankings{% if country %}?country={{ country|urlencode }}{% if region %}&amp;region={{ region|urlencode }}{% endif %}{% endif %}" class="{% if view != 'friendlies' %}on{% endif %}">Competitions</a><a href="/rankings?view=friendlies{% if country %}&amp;country={{ country|urlencode }}{% if region %}&amp;region={{ region|urlencode }}{% endif %}{% endif %}" class="{% if view == 'friendlies' %}on{% endif %}">Friendlies</a></div>
+{% if view == "friendlies" %}<p class="note" style="margin-top:0">A separate ranking from friendlies only: it never mixes with the main ranking.</p>{% endif %}
 <section class="card"><div class="tbl"><table class="st rk">
   <thead><tr><th>#</th><th class="tl">Team</th><th><abbr title="Rating">Rating</abbr></th><th><abbr title="Played">P</abbr></th><th><abbr title="Won">W</abbr></th><th><abbr title="Drawn">D</abbr></th><th><abbr title="Lost">L</abbr></th><th><abbr title="Goal difference">GD</abbr></th><th class="hide-s">Form</th></tr></thead>
   <tbody>{% for r in rows %}<tr>

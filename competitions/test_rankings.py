@@ -140,6 +140,75 @@ class RankingsTest(Helpers, TestCase):
         a = {x["key"]: x for x in rankings.awards(lambda o: o.slug == self.sb, 99)["awards"]}
         self.assertNotIn("defence", a)
 
+    def test_fair_play_counts_cards_correctly(self):
+        b1, c1 = self.league(self.a, self.sa, ["Lions", "Tigers", "Bears"])
+        self.play(self.a, b1, c1, "Lions")
+        self.root.call("patch", "/api/admin/settings", {"section": "rankings", "changes": {"enabled": True, "min_matches": 1}})
+        ms = list(Match.objects.filter(competition__slug=c1).select_related("home__team", "away__team"))
+        card = lambda m, side, kind: self.a.call("post", f"{b1}/matches/{m.id}/events", {"kind": kind, "side": side, "minute": 50})
+        # Lions: a red card (3); Tigers: two yellows (2); Bears: one yellow (1) -> Bears win Fair Play
+        for m in ms:
+            names = {"home": m.home.team.name, "away": m.away.team.name}
+            for side, team in names.items():
+                if team == "Lions" and not getattr(self, "_red", False):
+                    card(m, side, "red"); self._red = True
+                if team == "Tigers":
+                    card(m, side, "yellow")
+        bears = next(m for m in ms if "Bears" in (m.home.team.name, m.away.team.name))
+        card(bears, "home" if bears.home.team.name == "Bears" else "away", "yellow")
+        a = {x["key"]: x for x in rankings.awards(lambda o: True, 1)["awards"]}
+        self.assertEqual(a["fairplay"]["who"], "Bears", a["fairplay"])
+        self.assertIn("1 card point", a["fairplay"]["stat"])
+
+    def test_friendlies_have_their_own_ranking_and_awards_are_worldwide(self):
+        b1, c1 = self.league(self.a, self.sa, ["Lions", "Tigers"])
+        self.play(self.a, b1, c1, "Lions")
+        fs = self.a.call("post", f"{b1}/competitions", {"name": "Fun", "kind": "friendly", "visibility": "public"}).json()["competition"]["slug"]
+        ids = [self.a.call("post", f"{b1}/teams", {"name": n}).json()["team"]["id"] for n in ("Owls", "Bats")]
+        self.a.call("post", f"{b1}/competitions/{fs}/entries", {"teamIds": ids})
+        self.a.call("post", f"{b1}/competitions/{fs}/generate", {"start": "2026-01-01T15:00:00Z"})
+        for m in Match.objects.filter(competition__slug=fs):
+            self.a.call("patch", f"{b1}/matches/{m.id}", {"homeScore": 2, "awayScore": 0})
+        self.root.call("patch", "/api/admin/settings", {"section": "rankings", "changes": {"enabled": True, "min_matches": 1}})
+        main = Client().get("/rankings").content.decode()
+        self.assertIn("Lions", main)
+        self.assertNotIn("Owls", main, "friendlies don't mix with the main ranking")
+        friendly = Client().get("/rankings?view=friendlies").content.decode()
+        self.assertIn("Owls", friendly)
+        self.assertNotIn("Tigers", friendly)
+        awards = Client().get("/rankings/awards?country=Nowhere").content.decode()
+        self.assertIn("Awards 2026 · worldwide", awards)
+        self.assertIn("Lions", awards, "the country filter doesn't apply to awards")
+
+    def test_team_of_the_season_and_organization_awards(self):
+        from competitions.models import Player, Team
+        b1, c1 = self.league(self.a, self.sa, ["Lions", "Tigers"])
+        b2, c2 = self.league(self.b, self.sb, ["Eagles", "Hawks"])
+        lions = Team.objects.get(name="Lions")
+        Player.objects.create(team=lions, name="Ama Keeper", position="GK")
+        Player.objects.create(team=lions, name="Kojo Back", position="DF")
+        striker = Player.objects.create(team=lions, name="Kofi Striker", position="FW")
+        for owner, base, cs in ((self.a, b1, c1), (self.b, b2, c2)):
+            for m in Match.objects.filter(competition__slug=cs).select_related("home__team"):
+                owner.call("patch", f"{base}/matches/{m.id}", {"homeScore": 2, "awayScore": 0})
+                if cs == c1:                           # the Lions striker scores for the Lions, whichever side they're on
+                    ev = {"side": "home" if m.home.team_id == lions.id else "away", "playerId": striker.id}
+                else:
+                    ev = {"side": "home", "playerName": "Eli Hawk"}
+                owner.call("post", f"{base}/matches/{m.id}/events", {"kind": "goal", "minute": 5, **ev})
+        self.root.call("patch", "/api/admin/settings", {"section": "rankings", "changes": {"enabled": True, "min_matches": 1}})
+        xi = rankings.team_of_the_season()["xi"]
+        self.assertIn("Kofi Striker", [p["name"] for p in xi["FW"]])
+        self.assertEqual([p["name"] for p in xi["GK"]], ["Ama Keeper"], "the goalkeeper of a team that kept clean sheets")
+        self.assertEqual([p["name"] for p in xi["DF"]], ["Kojo Back"])
+        page = Client().get("/rankings/awards").content.decode()
+        self.assertIn("Team of the Season", page)
+        self.assertIn("Kofi Striker", page)
+        mine = self.a.get(f"/api/orgs/{self.sa}/awards").json()
+        names = [p["name"] for k in mine["xi"] for p in mine["xi"][k]]
+        self.assertIn("Kofi Striker", names)
+        self.assertNotIn("Eli Hawk", names, "only this organization's players")
+
     def test_margin_and_penalties(self):
         self.assertEqual((rankings.margin_factor(1), rankings.margin_factor(2), rankings.margin_factor(3)), (1.0, 1.5, 1.75))
 
