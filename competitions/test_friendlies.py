@@ -369,6 +369,7 @@ class FriendliesTest(Helpers, TestCase):
         p1 = self.join_team("lion_r", self.lions, "player", "lion_r@example.com")
         from league.models import Admin
         Admin.objects.filter(username="lion_r").update(phone="0241234567")
+        Admin.objects.filter(username="boss").update(phone="0209999999")              # the owner isn't on either team
         mid = self.boss.call("post", f"/api/orgs/{self.a}/friendlies", {"fromTeamId": self.lions, "toTeamId": leopards,
                                                                        "kickoff": (timezone.now() + timedelta(hours=2)).isoformat()}).json()["challenge"]["match"]["id"]
         Organization.objects.filter(slug=self.a).update(auto_sms_reminders=True)
@@ -383,6 +384,7 @@ class FriendliesTest(Helpers, TestCase):
         sms = SmsMessage.objects.filter(org__slug=self.a, kind="reminder")
         self.assertEqual(sms.count(), 1)
         self.assertIn("Lions v Leopards", sms[0].body)
+        self.assertEqual(sms[0].recipients, ["233241234567"], "only the people on the teams playing, not the rest of the organization")
         self.assertLess(SmsAccount.objects.get(org__slug=self.a).credits, 10, "the organization's credits pay for it")
 
     def test_friendly_notices_by_sms_when_turned_on(self):

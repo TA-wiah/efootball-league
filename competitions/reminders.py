@@ -1,5 +1,6 @@
 """Match reminders: a few hours before kick-off, everyone on both teams gets an email, and a text message too when the
-organization running the competition switched on "Text match reminders automatically" (it uses its SMS credits).
+team's organization switched on automatic text messages: each team's people only, from its own organization's
+SMS credits.
 
 Runs at most every 10 minutes when someone opens the site, or on demand: python manage.py send_reminders
 (e.g. as an hourly scheduled task). Each match is reminded once.
@@ -41,7 +42,7 @@ def email_teams(team_ids, subject, lines, link, button="Open"):
     return sent
 
 
-def text_team(team, message):
+def text_team(team, message, kind="notice"):
     """Best effort: an SMS to everyone on the team with a phone, paid from the team's organization's credits, only when
     that organization turned on automatic text messages. Returns how many people it went to."""
     org = team.org
@@ -52,7 +53,7 @@ def text_team(team, message):
         return 0
     try:
         from sms.api import send_text
-        send_text(org, None, numbers, message[:450], kind="notice")
+        send_text(org, None, numbers, message[:450], kind=kind)
         return len(numbers)
     except ApiError as e:                                  # no credits, SMS off, blocked…: emails still go
         log.info("SMS to %s not sent: %s", team.name, e.message)
@@ -65,7 +66,7 @@ def send_due(force=False):
         return 0
     _last["t"] = now_t
     now = timezone.now()
-    due = (Match.objects.select_related("competition__org", "home__team", "away__team")
+    due = (Match.objects.select_related("competition__org", "home__team__org", "away__team__org")
            .filter(status="scheduled", reminded__isnull=True, home__isnull=False, away__isnull=False,
                    kickoff__gt=now, kickoff__lte=now + timezone.timedelta(hours=REMIND_HOURS))[:50])
     done = 0
@@ -80,14 +81,11 @@ def send_due(force=False):
         email_teams([m.home.team_id, m.away.team_id], f"Match reminder: {pair}",
                     [f"{pair} kicks off {when} ({m.competition.name}).", "Before kick-off press “We’re here”, and after the match send the result with a screenshot."],
                     f"{base}/app/report/{m.id}", "Open the match")
-        if org.auto_sms_reminders:
-            try:
-                text, ids = templates.build(org, "match_reminder", base, {"match": m.id})
-                numbers = list(Membership.objects.filter(id__in=ids).exclude(user__phone="").values_list("user__phone", flat=True).distinct())
-                if numbers:
-                    from sms.api import send_text
-                    send_text(org, None, numbers, text, kind="reminder")
-            except ApiError as e:                          # no credits, SMS off, blocked…: the email still went
-                log.info("SMS reminder for match %s not sent: %s", m.id, e.message)
+        try:
+            text, _ = templates.build(org, "match_reminder", base, {"match": m.id})
+        except ApiError:
+            text = f"Reminder: {pair}, {when}. {m.competition.name}."
+        for team in (m.home.team, m.away.team):            # each team: only its own people, from its own organization's credits
+            text_team(team, text, kind="reminder")
         done += 1
     return done
