@@ -443,6 +443,30 @@ class FriendliesTest(Helpers, TestCase):
         everyone = told(lambda: self.chief.call("post", f"/api/orgs/{self.b}/friendlies", {"fromTeamId": self.tigers, "toOrg": self.a, "kickoff": self.soon(3)}))
         self.assertEqual(everyone, sorted(["boss@example.com", "bull_coach@example.com", "bull_w@example.com", "leo_w@example.com", "lion_w@example.com"]))
 
+    def test_result_confirmed_texts_only_the_two_teams(self):
+        from league.models import Admin
+        from orgs.models import Organization
+        from sms.models import SmsAccount, SmsMessage
+        leopards, bulls = self.team(self.boss, self.a, "Leopards"), self.team(self.boss, self.a, "Bulls")
+        p1 = self.join_team("lion_c", self.lions, "player")
+        self.join_team("leo_c", leopards, "player")
+        self.join_team("bull_c2", bulls, "player")                       # not playing this match
+        Admin.objects.filter(username="lion_c").update(phone="0241111111")
+        Admin.objects.filter(username="leo_c").update(phone="0242222222")
+        Admin.objects.filter(username="bull_c2").update(phone="0243333333")
+        Admin.objects.filter(username="boss").update(phone="0244444444")  # the owner, on no team
+        org = Organization.objects.get(slug=self.a)
+        Organization.objects.filter(id=org.id).update(auto_sms_reminders=True)
+        SmsAccount.objects.update_or_create(org=org, defaults={"credits": 20})
+        store.update("sms", {"enabled": True, "provider": "console", "sender": "League"})
+        mid = self.boss.call("post", f"/api/orgs/{self.a}/friendlies", {"fromTeamId": self.lions, "toTeamId": leopards, "kickoff": "now"}).json()["challenge"]["match"]["id"]
+        png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+        claim = p1.call("post", f"/api/report/{mid}/proof", {"kind": "result", "image": png, "homeScore": 2, "awayScore": 1}).json()["claims"][0]
+        SmsMessage.objects.all().delete()
+        self.boss.call("post", f"/api/report/{mid}/approve", {"proofId": claim["id"]})
+        sent = [n for m in SmsMessage.objects.filter(org=org, body__contains="Result confirmed") for n in m.recipients]
+        self.assertEqual(sorted(sent), ["233241111111", "233242222222"], "only the two teams that played: not Bulls, not the owner")
+
     def test_friendly_series_is_always_a_plain_series_and_counts_less(self):
         r = self.boss.call("post", f"/api/orgs/{self.a}/competitions", {"name": "Summer Friendlies", "kind": "friendly", "format": "groups_knockout", "visibility": "public"})
         c = Competition.objects.get(slug=r.json()["competition"]["slug"])
