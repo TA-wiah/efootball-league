@@ -220,7 +220,9 @@ def match(request, slug):
     events = []
     for e in m.events.select_related("player", "assist"):
         events.append({"minute": e.minute, "side": e.side, "kind": e.kind, "label": EVENT_L[e.kind], "icon": EVENT_ICON.get(e.kind, "•"),
-                       "player": e.player.name if e.player else e.player_name, "assist": e.assist.name if e.assist else e.assist_name,
+                       "player": ((e.player.name if e.player else e.player_name) + " (own goal)" if (e.player or e.player_name) else "Own goal")
+                                 if e.kind == "own_goal" else (e.player.name if e.player else e.player_name),
+                       "assist": e.assist.name if e.assist else e.assist_name,
                        "note": e.note})
     # knockout: aggregate over two legs
     aggregate = None
@@ -252,6 +254,15 @@ def match(request, slug):
            "title": title + (f" {m.home_score}–{m.away_score}" if mv["played"] else ""), "description": desc,
            "logo": logo("competition", c), "share_image": logo("competition", c) or org_logo(c.org), "notes": m.notes}
     return page(request, "match.html", ctx, index=c.visibility == "public" and not c.hidden, private=c.hidden)
+
+
+def xi_view(t):
+    rows = [("Forwards", "FW"), ("Midfielders", "MF"), ("Defenders", "DF"), ("Goalkeeper", "GK")]
+    out = []
+    for label, k in rows:
+        players = [{**p, "t": team_view(p["team"], public_team_ids([p["team"].id])), "org": p["team"].org} for p in t["xi"][k]]
+        out.append({"label": label, "players": players, "missing": {"GK": 1, "DF": 4, "MF": 3, "FW": 3}[k] - len(players)})
+    return {"rows": out, "filled": t["filled"], "year": t["year"]}
 
 
 def store_name(key):
@@ -463,15 +474,16 @@ def sitemap(request):
 
 def rankings_page(request, tab=""):
     """/rankings (teams) and /rankings/players, across every organization. Super admins can preview while it's off."""
-    from .rankings import awards, compute, settings_
+    from .rankings import awards, compute, settings_, team_of_the_season
     cfg = settings_()
     user = session_user(request)
     if not cfg["enabled"] and not (user and user.is_superuser):
         raise Http404
     if tab not in ("", "players", "awards"):
         raise Http404
-    data = compute()
-    country = (request.GET.get("country") or "").strip()[:60]
+    view = "friendlies" if request.GET.get("view") == "friendlies" and tab == "" else ""
+    data = compute(friendlies=bool(view))
+    country = (request.GET.get("country") or "").strip()[:60] if tab != "awards" else ""      # awards are worldwide
     region = (request.GET.get("region") or "").strip()[:60] if country else ""
     where = lambda o: (not country or o.country.lower() == country.lower()) and (not region or o.region.lower() == region.lower())
     teams = [r for r in data["teams"] if r["played"] >= cfg["min_matches"]]
@@ -502,6 +514,7 @@ def rankings_page(request, tab=""):
            "poty_name": store_name("poty"),
            "awards": [{**a, "t": team_view(a["team"], public_team_ids([a["team"].id])), "org": a["team"].org}
                       for a in awards(where, cfg["min_matches"])["awards"]] if tab == "awards" else [],
+           "xi": xi_view(team_of_the_season()) if tab == "awards" else None, "view": view,
            "matches": data["matches"], "preview": not cfg["enabled"], "nav": "rankings",
            "title": {"players": "Player rankings", "awards": "Awards"}.get(tab, "Team rankings") + ("" if area == "Worldwide" else f": {area}"), "description": "The best teams and players across every league and tournament on the platform."}
     return page(request, "rankings.html", ctx, index=cfg["enabled"], private=not cfg["enabled"], banner=False)

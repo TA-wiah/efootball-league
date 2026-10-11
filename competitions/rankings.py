@@ -23,6 +23,7 @@ CARD_POINTS = {"yellow": 1, "second_yellow": 2, "red": 3}      # for the Fair Pl
 AWARDS = [("poty", "Most goals and assists together"), ("boot", "Most goals"), ("assists", "Most assists"),
           ("defence", "Fewest goals conceded per match"), ("team", "#1 in the team rankings"), ("fairplay", "Fewest cards per match")]
 _cache = {"key": None, "data": None}
+_fcache = {"key": None, "data": None}               # the separate friendlies ranking
 
 
 def settings_():
@@ -46,15 +47,19 @@ def margin_factor(gd):
     return 1.0 if gd <= 1 else 1.5 if gd == 2 else (11 + gd) / 8
 
 
-def compute():
-    """{teams: [...], players: [...]} in ranking order (cached until a match changes)."""
+def compute(friendlies=False):
+    """{teams: [...], players: [...]} in ranking order (cached until a match changes). friendlies=True: a separate
+    ranking from friendlies only (they never mix with the main one unless a super admin chose to count them)."""
     qs = _played()
     weight = settings_()["friendly_weight"]                 # friendlies: not counted at all (default), or half / fully
-    if not weight:
+    cache = _fcache if friendlies else _cache
+    if friendlies:
+        qs, weight = qs.filter(competition__kind="friendly"), 1.0
+    elif not weight:
         qs = qs.exclude(competition__kind="friendly")      # then they're left out completely: ratings, matches played, players
     key = (qs.count(), qs.aggregate(m=Max("updated"))["m"], MatchEvent.objects.filter(match__in=qs).count(), weight, timezone.localdate().year)
-    if _cache["key"] == key:
-        return _cache["data"]
+    if cache["key"] == key:
+        return cache["data"]
     teams = {}
 
     def row(t):
@@ -108,7 +113,7 @@ def compute():
                 season[entry.team_id]["cards"] += CARD_POINTS[e.kind]
     data = {"teams": ranked, "players": players, "matches": len(games), "year": year, "season": season,
             "year_players": [p for p in scorers(this_year) if p["goals"] or p["assists"]]}
-    _cache.update(key=key, data=data)
+    cache.update(key=key, data=data)
     return data
 
 
@@ -142,7 +147,7 @@ def awards(where, min_matches):
     # Team of the Year: the team on top of the rankings (same list and area as Rankings → Teams), having played this year
     year = data["year"]
     top = [r for r in data["teams"] if r["played"] >= min_matches and where(r["team"].org) and r["last"] and timezone.localtime(r["last"]).year == year]
-    team("team", top, lambda r: f"Rating {round(r['rating'])} · #1 in the rankings")
+    team("team", top, lambda r: f"Rating {round(r['rating'])} · the highest-ranked")
     # Fair Play only once cards are being recorded (otherwise everyone has 0 and it means nothing)
     if len(teams) >= 2 and any(r["cards"] for r in teams):
         team("fairplay", sorted(teams, key=lambda r: (per(r, "cards"), r["team"].name.lower())),
@@ -151,6 +156,54 @@ def awards(where, min_matches):
     for a in out:
         a["how"] = how[a["key"]]
     return {"year": data["year"], "awards": out}
+
+
+def team_of_the_season(where=lambda o: True):
+    """The year's best XI (4-3-3) from players in the system: forwards by goals, midfielders by assists and goals,
+    defenders and the goalkeeper by their team's defence (fewest conceded, clean sheets). Positions come from the teams'
+    squads; scorers typed by name are matched to the squad when the name is there. Friendlies don't count."""
+    from .models import Player
+    data = compute()
+    s = settings_()
+    season = {tid: r for tid, r in data["season"].items() if r["played"] >= s["min_matches"] and where(r["team"].org)}
+    stats = [p for p in data["year_players"] if p["team"] and where(p["team"].org)]
+    squads = {}
+    for pl in Player.objects.select_related("team__org").filter(team_id__in=set(season) | {p["team"].id for p in stats}, active=True):
+        squads.setdefault(pl.team_id, []).append(pl)
+    def position(p):
+        for pl in squads.get(p["team"].id, []):
+            if (p["playerId"] and pl.id == p["playerId"]) or (not p["playerId"] and pl.name.strip().lower() == p["name"].strip().lower()):
+                return pl.position
+        return ""
+    defence = lambda tid: (season[tid]["cs"] / season[tid]["played"], -season[tid]["ga"] / season[tid]["played"]) if tid in season else (0, -99)
+    picked, xi = set(), {"GK": [], "DF": [], "MF": [], "FW": []}
+    def add(slot, row, stat):
+        key = (row["team"].id, row["name"].strip().lower())
+        if key in picked or len(xi[slot]) >= {"GK": 1, "DF": 4, "MF": 3, "FW": 3}[slot]:
+            return False
+        picked.add(key)
+        xi[slot].append({"name": row["name"], "team": row["team"], "stat": stat})
+        return True
+    plural = lambda n, w: f"{n} {w}{'' if n == 1 else 's'}"
+    rated = [dict(p, pos=position(p)) for p in stats]
+    for p in sorted([p for p in rated if p["pos"] == "FW" or (not p["pos"] and p["goals"] > p["assists"])], key=lambda p: (-(p["goals"] * 3 + p["assists"]), p["name"].lower())):
+        add("FW", p, f"{plural(p['goals'], 'goal')} · {plural(p['assists'], 'assist')}")
+    for p in sorted([p for p in rated if p["pos"] == "MF" or (not p["pos"] and p["assists"] >= p["goals"])], key=lambda p: (-(p["assists"] * 3 + p["goals"] * 2), p["name"].lower())):
+        add("MF", p, f"{plural(p['assists'], 'assist')} · {plural(p['goals'], 'goal')}")
+    # defenders and goalkeeper: from the best defences' squads (and any defender who scored or assisted)
+    backs = [{"name": pl.name, "team": pl.team, "playerId": pl.id, "pos": pl.position, "goals": 0, "assists": 0}
+             for tid in season for pl in squads.get(tid, []) if pl.position in ("DF", "GK")]
+    for b in backs:
+        for p in rated:
+            if p["team"].id == b["team"].id and p["name"].strip().lower() == b["name"].strip().lower():
+                b["goals"], b["assists"] = p["goals"], p["assists"]
+    dstat = lambda b: f"{season[b['team'].id]['cs']} clean sheet{'' if season[b['team'].id]['cs'] == 1 else 's'} · {season[b['team'].id]['ga']} conceded in {plural(season[b['team'].id]['played'], 'match')}"
+    for b in sorted([b for b in backs if b["pos"] == "GK"], key=lambda b: (defence(b["team"].id), b["name"].lower()), reverse=True):
+        add("GK", b, dstat(b))
+    for b in sorted([b for b in backs if b["pos"] == "DF"], key=lambda b: (defence(b["team"].id), b["goals"] + b["assists"]), reverse=True):
+        add("DF", b, dstat(b))
+    filled = sum(len(v) for v in xi.values())
+    return {"year": data["year"], "xi": xi, "filled": filled}
 
 
 def positions(teams):

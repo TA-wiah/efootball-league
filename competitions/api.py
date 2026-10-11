@@ -896,11 +896,14 @@ def match_events(request, user, ip, slug, match_id):
     if mt.events.count() >= 80:
         raise ApiError(400, "Too many events for one match.")
 
+    # an own goal: "side" is the team the goal counts for; the player who put it in is from the other team
+    squad_of = (mt.away if side == "home" else mt.home) if b["kind"] == "own_goal" else entry
+
     def player(key):
         pid = b.get(key)
         if pid in (None, ""):
             return None
-        p = entry.team.players.filter(id=pid).first() if isinstance(pid, int) else None
+        p = squad_of.team.players.filter(id=pid).first() if squad_of and isinstance(pid, int) else None
         if not p:
             raise ApiError(400, "That player isn't in this team's squad.")
         return p
@@ -973,6 +976,22 @@ def org_rankings(request, user, ip, slug):
         if len(players) >= 15:
             break
     return {"enabled": True, "minMatches": s["min_matches"], "inRankings": org.in_rankings, "teams": rows, "players": players}
+
+
+@endpoint("GET", login_required=True)
+def org_awards(request, user, ip, slug):
+    """This organization's own awards and best XI for the year (its teams and players only), for its members."""
+    from .rankings import awards, settings_, team_of_the_season
+    org, m = access(user, slug, "org.view")
+    s = settings_()
+    if not s["enabled"]:
+        return {"enabled": False}
+    mine = lambda o: o.id == org.id
+    a = awards(mine, s["min_matches"])
+    xi = team_of_the_season(mine)
+    return {"enabled": True, "year": a["year"],
+            "awards": [{"key": x["key"], "name": x["name"], "who": x["who"], "team": team_brief(x["team"]), "stat": x["stat"], "how": x["how"]} for x in a["awards"]],
+            "xi": {k: [{"name": p["name"], "team": team_brief(p["team"]), "stat": p["stat"]} for p in v] for k, v in xi["xi"].items()}}
 
 
 @endpoint("GET", login_required=True)

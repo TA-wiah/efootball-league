@@ -462,6 +462,26 @@ class CompetitionApiTest(Helpers, TestCase):
         page = __import__("django.test", fromlist=["Client"]).Client().get(f"/competition/{top}/table").content.decode()
         self.assertIn("relegated to Division One", page)
 
+    def test_own_goal_with_or_without_a_name(self):
+        from competitions.models import Match, Player, Team
+        cs = self.comp(visibility="public")
+        ids = self.teams(["Reds", "Blues"])
+        self.owner.call("post", f"{self.base}/competitions/{cs}/entries", {"teamIds": ids})
+        self.owner.call("post", f"{self.base}/competitions/{cs}/generate", {})
+        m = Match.objects.filter(competition__slug=cs).select_related("home__team", "away__team").first()
+        url = f"{self.base}/matches/{m.id}/events"
+        r = self.owner.call("post", url, {"kind": "own_goal", "side": "home", "minute": 12})
+        self.assertEqual(r.status_code, 200, r.json())
+        other = Player.objects.create(team=m.away.team, name="Unlucky Defender")
+        mine = Player.objects.create(team=m.home.team, name="Home Player")
+        self.assertEqual(self.owner.call("post", url, {"kind": "own_goal", "side": "home", "playerId": other.id}).status_code, 200,
+                         "the player who put it in is from the other team")
+        self.assertEqual(self.owner.call("post", url, {"kind": "own_goal", "side": "home", "playerId": mine.id}).status_code, 400)
+        page = __import__("django.test", fromlist=["Client"]).Client().get(f"/match/{m.slug}").content.decode()
+        self.assertIn("Own goal", page)
+        self.assertIn("Unlucky Defender (own goal)", page)
+        self.assertNotIn("Unknown player", page)
+
     def test_knockout_dates_follow_the_group_stage(self):
         from datetime import date, timedelta
         cs, url, e = self.groups_comp()

@@ -597,9 +597,9 @@ function playerOverview(){var ids=myTeamIds(),mgr=ORG.me.role!=="player";
       '<div class="card"><p class="note" style="margin:0">'+ic("check")+' After a match, open it from <b>My matches</b> and <b>submit the result with a screenshot</b>. The organization checks it and confirms the score.</p></div>'+
       '<div class="card"><div class="gh">NEXT MATCHES</div>'+(up.length?'<div class="tbl"><table class="dt"><tbody>'+up.map(row).join("")+'</tbody></table></div>':'<p class="note">No matches coming up.</p>')+'</div>'+
       '<div class="card"><div class="gh">LATEST RESULTS</div>'+(past.length?'<div class="tbl"><table class="dt"><tbody>'+past.map(row).join("")+'</tbody></table></div>':'<p class="note">No results yet.</p>')+'</div>'+
-      '<div id="prank"></div>'+teams.map(teamFriendlies).join("")+
+      '<div id="prank"></div><div id="pawards"></div>'+teams.map(teamFriendlies).join("")+
       '<div class="card"><div class="gh">RUN YOUR OWN CLUB</div><p class="note" style="margin-top:0">Want your own club to arrange friendlies, invite players and enter competitions? Create your own organization: you’ll be its owner. You keep your place here too.</p><a class="btn" href="/app/new?intent=team" data-nav>'+ic("plus")+' Create my club</a></div>';
-    rankingsCard("prank");
+    rankingsCard("prank");orgAwardsCard("pawards");
     [["data-dok","approve","Approved: the match is set"],["data-dno","decline","Declined"]].forEach(function(a){document.querySelectorAll("["+a[0]+"]").forEach(function(b){b.onclick=function(){busy(b,true,"…");
       api(api0("/friendly-board/"+b.getAttribute(a[0])+"/"+a[1]),"POST",{}).then(function(x){busy(b,false);toast(x.ok?a[2]:x.data.error,!x.ok);if(x.ok)playerOverview()})}})})})}
 function pendingResultsCard(){if(!has("results.enter"))return;api(api0("/pending-results")).then(function(r){if(!r.ok||!r.data.matches.length)return;var box=document.createElement("div");
@@ -617,6 +617,12 @@ function pendingFriendliesCard(){if(!has("teams.manage")&&!has("teams.manage_ass
   card.querySelectorAll("[data-fapa],[data-fapd]").forEach(function(b){b.onclick=function(){var id=b.dataset.fapa||b.dataset.fapd,ok=!!b.dataset.fapa,sel=card.querySelector('[data-fapt="'+id+'"]');busy(b,true,"…");
     api(api0("/friendlies/"+id+"/"+(ok?"accept":"decline")),"POST",ok&&sel?{teamId:+sel.value}:{}).then(function(x){busy(b,false);toast(x.ok?(ok?"Approved: the match is set":"Declined"):x.data.error,!x.ok);if(x.ok){card.remove();pendingFriendliesCard()}})}})})}
 // where the teams stand in the platform rankings (world, country, region), explained in plain words
+function orgAwardsCard(box){api(api0("/awards")).then(function(r){if(!r.ok||!r.data.enabled||!$(box))return;var d=r.data;
+  if(!d.awards.length&&!Object.keys(d.xi).some(function(k){return d.xi[k].length}))return;
+  var line=function(k,label){var ps=d.xi[k];return ps.length?'<tr><td class="note" style="white-space:nowrap">'+label+'</td><td>'+ps.map(function(p){return'<b>'+esc(p.name)+'</b> <small style="display:inline">('+esc(p.team.name)+')</small>'}).join(", ")+'</td></tr>':''};
+  $(box).innerHTML='<div class="card"><div class="gh">'+esc(ORG.org.name).toUpperCase()+' AWARDS '+d.year+'</div><p class="note" style="margin-top:0">Only your organization’s teams and players, from this year’s competition matches (friendlies don’t count). The platform-wide awards are on <a href="/rankings/awards" target="_blank" rel="noopener">Rankings → Awards ↗</a>.</p>'+
+    (d.awards.length?'<div class="grid">'+d.awards.map(function(a){return'<div class="oc"><small style="color:var(--gold);font-weight:800;letter-spacing:.5px">🏆 '+esc(a.name.toUpperCase())+'</small><span class="ch" style="margin-top:6px">'+crest(a.team,30)+'<b style="margin:0">'+esc(a.who)+'</b></span><small style="display:block;margin-top:4px">'+(a.who!==a.team.name?esc(a.team.name)+' · ':'')+esc(a.stat)+'</small></div>'}).join("")+'</div>':'')+
+    '<div class="gh" style="margin-top:14px">TEAM OF THE SEASON</div><div class="tbl"><table class="dt"><tbody>'+line("FW","Forwards")+line("MF","Midfielders")+line("DF","Defenders")+line("GK","Goalkeeper")+'</tbody></table></div><p class="note">Add players’ positions in your squads (Teams) so defenders and goalkeepers can be picked.</p></div>'})}
 function rankingsCard(box){api(api0("/rankings")).then(function(r){if(!r.ok||!r.data.enabled||!r.data.teams.length||!$(box))return;var d=r.data;
   var rows=d.teams.map(function(t){var pl=t.world?'<b style="font-size:17px">#'+t.world+'</b> world'+(t.inCountry?' · <b>#'+t.inCountry+'</b> in '+esc(t.country):'')+(t.inRegion?' · <b>#'+t.inRegion+'</b> in '+esc(t.region):'')
       :'<span class="note">Not ranked yet: '+t.needed+' more match'+(t.needed===1?"":"es")+' in public competitions</span>';
@@ -651,14 +657,14 @@ function overview(){var o=ORG.org;if(teamOnly())return playerOverview();setTimeo
       '<div class="kpis">'+K(s.activeCompetitions,"Active competitions","/competitions",s.competitions+" in total")+K(s.teams,"Total teams","/teams")+K(s.players,"Total players","/players")+
         K(s.staff,"Staff","/staff",s.members+" member"+(s.members===1?"":"s")+" in total")+K(s.upcoming,"Upcoming matches","/fixtures")+K(s.completed,"Matches played","/results")+
         (s.pendingInvitations!=null?K(s.pendingInvitations,"Pending invitations","/invitations"):"")+(s.awaitingResults?K(s.awaitingResults,"Waiting for a result","/fixtures","Kicked off, no score yet","warn"):"")+'</div>'+
-      '<div id="dremind"></div><div id="dmine"></div><div id="drank"></div>'+
+      '<div id="dremind"></div><div id="dmine"></div><div id="drank"></div><div id="dawards"></div>'+
       (!s.competitions&&has("competitions.manage")?'<div class="card"><div class="gh">Get started</div><ol style="margin:0;padding-left:20px;line-height:1.9"><li><a href="'+app0("/teams?new=1")+'" data-nav>Add your teams</a></li><li><a href="'+app0("/competitions?new=1")+'" data-nav>Create a competition</a> and enter the teams</li><li>Generate the fixtures, then enter results as matches are played</li><li>Share your <a href="'+app0("/link")+'" data-nav>public link</a>: the tables update by themselves</li></ol></div>':'')+
       '<div class="agrid"><div class="card"><div class="gh">Upcoming matches</div>'+matchList(s.nextMatches||[],{comp:1,by:"date",empty:"No upcoming matches with a date."})+'</div>'+
       '<div class="card"><div class="gh">Recent results</div>'+matchList(s.recentResults||[],{comp:1,by:"date",empty:"No results yet."})+'</div></div>'+
       '<div class="agrid" style="margin-top:14px"><div class="card"><div class="gh">Recent activity</div><div class="feed">'+feed(s.activity)+'</div><p style="margin:10px 0 0"><a href="'+app0("/activity")+'" data-nav>All activity →</a></p></div>'+
       '<div class="card"><div class="gh">Your access</div><p style="margin-top:0">'+pill(ORG.me.role,ORG.me.roleLabel)+' <span class="note">'+esc((ROLES.roles.filter(function(x){return x.key===ORG.me.role})[0]||{}).description||"")+'</span></p><ul class="note" style="margin:0;padding-left:18px;line-height:1.7">'+
         (ROLES.permissions||[]).filter(function(p){return has(p.key)}).map(function(p){return'<li>'+esc(p.label)+'</li>'}).join("")+'</ul></div></div>';proCard();
-    remindersCard(s,"dremind");myMatchesCard("dmine");rankingsCard("drank")})}
+    remindersCard(s,"dremind");myMatchesCard("dmine");rankingsCard("drank");orgAwardsCard("dawards")})}
 
 // ---------- activity & notifications ----------
 function activitySec(){var all=[],more=function(before){api(api0("/activity"+(before?"?before="+before:""))).then(function(r){if(!r.ok)return fail(r);all=all.concat(r.data.events);
@@ -880,7 +886,7 @@ function compSettings(C,E,crit){$("ctab").innerHTML=compForm(C,crit)+'<div class
 // ---------- one match ----------
 function matchPage(id){api(api0("/matches/"+id)).then(function(r){if(!r.ok)return fail(r);var m=r.data.match,canR=has("results.enter"),canF=has("fixtures.manage");
   var t=function(x,lab){return'<div class="t">'+crest(x,56)+'<span>'+(x?esc(x.name):'<span class="note">'+esc(lab||"To be decided")+'</span>')+'</span></div>'};
-  var evs=m.events.map(function(e){return'<div class="ev '+e.side+'"><i>'+(e.minute!=null?e.minute+"'":"")+'</i><span><b>'+esc(EV_L[e.kind])+'</b> · '+esc(e.playerName||"Unknown player")+(e.assistName?' <span class="note">(assist '+esc(e.assistName)+')</span>':'')+(e.note?' <span class="note">'+esc(e.note)+'</span>':'')+'</span>'+(canR?'<button class="btn g sm" data-xe="'+e.id+'" aria-label="Delete event">✕</button>':'')+'</div>'}).join("");
+  var evs=m.events.map(function(e){return'<div class="ev '+e.side+'"><i>'+(e.minute!=null?e.minute+"'":"")+'</i><span><b>'+esc(EV_L[e.kind])+'</b>'+(e.kind==="own_goal"?(e.playerName?' · '+esc(e.playerName)+' <span class="note">(own goal, counts for this team)</span>':' <span class="note">(counts for this team)</span>'):' · '+esc(e.playerName||"Unknown player"))+(e.assistName?' <span class="note">(assist '+esc(e.assistName)+')</span>':'')+(e.note?' <span class="note">'+esc(e.note)+'</span>':'')+'</span>'+(canR?'<button class="btn g sm" data-xe="'+e.id+'" aria-label="Delete event">✕</button>':'')+'</div>'}).join("");
   var squad=function(side){return'<option value="">Type a name instead…</option>'+(m.players[side]||[]).map(function(p){return'<option value="'+p.id+'">'+(p.number!=null?p.number+". ":"")+esc(p.name)+'</option>'}).join("")};
   $("sec").innerHTML='<div class="card"><a class="note" style="color:var(--soft)" href="'+app0("/competitions/"+m.competition.slug+"/fixtures")+'" data-nav>← '+esc(m.competition.name)+'</a><p class="note" style="text-align:center;margin:8px 0 14px">'+esc(m.roundName||("Round "+m.round))+(m.group?' · Group '+esc(m.group):'')+(m.leg>1?' · 2nd leg':'')+'<br>'+when(m.kickoff)+(m.venue?' · '+esc(m.venue):'')+'</p>'+
     (m.competition.visibility!=="private"?publicLinks("/match/"+m.slug,"Public match page"):"")+'<div class="board" style="margin-top:14px">'+t(m.home,m.homeFrom)+'<div><div class="big">'+(m.homeScore==null?"– : –":m.homeScore+" : "+m.awayScore)+'</div>'+(m.homePens!=null?'<div class="note">Penalties '+m.homePens+'–'+m.awayPens+'</div>':'')+'<span class="pill '+m.status+'">'+esc(MST_L[m.status])+'</span></div>'+t(m.away,m.awayFrom)+'</div></div>'+
@@ -901,7 +907,10 @@ function matchPage(id){api(api0("/matches/"+id)).then(function(r){if(!r.ok)retur
   if($("rf"))$("rf").onsubmit=function(e){e.preventDefault();var d={homeScore:intOrNull(val("hs")),awayScore:intOrNull(val("as")),status:val("mst"),kickoff:fromLocal(val("mko")),venue:val("mv"),referee:val("mref"),notes:val("mnotes")};if(ENDED_L[m.decided||""]!==undefined||val("mend"))d.decided=val("mend");
     if(d.homeScore!=null&&d.awayScore!=null&&d.status==="scheduled")d.status="finished";if($("hp")){d.homePens=intOrNull(val("hp"));d.awayPens=intOrNull(val("ap"))}
     var b=$("rsave");busy(b,true,"Saving…");api(api0("/matches/"+id),"PATCH",d).then(function(r){busy(b,false);if(!r.ok){$("rmsg").innerHTML=errBox(r);return}toast("Match saved");reload()})};
-  if($("esd"))$("esd").onchange=function(){var s=val("esd");$("ep").innerHTML=squad(s);$("ea").innerHTML=squad(s)};
+  // an own goal: pick the team the goal counts for; the player who put it in is from the other team (name optional)
+  var evSide=function(){var og=val("ek")==="own_goal",s=val("esd"),o=s==="home"?"away":"home";$("ep").innerHTML=squad(og?o:s);$("ea").innerHTML=squad(s);
+    $("esd").previousSibling.textContent=og?"Goal counts for":"Team";$("epn").placeholder=og?"Who put it in (optional)":"Player name";$("ea").closest("label").style.display=og?"none":""};
+  if($("esd")){$("esd").onchange=evSide;$("ek").onchange=evSide}
   if($("ef"))$("ef").onsubmit=function(e){e.preventDefault();api(api0("/matches/"+id+"/events"),"POST",{kind:val("ek"),side:val("esd"),minute:intOrNull(val("emin")),playerId:intOrNull(val("ep")),playerName:val("epn"),assistId:intOrNull(val("ea")),assistName:val("ean")}).then(function(r){
     if(!r.ok){toast(r.data.error,true);return}toast("Event added");reload()})};
   document.querySelectorAll("[data-xe]").forEach(function(b){b.onclick=function(){api(api0("/matches/"+id+"/events/"+b.dataset.xe),"DELETE",{}).then(function(r){if(r.ok)reload();else toast(r.data.error,true)})}});
