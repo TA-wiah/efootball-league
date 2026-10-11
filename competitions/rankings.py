@@ -135,7 +135,7 @@ def awards(where, min_matches):
             out.append({"key": key, "name": name(key), "who": rows[0]["team"].name, "team": rows[0]["team"], "stat": stat(rows[0])})
 
     per = lambda r, k: r[k] / r["played"]
-    plural = lambda n, w: f"{n} {w}{'' if n == 1 else 's'}"
+    plural = lambda n, w: f"{n} {w if n == 1 else (w + 'es' if w.endswith('ch') else w + 's')}"
     player("poty", sorted(players, key=lambda p: (-(p["goals"] + p["assists"]), -p["goals"], p["name"].lower())),
            lambda p: f"{plural(p['goals'], 'goal')} · {plural(p['assists'], 'assist')}")
     player("boot", sorted([p for p in players if p["goals"]], key=lambda p: (-p["goals"], -p["assists"], p["name"].lower())), lambda p: plural(p["goals"], "goal"))
@@ -184,7 +184,7 @@ def team_of_the_season(where=lambda o: True):
         picked.add(key)
         xi[slot].append({"name": row["name"], "team": row["team"], "stat": stat})
         return True
-    plural = lambda n, w: f"{n} {w}{'' if n == 1 else 's'}"
+    plural = lambda n, w: f"{n} {w if n == 1 else (w + 'es' if w.endswith('ch') else w + 's')}"
     rated = [dict(p, pos=position(p)) for p in stats]
     for p in sorted([p for p in rated if p["pos"] == "FW" or (not p["pos"] and p["goals"] > p["assists"])], key=lambda p: (-(p["goals"] * 3 + p["assists"]), p["name"].lower())):
         add("FW", p, f"{plural(p['goals'], 'goal')} · {plural(p['assists'], 'assist')}")
