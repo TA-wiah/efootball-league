@@ -413,6 +413,19 @@ class PortalTest(Helpers, TestCase):
         self.assertEqual(boss.call("patch", f"/api/orgs/{slug}/members/{me}", {"role": "admin"}).status_code, 400, "but can't change their own role")
         self.assertEqual(Membership.objects.get(org__slug=slug, user__username="boss").teams.count(), 1)
 
+    def test_delete_revoked_or_expired_invitations(self):
+        boss = self.signup("boss")
+        slug = self.new_org(boss)
+        url = f"/api/orgs/{slug}/invitations"
+        live = boss.call("post", url, {"role": "player"}).json()["invitation"]["id"]
+        self.assertEqual(boss.call("post", f"{url}/{live}/delete").status_code, 400, "a usable invitation must be revoked first")
+        boss.call("post", f"{url}/{live}/revoke")
+        self.assertEqual(boss.call("post", f"{url}/{live}/delete").status_code, 200)
+        self.assertFalse(Invitation.objects.filter(id=live).exists())
+        old = boss.call("post", url, {"role": "viewer"}).json()["invitation"]["id"]
+        Invitation.objects.filter(id=old).update(expires=timezone.now() - timedelta(days=1))
+        self.assertEqual(boss.call("post", f"{url}/{old}/delete").status_code, 200, "expired ones too")
+
     def test_who_can_invite_which_roles(self):
         boss = self.signup("boss")
         slug = self.new_org(boss)

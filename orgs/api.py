@@ -649,6 +649,14 @@ def invitation_action(request, user, ip, slug, inv_id, action):
         raise ApiError(404, "Invitation not found.")
     if RANK[inv.role] >= RANK[m.role]:
         raise ApiError(403, "You can't manage an invitation for a role at or above your own.")
+    if action == "delete":                           # tidy the list: only invitations that can't be used any more
+        if inv.state not in (Invitation.REVOKED, Invitation.EXPIRED):
+            raise ApiError(400, "Only revoked or expired invitations can be deleted. Revoke it first.")
+        inv.delete()
+        log(org, user, f"deleted the {inv.state} invitation for {inv.email or 'a link'}")
+        return {"ok": True, "deleted": True}
+    if action not in ("revoke", "resend"):
+        raise ApiError(404, "Unknown action.")
     if action == "revoke":
         if inv.state != Invitation.PENDING:
             raise ApiError(400, "Only pending invitations can be revoked.")

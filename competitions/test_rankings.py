@@ -159,6 +159,7 @@ class RankingsTest(Helpers, TestCase):
         a = {x["key"]: x for x in rankings.awards(lambda o: True, 1)["awards"]}
         self.assertEqual(a["fairplay"]["who"], "Bears", a["fairplay"])
         self.assertIn("1 card point", a["fairplay"]["stat"])
+        self.assertNotIn("matchs", " ".join(x["stat"] for x in a.values()), "plural of match is matches")
 
     def test_friendlies_have_their_own_ranking_and_awards_are_worldwide(self):
         b1, c1 = self.league(self.a, self.sa, ["Lions", "Tigers"])

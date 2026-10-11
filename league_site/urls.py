@@ -138,6 +138,7 @@ urlpatterns = [
     path("api/orgs/<slug:slug>/invitations", o.invitations),
     path("api/orgs/<slug:slug>/invitations/<int:inv_id>/revoke", o.invitation_action, {"action": "revoke"}),
     path("api/orgs/<slug:slug>/invitations/<int:inv_id>/resend", o.invitation_action, {"action": "resend"}),
+    path("api/orgs/<slug:slug>/invitations/<int:inv_id>/delete", o.invitation_action, {"action": "delete"}),
     path("api/invitations/<str:token>", o.invitation_public),
     path("api/invitations/<str:token>/accept", o.invitation_accept),
     path("api/me/invitations", o.my_invitations),
