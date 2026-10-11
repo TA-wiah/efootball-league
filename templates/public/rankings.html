@@ -25,7 +25,7 @@
     <div><b>⭐ Every team has a rating</b><p>Everyone starts at <b>1500</b>. Win and your rating goes up; lose and it goes down. The points move from the loser to the winner, so beating a strong team earns much more than beating a weak one, and a bigger win counts a little more.</p></div>
     <div><b>🔢 Example</b><p>Two teams both on 1500: the winner goes to about <b>1516</b>, the loser to 1484. If a 1400 team beats a 1600 team, the winner jumps about <b>24</b> points: a surprise is worth more.</p></div>
     <div><b>🌍 World, country, region</b><p><b>World</b> is everyone on the platform. Choose a <b>country</b> (or a region inside it) at the top to see only teams from there: the number is the team's place in that list. The country and region come from each organization's profile.</p></div>
-    <div><b>✅ What counts</b><p>Results in <b>public</b> competitions. A draw on penalties counts as a draw. Friendlies count {% if friendly_weight == 0 %}<b>not at all</b>{% elif friendly_weight == 1 %}<b>fully</b>{% else %}<b>half</b>{% endif %}. Walkovers, forfeits and abandoned matches don't count.</p></div>
+    <div><b>✅ What counts</b><p>Results in <b>public</b> competitions. A draw on penalties counts as a draw. {% if friendly_weight == 0 %}Friendlies <b>don't count</b>: they have their own friendly tables.{% elif friendly_weight == 1 %}Friendlies count <b>fully</b>.{% else %}Friendlies count <b>half</b>.{% endif %} Walkovers, forfeits and abandoned matches don't count.</p></div>
     <div><b>❓ Not on the list?</b><p>A team appears after <b>{{ min_matches }}</b> match{{ min_matches|pluralize:"es" }} in public competitions. Private competitions don't count, and an organization can choose to keep its teams out (Organization settings).</p></div>
     <div><b>👟 Players</b><p>Players are ranked by goals, then assists, from the goals and assists organizers enter on match pages.</p></div>
   </div></details>{% endif %}
@@ -35,7 +35,7 @@
     <b class="aw">{{ a.who }}</b>{% if a.key in "poty boot assists" %}<span class="pt">{% if a.t.link %}<a href="/team/{{ a.t.slug }}">{{ a.t.name }}</a>{% else %}{{ a.t.name }}{% endif %}</span>{% endif %}
     <span class="po">{{ a.org.name }}{% if a.org.country %} · {{ a.org.country }}{% endif %}</span><span class="ps">{{ a.stat }}</span><small class="ah">{{ a.how }}</small></div>
   {% empty %}<p class="note">No awards yet: they come from this year's matches in public competitions (goals, cards and results entered by organizers).</p>{% endfor %}</div>
-  <p class="note" style="margin-bottom:0">From {{ year }}'s matches in public competitions across the platform. Friendlies don't count. Teams need {{ min_matches }}+ matches for the team awards.</p></section>
+  <p class="note" style="margin-bottom:0">From {{ year }}'s matches in public competitions across the platform; friendlies don't count. The Team of the Year is the team on top of the team rankings. Best Defence and Fair Play compare teams with {{ min_matches }}+ competition matches this year (at least two teams are needed), and Fair Play appears once organizers record cards on match pages.</p></section>
 {% elif not tab %}
 <section class="card"><div class="tbl"><table class="st rk">
   <thead><tr><th>#</th><th class="tl">Team</th><th><abbr title="Rating">Rating</abbr></th><th><abbr title="Played">P</abbr></th><th><abbr title="Won">W</abbr></th><th><abbr title="Drawn">D</abbr></th><th><abbr title="Lost">L</abbr></th><th><abbr title="Goal difference">GD</abbr></th><th class="hide-s">Form</th></tr></thead>

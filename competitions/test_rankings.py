@@ -124,6 +124,22 @@ class RankingsTest(Helpers, TestCase):
         self.assertEqual([(p["name"], p["team"]["name"], p["goals"], p["world"], p["inCountry"]) for p in mine], [("Kofi Mensah", m.home.team.name, 1, 1, 1)])
         self.assertEqual(self.b.get(f"/api/orgs/{self.sb}/rankings").json()["players"], [], "only your own organization's players")
 
+    def test_team_awards_follow_the_rankings(self):
+        b1, c1 = self.league(self.a, self.sa, ["Lions", "Tigers", "Bears"])
+        self.play(self.a, b1, c1, "Lions")
+        self.root.call("patch", "/api/admin/settings", {"section": "rankings", "changes": {"enabled": True, "min_matches": 1}})
+        a = {x["key"]: x for x in rankings.awards(lambda o: True, 1)["awards"]}
+        top = rankings.compute()["teams"][0]["team"].name
+        self.assertEqual((a["team"]["who"], top), ("Lions", "Lions"), "Team of the Year is #1 in the team rankings")
+        self.assertNotIn("fairplay", a, "no cards recorded: no Fair Play award")
+        m = Match.objects.filter(competition__slug=c1).first()
+        self.a.call("post", f"{b1}/matches/{m.id}/events", {"kind": "yellow", "side": "home", "minute": 30, "playerName": "Yaw"})
+        self.assertIn("fairplay", {x["key"] for x in rankings.awards(lambda o: True, 1)["awards"]}, "with cards recorded it appears")
+        # a single team with enough matches doesn't win Best Defence by default
+        b2, c2 = self.league(self.b, self.sb, ["Eagles", "Hawks"])
+        a = {x["key"]: x for x in rankings.awards(lambda o: o.slug == self.sb, 99)["awards"]}
+        self.assertNotIn("defence", a)
+
     def test_margin_and_penalties(self):
         self.assertEqual((rankings.margin_factor(1), rankings.margin_factor(2), rankings.margin_factor(3)), (1.0, 1.5, 1.75))
 

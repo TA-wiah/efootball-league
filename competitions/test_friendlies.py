@@ -505,7 +505,7 @@ class FriendliesTest(Helpers, TestCase):
         rating = {}
         for w in ("0", "0.5", "1"):
             store.update("rankings", {"enabled": True, "friendly_weight": w})
-            rating[w] = next(round(r["rating"], 1) for r in rankings.compute()["teams"] if r["team"].name == "Lions")
-        self.assertEqual(rating["0"], 1500.0)
+            rating[w] = next((round(r["rating"], 1) for r in rankings.compute()["teams"] if r["team"].name == "Lions"), None)
+        self.assertIsNone(rating["0"], "friendlies don't count (the default): the Lions, who only played a friendly, aren't ranked")
         self.assertEqual(rating["0.5"], 1508.0)
         self.assertEqual(rating["1"], 1516.0)

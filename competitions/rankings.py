@@ -7,7 +7,7 @@ Teams are rated with Elo (the system used for chess and in the World Football El
 - a match decided on penalties counts as a draw;
 - walkovers and forfeits don't count (a win after the opponent's connection dropped does);
 - matches are taken in the order they were played;
-- friendlies count half by default (a super admin can make them count fully or not at all).
+- friendlies don't count by default: they have their own friendly tables (a super admin can make them count half or fully).
 Awards (Rankings → Awards) come from the current year's competitive matches; a super admin can rename them.
 Organizations can keep their teams out, and a super admin can switch rankings off entirely.
 """
@@ -21,15 +21,15 @@ from .models import Match, MatchEvent
 START, K = 1500.0, 32.0
 CARD_POINTS = {"yellow": 1, "second_yellow": 2, "red": 3}      # for the Fair Play award
 AWARDS = [("poty", "Most goals and assists together"), ("boot", "Most goals"), ("assists", "Most assists"),
-          ("defence", "Fewest goals conceded per match"), ("team", "Highest rating"), ("fairplay", "Fewest cards per match")]
+          ("defence", "Fewest goals conceded per match"), ("team", "#1 in the team rankings"), ("fairplay", "Fewest cards per match")]
 _cache = {"key": None, "data": None}
 
 
 def settings_():
     s = store.get("rankings")
-    w = str(s.get("friendly_weight", "0.5"))
+    w = str(s.get("friendly_weight", "0"))
     return {"enabled": bool(s.get("enabled")), "min_matches": max(1, int(s.get("min_matches") or 3)),
-            "friendly_weight": float(w) if w in ("0", "0.5", "1") else 0.5}
+            "friendly_weight": float(w) if w in ("0", "0.5", "1") else 0.0}
 
 
 def _played():
@@ -49,7 +49,9 @@ def margin_factor(gd):
 def compute():
     """{teams: [...], players: [...]} in ranking order (cached until a match changes)."""
     qs = _played()
-    weight = settings_()["friendly_weight"]                 # friendlies move ratings less (or not at all)
+    weight = settings_()["friendly_weight"]                 # friendlies: not counted at all (default), or half / fully
+    if not weight:
+        qs = qs.exclude(competition__kind="friendly")      # then they're left out completely: ratings, matches played, players
     key = (qs.count(), qs.aggregate(m=Max("updated"))["m"], MatchEvent.objects.filter(match__in=qs).count(), weight, timezone.localdate().year)
     if _cache["key"] == key:
         return _cache["data"]
@@ -133,13 +135,18 @@ def awards(where, min_matches):
            lambda p: f"{plural(p['goals'], 'goal')} · {plural(p['assists'], 'assist')}")
     player("boot", sorted([p for p in players if p["goals"]], key=lambda p: (-p["goals"], -p["assists"], p["name"].lower())), lambda p: plural(p["goals"], "goal"))
     player("assists", sorted([p for p in players if p["assists"]], key=lambda p: (-p["assists"], -p["goals"], p["name"].lower())), lambda p: plural(p["assists"], "assist"))
-    team("defence", sorted(teams, key=lambda r: (per(r, "ga"), -r["cs"], r["team"].name.lower())),
-         lambda r: f"{r['ga']} conceded in {plural(r['played'], 'match')} · {plural(r['cs'], 'clean sheet')}")
-    rated = {r["team"].id: r["rating"] for r in data["teams"]}
-    team("team", sorted([r for r in teams if r["team"].id in rated], key=lambda r: (-rated[r["team"].id], r["team"].name.lower())),
-         lambda r: f"Rating {round(rated[r['team'].id])}")
-    team("fairplay", sorted(teams, key=lambda r: (per(r, "cards"), r["team"].name.lower())),
-         lambda r: f"{plural(r['cards'], 'card point')} in {plural(r['played'], 'match')}")
+    # team awards are only given when at least two teams qualify (one team alone would win them by default)
+    if len(teams) >= 2:
+        team("defence", sorted(teams, key=lambda r: (per(r, "ga"), -r["cs"], r["team"].name.lower())),
+             lambda r: f"{r['ga']} conceded in {plural(r['played'], 'match')} · {plural(r['cs'], 'clean sheet')}")
+    # Team of the Year: the team on top of the rankings (same list and area as Rankings → Teams), having played this year
+    year = data["year"]
+    top = [r for r in data["teams"] if r["played"] >= min_matches and where(r["team"].org) and r["last"] and timezone.localtime(r["last"]).year == year]
+    team("team", top, lambda r: f"Rating {round(r['rating'])} · #1 in the rankings")
+    # Fair Play only once cards are being recorded (otherwise everyone has 0 and it means nothing)
+    if len(teams) >= 2 and any(r["cards"] for r in teams):
+        team("fairplay", sorted(teams, key=lambda r: (per(r, "cards"), r["team"].name.lower())),
+             lambda r: f"{plural(r['cards'], 'card point')} in {plural(r['played'], 'match')}")
     how = dict(AWARDS)
     for a in out:
         a["how"] = how[a["key"]]
