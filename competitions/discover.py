@@ -78,13 +78,13 @@ def landing(request):
     stats = {"competitions": Competition.objects.filter(listed()).count(), "teams": len(linkable),
              "matches": Match.objects.filter(listed("competition__"), status="finished").count()}
     ctx = {"featured": [card(c) for c in featured],
-           "popular": [card(c) for c in comps.order_by("-views", "-played_count")[:6]],
+           "popular": [card(c) for c in comps.exclude(id__in=[c.id for c in featured]).order_by("-views", "-played_count")[:6]],   # not the same cards twice
            "starting": [card(c) for c in comps.filter(upcoming_q()).order_by(F("start_date").asc(nulls_last=True), "-created")[:6]],
            "upcoming": [match_view(m, linkable) for m in upcoming], "countries": list(countries),
            "stats": stats if stats["competitions"] >= 3 else None,
-           "title": "Leagues and tournaments, live",
-           "description": "Create a competition, register teams, generate fixtures, enter results and publish live league tables "
-                          "and match pages. Free for organizers, open to fans."}
+           "title": "eFootball leagues, cups and rankings",
+           "description": "Follow eFootball leagues, cups and friendlies: live tables, results confirmed from game screenshots, "
+                          "and rankings across every organization. Free to follow, made for WhatsApp."}
     return page(request, "landing.html", ctx)
 
 

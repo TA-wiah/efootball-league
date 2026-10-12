@@ -1,6 +1,7 @@
 {% extends "public/base.html" %}
 {% block content %}
 <section class="card">
+  <h1 class="sr">{{ title }}</h1>
   <div class="note" style="text-align:center"><a href="/competition/{{ c.slug }}">{{ c.name }}</a> · {{ m.round }}{% if m.group %} · Group {{ m.group }}{% endif %}{% if m.leg > 1 %} · 2nd leg{% endif %}</div>
   <div class="board">
     {% if m.home %}<{% if m.home.link %}a href="/team/{{ m.home.slug }}"{% else %}div{% endif %} class="t">{% include "public/_crest.html" with t=m.home size=64 %}<span>{{ m.home.name }}</span></{% if m.home.link %}a{% else %}div{% endif %}>{% else %}<div class="t">{% include "public/_crest.html" with t=None size=64 %}<span class="note">To be decided</span></div>{% endif %}
@@ -8,10 +9,11 @@
       <div class="big">{% if m.played %}{{ m.hs }} : {{ m.as }}{% elif m.kickoff %}<time datetime="{{ m.kickoff|date:'c' }}" data-f="time" style="font-size:30px">{{ m.kickoff|date:"H:i" }}</time>{% else %}vs{% endif %}</div>
       {% if m.hp is not None %}<div class="note">Penalties {{ m.hp }}–{{ m.ap }}</div>{% endif %}
       {% if aggregate.total %}<div class="note">Aggregate {{ aggregate.home }}–{{ aggregate.away }}</div>{% endif %}
-      <span class="pill {{ m.status }}">{{ m.status_label }}</span>
+      {% if m.awaiting %}<span class="pill warn">Awaiting result</span>{% else %}<span class="pill {{ m.status }}">{{ m.status_label }}</span>{% endif %}
     </div>
     {% if m.away %}<{% if m.away.link %}a href="/team/{{ m.away.slug }}"{% else %}div{% endif %} class="t">{% include "public/_crest.html" with t=m.away size=64 %}<span>{{ m.away.name }}</span></{% if m.away.link %}a{% else %}div{% endif %}>{% else %}<div class="t">{% include "public/_crest.html" with t=None size=64 %}<span class="note">To be decided</span></div>{% endif %}
   </div>
+  {% if trust %}<p class="trust"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/><path d="m9 12 2 2 4-4"/></svg> Result confirmed by {{ trust.org }}{% if trust.proof %} · backed by a result screenshot{% endif %}</p>{% elif m.awaiting %}<p class="trust wait">Kicked off and waiting for the teams to send the result. It appears here once {{ c.org.name }} confirms it.</p>{% endif %}
   <div style="display:flex;justify-content:center">{% include "public/_share.html" with share_url=url share_text=title %}</div>
 </section>
 {% if whatsapp or report %}<section class="card" style="border-color:rgba(37,211,102,.5)"><div class="gh">Playing in this match?</div><p class="note" style="margin-top:0">Press “We're here” before kick-off and send screenshots of the start, the end and the result. A team that doesn't show up loses by walkover.</p>
@@ -25,6 +27,7 @@
 <div class="two">
   <div>
     <section class="card"><div class="gh">Match events</div>
+      {% if trust.missing %}<p class="note" style="margin-top:0">Not every scorer has been recorded ({{ trust.missing }} goal{{ trust.missing|pluralize }} without a name).</p>{% endif %}
       {% for e in events %}<div class="ev {{ e.side }}"><span class="min">{% if e.minute is not None %}{{ e.minute }}'{% endif %}</span>
         {% if e.icon == "goal" %}<svg class="ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m12 7 4 3-1.5 4.5h-5L8 10z"/></svg>{% elif e.icon == "sub" %}<svg class="ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 4v14M3 14l4 4 4-4M17 20V6M13 10l4-4 4 4"/></svg>{% else %}<span class="ico {{ e.icon }}" aria-hidden="true"></span>{% endif %}
         <span><b>{{ e.player|default:"Unknown player" }}</b> <span class="note">{{ e.label }}{% if e.assist %}, assist {{ e.assist }}{% endif %}{% if e.note %} · {{ e.note }}{% endif %}</span></span></div>

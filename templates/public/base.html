@@ -93,7 +93,7 @@ abbr{text-decoration:none;cursor:help}
 @media(max-width:620px){.mrow{grid-template-columns:1fr auto 1fr}.mrow .mt{grid-column:1/-1;flex-direction:row;flex-wrap:wrap;gap:8px}.hide-s{display:none}}
 
 /* ---------- grids, tiles, cards ---------- */
-.two{display:grid;grid-template-columns:1.25fr 1fr;gap:16px;align-items:start}@media(max-width:860px){.two{grid-template-columns:1fr}}
+.two{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px;align-items:start}.two>*{min-width:0}@media(max-width:860px){.two{grid-template-columns:minmax(0,1fr)}}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
 .tile{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:14px;padding:12px 14px;color:var(--tx);text-decoration:none;font-weight:700;transition:border-color .15s,transform .15s}
 a.tile:hover{border-color:var(--gold);transform:translateY(-1px)}.tile small{display:block;color:var(--soft);font-weight:500}
@@ -116,7 +116,7 @@ a.tile:hover{border-color:var(--gold);transform:translateY(-1px)}.tile small{dis
 .share{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 
 /* ---------- landing ---------- */
-.hero2{position:relative;text-align:center;padding:56px 10px 34px;isolation:isolate}
+.hero2{position:relative;text-align:center;padding:56px 10px 34px;isolation:isolate;overflow-x:clip}
 .hero2:before{content:"";position:absolute;inset:0 -20px;z-index:-1;opacity:.5;border-radius:28px;
   background:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px) 0 0/48px 48px,linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px) 0 0/48px 48px;
   -webkit-mask:radial-gradient(ellipse at 50% 30%,#000 30%,transparent 72%);mask:radial-gradient(ellipse at 50% 30%,#000 30%,transparent 72%)}
@@ -234,12 +234,19 @@ th{font-family:var(--cond);font-size:13px}
 .filters{align-items:end}.filters label{font-family:var(--cond);font-size:14px;font-weight:700;letter-spacing:.3px;text-transform:none;color:var(--tx2)}
 .filters input,.filters select{height:46px;font-family:var(--sans);font-size:15px}.filters .btn{height:46px}
 .filters input:focus,.filters select:focus{border-color:var(--gold)}@media(max-width:720px){.brand .bt{display:none}}
+
+/* phones: a sideways-scrolling page is a broken page; thumbs need room; tabs hint there is more */
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.rankchips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0;text-decoration:none}
+.trust{display:flex;align-items:center;justify-content:center;gap:6px;margin:10px 0 0;color:var(--tx2);font-size:14px;text-align:center}.trust svg{color:var(--pitch);flex:none}.trust.wait{color:var(--soft)}
+.tabs{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent)}
+@media(max-width:560px){.nav a{min-height:44px;min-width:44px;justify-content:center}.nav a.login{padding-inline:14px}.share a,.share button{min-height:44px}.tabs a{min-height:40px;display:inline-flex;align-items:center}}
 </style></head><body>
 <header class="top"><div class="top-in">
-  <a class="brand" href="/" aria-label="{{ site_name }} home"><span class="mark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 13v3M8 20h8M9.5 20l.5-4h4l.5 4"/></svg></span><span class="bt">Competition Manager</span></a>
+  <a class="brand" href="/" aria-label="{{ site_name }} home"><span class="mark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 13v3M8 20h8M9.5 20l.5-4h4l.5 4"/></svg></span><span class="bt">{{ site_name }}</span></a>
   <nav class="nav" aria-label="Main">
-    <a href="/competitions"{% if nav == "competitions" %} class="on"{% endif %}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M12 13v3M8 20h8"/></svg><span class="long">Competitions</span></a>
-    {% if rankings_on %}<a href="/rankings"{% if nav == "rankings" %} class="on"{% endif %}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 21V11M12 21V5M16 21v-7M4 21h16"/></svg><span class="long">Rankings</span></a>{% endif %}
+    <a href="/competitions"{% if nav == "competitions" %} class="on"{% endif %} aria-label="Competitions"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M12 13v3M8 20h8"/></svg><span class="long">Competitions</span></a>
+    {% if rankings_on %}<a href="/rankings"{% if nav == "rankings" %} class="on"{% endif %} aria-label="Rankings"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 21V11M12 21V5M16 21v-7M4 21h16"/></svg><span class="long">Rankings</span></a>{% endif %}
     <a href="/updates"{% if nav == "updates" %} class="on"{% endif %} aria-label="Updates"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg><span class="long">Updates</span></a>
     <a href="/search"{% if nav == "search" %} class="on"{% endif %} aria-label="Search"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span class="long">Search</span></a>
     <a href="/app" class="login">Log in</a>

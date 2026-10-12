@@ -140,6 +140,7 @@ class Match(models.Model):
     away_score = models.PositiveSmallIntegerField(null=True, blank=True)
     home_pens = models.PositiveSmallIntegerField(null=True, blank=True)
     away_pens = models.PositiveSmallIntegerField(null=True, blank=True)
+    room_code = models.CharField(max_length=24, blank=True)      # the eFootball room to join (only the two teams and staff see it)
     slug = models.SlugField(max_length=140, unique=True)
     notes = models.TextField(blank=True, max_length=2000)
     created = models.DateTimeField(auto_now_add=True)
@@ -214,3 +215,4 @@ class FriendlyChallenge(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     answered = models.DateTimeField(null=True, blank=True)
     match = models.ForeignKey(Match, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    room_code = models.CharField(max_length=24, blank=True)      # the eFootball room to join (only the two teams see it)
