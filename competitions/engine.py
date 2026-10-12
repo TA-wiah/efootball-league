@@ -1,6 +1,8 @@
 """Competition logic with no HTTP in it: fixtures, standings, tie-breakers, top scorers, slugs and logos."""
 import base64
 import random
+import re
+import unicodedata
 from datetime import timedelta
 
 from django.utils.text import slugify
@@ -335,8 +337,47 @@ def head_to_head(matches):
 
 
 # ---------- top scorers ----------
+def name_tokens(name):
+    """"Luíz  Suárez" -> ["luiz", "suarez"]: lower case, no accents, words only."""
+    s = unicodedata.normalize("NFKD", name or "").encode("ascii", "ignore").decode().lower()
+    return re.findall(r"[a-z0-9]+", s)
+
+
+def _near(a, b):
+    """Two words that are the same, or one letter apart (Luis / Luiz) when long enough."""
+    if a == b:
+        return True
+    if min(len(a), len(b)) < 4 or abs(len(a) - len(b)) > 1:
+        return False
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        cur = [i]
+        for j, cb in enumerate(b, 1):
+            cur.append(min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (ca != cb)))
+        prev = cur
+    return prev[-1] <= 1
+
+
+def same_player(a, b):
+    """Do two names typed for the same team mean the same player? Same words in any order ("Messi Lionel" /
+    "Lionel Messi"), an extra first name or initials ("Messi" / "Lionel Messi", "P. E. Aubameyang" / "Aubameyang"),
+    or a one-letter typo ("Luis Suarez" / "Luiz Suarez"). Only ever used inside one team."""
+    ta, tb = name_tokens(a), name_tokens(b)
+    if not ta or not tb:
+        return False
+    short, long_ = (ta, tb) if len(ta) <= len(tb) else (tb, ta)
+    real = [t for t in short if len(t) > 1]                # initials alone don't identify anyone
+    if not real:
+        return False
+    exact = [t for t in real if t in long_]
+    typos = [t for t in real if t not in long_ and any(_near(t, u) for u in long_)]
+    # every word matches; a one-letter typo only counts when another word matches exactly ("Raul" isn't "Saul")
+    return len(exact) + len(typos) == len(real) and (not typos or len(exact) >= 1)
+
+
 def scorers(events):
-    """Goals and assists per player from match events (own goals don't count for the scorer)."""
+    """Goals and assists per player from match events (own goals don't count for the scorer). Names typed in
+    different ways for the same team are counted as one player (see same_player); the fullest name is shown."""
     table = {}
 
     def row(player, name, team):
@@ -353,7 +394,23 @@ def scorers(events):
             row(e.player, e.player_name, team)["goals"] += 1
         if e.kind in ("goal", "penalty_goal") and (e.assist or e.assist_name.strip()):
             row(e.assist, e.assist_name, team)["assists"] += 1
-    return sorted(table.values(), key=lambda r: (-r["goals"], -r["assists"], r["name"].lower()))
+    # merge the same player written in different ways, team by team
+    rows = list(table.values())
+    by_team = {}
+    for r in rows:
+        by_team.setdefault(r["team"].id if r["team"] else None, []).append(r)
+    merged = []
+    for team_rows in by_team.values():
+        groups = []
+        for r in sorted(team_rows, key=lambda r: (r["playerId"] is None, -len(name_tokens(r["name"])))):
+            home = next((g for g in groups if any(same_player(r["name"], x["name"]) for x in g)
+                         and not (r["playerId"] and any(x["playerId"] and x["playerId"] != r["playerId"] for x in g))), None)
+            (home.append(r) if home is not None else groups.append([r]))
+        for g in groups:
+            best = g[0]                                       # a squad player first, else the fullest name
+            merged.append({**best, "goals": sum(x["goals"] for x in g), "assists": sum(x["assists"] for x in g),
+                           "aliases": sorted({x["name"] for x in g} - {best["name"]})})
+    return sorted(merged, key=lambda r: (-r["goals"], -r["assists"], r["name"].lower()))
 
 
 # ---------- logos ----------

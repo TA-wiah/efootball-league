@@ -908,11 +908,51 @@ def match_events(request, user, ip, slug, match_id):
             raise ApiError(400, "That player isn't in this team's squad.")
         return p
 
-    ev = MatchEvent(match=mt, kind=b["kind"], side=side, minute=num(b, "minute", 0, 150), player=player("playerId"),
-                    player_name=text(b, "playerName", 80), assist=player("assistId"), assist_name=text(b, "assistName", 80),
-                    note=text(b, "note", 120))
+    def by_name(pid_key, name_key):
+        """A typed name that matches someone in the squad (Messi / Lionel Messi) is linked to that player."""
+        p = player(pid_key)
+        name = text(b, name_key, 80)
+        if p or not name or not squad_of:
+            return p, name
+        hits = [x for x in squad_of.team.players.filter(active=True) if engine.same_player(name, x.name)]
+        return (hits[0], "") if len(hits) == 1 else (None, name)
+
+    who, who_name = by_name("playerId", "playerName")
+    helper, helper_name = by_name("assistId", "assistName") if b["kind"] != "own_goal" else (None, "")
+    ev = MatchEvent(match=mt, kind=b["kind"], side=side, minute=num(b, "minute", 0, 150), player=who,
+                    player_name=who_name, assist=helper, assist_name=helper_name, note=text(b, "note", 120))
     ev.save()
     return {"ok": True, "event": event_json(ev)}
+
+
+@endpoint("GET", "POST", login_required=True)
+def team_names(request, user, ip, slug, team_id):
+    """The names typed for a team's goals and assists, grouped when they look like the same player. POST
+    {"from": "Messi", "to": "Lionel Messi"} renames everywhere for this team (to tidy the records for good)."""
+    org, m = access(user, slug, "results.enter")
+    t = team_of(org, team_id)
+    events = MatchEvent.objects.filter(Q(match__home__team=t, side="home") | Q(match__away__team=t, side="away"),
+                                       kind__in=["goal", "penalty_goal"])
+    if request.method == "POST":
+        b = body(request)
+        old, new = text(b, "from", 80), text(b, "to", 80)
+        if not old or not new:
+            raise ApiError(400, "Choose the name to change and the name to use.")
+        n = events.filter(player_name__iexact=old).update(player_name=new) + events.filter(assist_name__iexact=old).update(assist_name=new)
+        log(org, user, f"renamed {old} to {new} in {t.name}'s goals and assists ({n})")
+        return {"ok": True, "changed": n}
+    counts = {}
+    for e in events:
+        for name in (e.player_name, e.assist_name):
+            if name.strip():
+                counts[name.strip()] = counts.get(name.strip(), 0) + 1
+    names = sorted(counts, key=lambda x: (-len(engine.name_tokens(x)), x.lower()))
+    groups = []
+    for x in names:
+        g = next((g for g in groups if any(engine.same_player(x, y) for y in g)), None)
+        (g.append(x) if g is not None else groups.append([x]))
+    squad = [p.name for p in t.players.filter(active=True)]
+    return {"groups": [[{"name": x, "count": counts[x]} for x in g] for g in groups], "squad": squad}
 
 
 @endpoint("DELETE", login_required=True)

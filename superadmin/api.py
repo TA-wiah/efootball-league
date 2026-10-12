@@ -763,6 +763,11 @@ def platform_settings(request, user, ip):
             check_proleague_settings(changes)
         if section == "rankings" and any(k.startswith("award_") and not 2 <= len(str(v).strip()) <= 60 for k, v in changes.items()):
             raise ApiError(400, "Give each award a name (2–60 characters).")
+        if section == "ai":
+            if "model" in changes and changes["model"] not in ("gpt-image-1", "dall-e-3"):
+                raise ApiError(400, "Choose the image model.")
+            if "daily_limit" in changes and (not isinstance(changes["daily_limit"], int) or not 1 <= changes["daily_limit"] <= 100):
+                raise ApiError(400, "The daily limit per person must be from 1 to 100.")
         if section == "rankings" and "friendly_weight" in changes and changes["friendly_weight"] not in ("0", "0.5", "1"):
             raise ApiError(400, "Friendlies count fully, half or not at all.")
         if section == "rankings" and "min_matches" in changes and (not isinstance(changes["min_matches"], int) or not 1 <= changes["min_matches"] <= 100):
@@ -782,7 +787,7 @@ def platform_settings(request, user, ip):
     pay = paynova.config()
     from sms import providers as smsp
     return {"site": store.masked("site"), "email": store.masked("email"), "payments": store.masked("payments"), "sms": store.masked("sms"),
-            "rankings": store.masked("rankings"), "proleague": store.masked("proleague"), "siteLogo": store.site_logo_url(),
+            "rankings": store.masked("rankings"), "proleague": store.masked("proleague"), "siteLogo": store.site_logo_url(), "ai": store.masked("ai"),
             "smsStatus": {"ready": smsp.ready(), "providers": smsp.PROVIDERS},
             "paymentStatus": {"ready": paynova.ready(pay), "mode": paynova.mode(pay["secret_key"]) or None, "source": pay["source"] or None},
             "emailStatus": {"ready": emailer.ready(cfg), "provider": cfg["provider"] or None, "source": cfg["source"]}}
