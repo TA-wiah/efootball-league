@@ -15,6 +15,7 @@ from competitions import friendlies as fr
 from competitions import ailogo
 from competitions import lineup
 from superadmin import api as sa
+from superadmin import updates as upd
 
 handler404 = "league.http.not_found"
 handler500 = "league.http.server_error"
@@ -209,6 +210,9 @@ urlpatterns = [
     path("api/admin/invitations/<int:iid>/revoke", sa.invitation_revoke),
     path("api/admin/audit", sa.audit_log),
     path("api/admin/announcements", sa.announcements),
+    path("api/admin/updates", upd.admin_updates),
+    path("api/admin/updates/<int:uid>", upd.admin_update_detail),
+    path("api/updates", upd.updates),
     path("api/admin/announcements/<int:aid>", sa.announcement_detail),
     path("api/admin/org-announcements/<int:aid>", sa.org_announcement),
     path("api/admin/settings", sa.platform_settings),
@@ -236,6 +240,7 @@ urlpatterns = [
     # ---- public pages (no login) ----
     path("competitions", discover.competitions),
     path("search", discover.search),
+    path("updates", pub.updates_page),
     path("competition/<slug:slug>", pub.competition),
     path("competition/<slug:slug>/<slug:tab>", pub.competition),
     path("league/<slug:slug>", pub.league_alias),

@@ -30,3 +30,15 @@ class PlatformAnnouncement(models.Model):
     active = models.BooleanField(default=True)
     author = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+")
     created = models.DateTimeField(auto_now_add=True)
+
+
+class PlatformUpdate(models.Model):
+    """What's new: one entry per update. audience: ["public"] (everyone, also on the public /updates page) or role keys
+    (owner, organizer, coach…) and/or "superadmin" — only they see it, on their dashboard."""
+    title = models.CharField(max_length=140)
+    body = models.TextField(blank=True, max_length=5000)
+    audience = models.JSONField(default=list)
+    date = models.DateField()
+    published = models.BooleanField(default=True)
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    created = models.DateTimeField(auto_now_add=True)

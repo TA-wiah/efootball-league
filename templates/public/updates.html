@@ -1,0 +1,19 @@
+{% extends "public/base.html" %}
+{% block content %}
+<style>
+.upd{display:flex;flex-direction:column;gap:14px;max-width:760px}
+.upd article{background:var(--card2);border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.upd time{font-family:var(--cond);font-size:13px;letter-spacing:1px;text-transform:uppercase;color:var(--gold)}
+.upd h2{margin:0;font-family:var(--cond);font-size:22px;line-height:1.15;color:var(--tx)}
+.upd p{margin:0;color:var(--tx2)}.upd ul{margin:0;padding-left:20px;color:var(--tx2);display:flex;flex-direction:column;gap:4px}
+</style>
+<h1 class="page-h">What's new</h1>
+<p class="note" style="margin-top:0">Every update to {{ site_name }} that players, coaches and team managers can use. Organizers see their own updates on their dashboard.</p>
+<div class="upd">
+{% for u in updates %}<article>
+  <time datetime="{{ u.date|date:'Y-m-d' }}">{{ u.date|date:"j M Y" }}</time>
+  <h2>{{ u.title }}</h2>
+  {% for b in u.blocks %}{% if b.type == "list" %}<ul>{% for i in b.items %}<li>{{ i }}</li>{% endfor %}</ul>{% else %}<p>{{ b.text }}</p>{% endif %}{% endfor %}
+</article>{% empty %}<p class="note">No updates yet.</p>{% endfor %}
+</div>
+{% endblock %}
