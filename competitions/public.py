@@ -267,6 +267,15 @@ def xi_view(t):
     return {"rows": out, "filled": t["filled"], "year": t["year"]}
 
 
+def updates_page(request):
+    """What's new: the updates for everyone (players, coaches, team managers)."""
+    from superadmin.models import PlatformUpdate
+    from superadmin.updates import PUBLIC, blocks
+    rows = [u for u in PlatformUpdate.objects.filter(published=True).order_by("-date", "-id")[:500] if PUBLIC in u.audience][:200]
+    return page(request, "updates.html", {"title": "What's new", "nav": "updates",
+                                          "updates": [{"date": u.date, "title": u.title, "blocks": blocks(u.body)} for u in rows]})
+
+
 def store_name(key):
     from superadmin import store
     return store.get("rankings").get(f"award_{key}") or store.DEFAULTS["rankings"][f"award_{key}"]

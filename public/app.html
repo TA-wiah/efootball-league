@@ -492,7 +492,7 @@ function wzFinish(){var d=WZ.d,b=$("wzn");busy(b,true,"Creating…");
 
 // ---------- one organization ----------
 var OGROUPS=["Overview","Competition management","People","Payments","Organization","Public website"];
-var SECTIONS=[["overview","Dashboard","Overview",0,"home"],["mymatches","My matches","Overview","plays","cal"],["myteam","My team","Overview","plays","shield"],["findfriendly","Find a friendly","Overview","anyteam","users"],["activity","Activity","Overview","org","pulse"],["notifications","Notifications","Overview",0,"bell"],
+var SECTIONS=[["overview","Dashboard","Overview",0,"home"],["mymatches","My matches","Overview","plays","cal"],["myteam","My team","Overview","plays","shield"],["findfriendly","Find a friendly","Overview","anyteam","users"],["activity","Activity","Overview","org","pulse"],["notifications","Notifications","Overview",0,"bell"],["updates","What’s new","Overview",0,"sparkle"],
   ["competitions","Competitions","Competition management",0,"trophy"],["newcomp","Create competition","Competition management","competitions.manage","plus"],["fixtures","Fixtures","Competition management","org","cal"],["friendlies","Friendlies","Competition management",0,"users"],
   ["results","Results","Competition management","org","check"],["tables","Standings","Competition management",0,"list"],["brackets","Brackets","Competition management",0,"bracket"],
   ["teams","Teams","People","org","shield"],["players","Players","People","org","user"],["coaches","Coaches","People","orgstaff","whistle"],["staff","Staff","People","orgstaff","badge"],["members","Members","People","org","users"],["invitations","Invitations","People","members.invite","mail"],["messages","Messages (SMS)","People","messages.send","megaphone"],
@@ -517,7 +517,7 @@ function orgView(slug,section,rest){
       (o.status==="pending"?'<div class="banner">This organization is waiting for a platform admin to approve it. Everything works, but its public website isn\'t live yet.</div>':o.status==="suspended"?'<div class="banner">This organization has been suspended by the platform. Its public pages are hidden. Contact support for help.</div>':'')+
       '<section id="sec"></section>',
       {org:o.slug,section:navOn,crumbs:'<nav class="crumbs" aria-label="Breadcrumb"><a href="'+mineUrl()+'" data-nav>My organizations</a><span>/</span><a href="'+base+'" data-nav>'+esc(o.name)+'</a>'+(navOn!=="overview"?'<span>/</span><b style="color:var(--tx)">'+esc(label)+'</b>':'')+'</nav>'});
-    var S={overview:overview,activity:activitySec,notifications:notificationsSec,competitions:competitionsSec,fixtures:function(){matchesSec("upcoming")},results:function(){matchesSec("results")},matches:function(){matchesSec("all")},
+    var S={overview:overview,activity:activitySec,notifications:notificationsSec,updates:updatesSec,competitions:competitionsSec,fixtures:function(){matchesSec("upcoming")},results:function(){matchesSec("results")},matches:function(){matchesSec("all")},
       tables:tablesSec,brackets:bracketsSec,friendlies:friendliesSec,findfriendly:findFriendlySec,myteam:function(){var ts=myTeamIds();if(ts.length)teamPage(ts[0])},teams:teamsSec,players:playersSec,coaches:function(){peopleSec("coaches")},staff:function(){peopleSec("staff")},members:function(){peopleSec("all")},invitations:invitationsSec,
       profile:profileSec,branding:brandingSec,settings:settingsSec,roles:rolesSec,access:accessSec,site:siteSec,website:websiteSec,payments:paymentsSec,invoices:invoicesSec,messages:messagesSec,pages:pagesSec,announcements:announcementsSec,link:linkSec,match:matchPage}[section];
     if(!S||(sec&&sec[3]&&!has(sec[3]))){$("sec").innerHTML='<div class="card empty">'+ic("lock")+'<h2>'+(S?(teamOnly()?"This page is for the organization’s staff":"Not available for your role"):"Page not found")+'</h2><p class="note">'+(S?(teamOnly()?"Everything about your team is on your dashboard: matches, results, friendlies and the squad.":"Your role doesn't include this. Ask the owner if you need it."):"")+'</p><a class="btn" href="'+base+'" data-nav>'+(teamOnly()?"Go to my team":"Back to the dashboard")+'</a></div>';return}
@@ -679,6 +679,13 @@ function activitySec(){var all=[],more=function(before){api(api0("/activity"+(be
       (r.data.more?'<div class="actions"><button class="btn g sm" id="amore">Show older</button></div>':'')+'</div>';
     if($("amore"))$("amore").onclick=function(){busy(this,true,"Loading…");more(all[all.length-1].id)}})};more()}
 function seenKey(){return"seen:"+ORG.org.slug}
+// What's new: every update; the public ones for everyone, the rest only for the roles they're for
+function updBlocks(bs){return bs.map(function(b){return b.type==="list"?'<ul style="margin:6px 0 0;padding-left:20px">'+b.items.map(function(i){return'<li>'+esc(i)+'</li>'}).join("")+'</ul>':'<p style="margin:6px 0 0">'+esc(b.text)+'</p>'}).join("")}
+function updatesSec(){var seen=0;try{seen=+localStorage.getItem("upd_seen")||0}catch(e){}
+  api("/api/updates").then(function(r){if(!r.ok)return fail(r);var us=r.data.updates;
+    $("sec").innerHTML='<div class="card"><div class="gh">WHAT’S NEW</div><p class="note" style="margin-top:0">Every update to the platform. Updates marked “Everyone” are also on the public <a href="/updates" target="_blank" rel="noopener">What’s new page ↗</a>, so you can share it with your teams; the others are only for the roles shown.'+(r.data.canManage?' Write updates in <a href="/admin/updates" data-nav>Admin → What’s new</a>.':'')+'</p></div>'+
+      (us.length?us.map(function(u){var fresh=u.created>seen&&seen>0;return'<div class="card"><div class="note" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0"><b style="color:var(--gold)">'+esc(new Date(u.date+"T12:00:00").toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"}))+'</b>'+u.audience.map(function(a){return'<span class="pill">'+esc(a)+'</span>'}).join("")+(fresh?'<span class="pill live">New</span>':'')+'</div><h3 style="margin:8px 0 0">'+esc(u.title)+'</h3>'+updBlocks(u.blocks)+'</div>'}).join(""):'<div class="card"><p class="note">No updates yet.</p></div>');
+    try{localStorage.setItem("upd_seen",String(Date.now()))}catch(e){}})}
 function notificationsSec(){var since=0;try{since=+localStorage.getItem(seenKey())||0}catch(e){}
   Promise.all([api(api0("/summary")),api(api0("/activity"))]).then(function(res){if(!res[0].ok)return fail(res[0]);var s=res[0].data,evs=(res[1].data||{}).events||[],items=[],soon=Date.now()+48*3600e3;
     var I=function(icon,title,sub,path){items.push('<a href="'+app0(path)+'" data-nav>'+ic(icon)+'<span><b>'+title+'</b><small>'+sub+'</small></span></a>')};
@@ -1892,7 +1899,7 @@ var AMENU=[
   ["League tables",[["/admin/tables","All standings"]]],
   ["Staff",[["/admin/staff?role=owner","Owners"],["/admin/staff?role=organizer","Organizers"],["/admin/staff?role=admin","Sub-admins"],["/admin/staff?role=editor","Editors"],["/admin/staff?role=moderator","Moderators"],["/admin/invitations","Invitations"]]],
   ["Reports & analytics",[["/admin/analytics","Analytics"],["/admin/activity","Activity report"]]],
-  ["Announcements",[["/admin/announcements","Platform announcements"],["/admin/announcements?scope=org","Competition announcements"]]],
+  ["Announcements",[["/admin/announcements","Platform announcements"],["/admin/announcements?scope=org","Competition announcements"],["/admin/updates","What’s new (updates)"]]],
   ["Pro League",[["/admin/proleague","Seasons & settings"]]],
   ["Payments",[["/admin/payments","Payments & payouts"],["/admin/sms","Text messages (SMS)"],["/admin/settings","PayNova and SMS settings"]]],
   ["System",[["/admin/settings","Platform settings"],["/admin/roles","Roles & permissions"],["/admin/security","Security"],["/admin/audit","Audit logs"],["/admin/integrations","API & integrations"],["/admin/config","Configuration"]]],
@@ -1972,7 +1979,7 @@ function chart(s,labels,unit){var W=560,H=180,L=34,B=22,T=10,max=Math.max(1,Math
 
 // ---------- router ----------
 function adminView(sec,rest){var V={"":aOverview,analytics:aAnalytics,activity:aActivity,system:aSystem,search:aSearch,users:aUsers,organizations:aOrgs,competitions:aComps,teams:aTeams,players:aPlayers,
-  matches:aMatches,fixtures:aFixtures,results:aResults,groups:aGroups,tables:aTables,staff:aStaff,invitations:aInvites,audit:aAudit,announcements:aAnnouncements,settings:aSettings,payments:aPayments,sms:aSms,proleague:aPro,
+  matches:aMatches,fixtures:aFixtures,results:aResults,groups:aGroups,tables:aTables,staff:aStaff,invitations:aInvites,audit:aAudit,announcements:aAnnouncements,updates:aUpdates,settings:aSettings,payments:aPayments,sms:aSms,proleague:aPro,
   roles:aRoles,security:aSecurity,integrations:aIntegrations,config:aConfig,support:aSupport}[sec];
   if(!V){A("Not found");ASEC.innerHTML='<div class="card empty"><p class="note">That admin page doesn\'t exist.</p></div>';return}V(rest)}
 var ULINK=function(u){return u?'<a href="/admin/users/'+u.id+'" data-nav>'+esc(u.username)+'</a>':"—"};
@@ -2166,6 +2173,28 @@ function aInvites(){alist({title:"Invitations",crumbs:[["Staff"],["Invitations"]
     ["Status",function(i){return sb(i.status)}],["Invited by",function(i){return esc(i.invitedBy||"—")}],["Sent",function(i){return date(i.created)}],["Expires",function(i){return date(i.expires)}]],
   row:function(i){return i.status==="pending"?'<button class="btn g sm" data-rv="'+i.id+'">Revoke</button>':''},
   bind:function(){document.querySelectorAll("[data-rv]").forEach(function(b){b.onclick=function(){confirmBox("Revoke this invitation?","The link stops working.",{danger:true,ok:"Revoke"}).then(function(y){if(y)act("/api/admin/invitations/"+b.dataset.rv+"/revoke","POST",{},"Invitation revoked").then(function(x){if(x)route()})})}})},empty:"No invitations."})}
+
+// ---------- what's new ----------
+function aUpdates(){var sec=A("What’s new",[["Announcements"],["What’s new"]]);
+  api("/api/admin/updates").then(function(r){if(!r.ok){sec.innerHTML=errBox(r);return}var us=r.data.updates,au=r.data.audiences,edit=null;
+    var form=function(u){u=u||{};var keys=u.keys||["public"];
+      return'<form class="card" id="uf" novalidate><div class="gh">'+(u.id?"EDIT UPDATE":"NEW UPDATE")+'</div><p class="note" style="margin-top:0">“Everyone” updates show on the public <a href="/updates" target="_blank" rel="noopener">What’s new page ↗</a> (what players, coaches and team managers can do). Choose roles instead to show an update only to them, on their dashboard. Start a line with “- ” for a bullet point.</p>'+
+        '<div class="row"><label for="ut">Title<input id="ut" maxlength="140" value="'+esc(u.title||"")+'"></label><label for="ud" style="max-width:200px">Date<input id="ud" type="date" value="'+esc(u.date||new Date().toISOString().slice(0,10))+'"></label></div>'+
+        '<label for="ub">What changed<textarea id="ub" maxlength="5000" rows="6">'+esc(u.body||"")+'</textarea></label>'+
+        '<fieldset style="border:0;padding:0;margin:8px 0 0"><legend class="note">Who sees it</legend><div style="display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:6px">'+au.map(function(a){return'<label style="display:flex;gap:6px;align-items:center;margin:0;font-weight:600"><input type="checkbox" data-ua="'+esc(a.key)+'"'+(keys.indexOf(a.key)>=0?" checked":"")+' style="width:auto">'+esc(a.label)+'</label>'}).join("")+'</div></fieldset>'+
+        '<label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="up"'+(u.published===false?"":" checked")+' style="width:auto"> Published</label>'+
+        '<div class="actions"><button class="btn">'+(u.id?"Save update":"Post update")+'</button>'+(u.id?'<button type="button" class="btn g" id="ux">Cancel</button>':'')+'</div></form>'};
+    var draw=function(){sec.innerHTML=form(edit)+'<div class="card"><div class="gh">ALL UPDATES · '+us.length+'</div>'+(us.length?'<table class="dt"><tbody>'+us.map(function(u,i){return'<tr><td style="white-space:nowrap">'+date(new Date(u.date+"T12:00:00").getTime())+'</td><td><b>'+esc(u.title)+'</b><small>'+esc(u.audience.join(", "))+'</small></td><td>'+sb(u.published?"active":"draft",u.published?"Published":"Hidden")+'</td>'+
+        '<td style="white-space:nowrap;text-align:right"><button class="btn g sm" data-ue="'+i+'">Edit</button> <button class="btn bad sm" data-ux="'+u.id+'">Delete</button></td></tr>'}).join("")+'</tbody></table>':'<p class="note">No updates yet.</p>')+'</div>';
+      document.querySelector('[data-ua="public"]').onchange=function(){if(this.checked)document.querySelectorAll("[data-ua]").forEach(function(c){if(c.dataset.ua!=="public")c.checked=false})};
+      document.querySelectorAll("[data-ua]").forEach(function(c){if(c.dataset.ua!=="public")c.addEventListener("change",function(){if(c.checked)document.querySelector('[data-ua="public"]').checked=false})});
+      $("uf").onsubmit=function(e){e.preventDefault();var aud=[].slice.call(document.querySelectorAll("[data-ua]:checked")).map(function(c){return c.dataset.ua});if(!aud.length){toast("Choose who sees this update",true);return}
+        var d={title:val("ut"),body:val("ub"),date:val("ud"),audience:aud,published:$("up").checked};
+        act(edit?"/api/admin/updates/"+edit.id:"/api/admin/updates",edit?"PATCH":"POST",d,edit?"Update saved":"Update posted").then(function(x){if(x)route()})};
+      if($("ux"))$("ux").onclick=function(){edit=null;draw()};
+      document.querySelectorAll("[data-ue]").forEach(function(b){b.onclick=function(){edit=us[+b.dataset.ue];draw();window.scrollTo(0,0)}});
+      document.querySelectorAll("[data-ux]").forEach(function(b){b.onclick=function(){confirmBox("Delete this update?","It disappears from What’s new for everyone.",{danger:true,ok:"Delete"}).then(function(y){if(y)act("/api/admin/updates/"+b.dataset.ux,"DELETE",{},"Deleted").then(function(x){if(x)route()})})}})};
+    draw()})}
 
 // ---------- announcements ----------
 function aAnnouncements(){var org=P("scope")==="org",sec=A(org?"Competition announcements":"Platform announcements",[["Announcements"]]);
