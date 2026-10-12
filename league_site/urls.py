@@ -12,6 +12,7 @@ from sms import api as sms
 from proleague import api as pro
 from competitions import reports as rep
 from competitions import friendlies as fr
+from competitions import ailogo
 from superadmin import api as sa
 
 handler404 = "league.http.not_found"
@@ -99,6 +100,7 @@ urlpatterns = [
     path("api/report/<int:match_id>/approve", rep.report_approve),
     path("api/orgs/<slug:slug>/pending-results", rep.org_pending_results),
     path("api/friendly-teams", fr.team_search),
+    path("api/ai-logo", ailogo.ai_logo),
     path("api/orgs/<slug:slug>/friendlies", fr.org_friendlies),
     path("api/orgs/<slug:slug>/rankings", c.org_rankings),
     path("api/orgs/<slug:slug>/awards", c.org_awards),
@@ -166,6 +168,7 @@ urlpatterns = [
     path("api/orgs/<slug:slug>/teams", c.teams),
     path("api/orgs/<slug:slug>/teams/<int:team_id>", c.team_detail),
     path("api/orgs/<slug:slug>/teams/<int:team_id>/logo", c.team_logo),
+    path("api/orgs/<slug:slug>/teams/<int:team_id>/names", c.team_names),
     path("api/orgs/<slug:slug>/teams/<int:team_id>/invitations", c.team_invitations),
     path("api/orgs/<slug:slug>/teams/<int:team_id>/players", c.team_players),
     path("api/orgs/<slug:slug>/players", c.players),

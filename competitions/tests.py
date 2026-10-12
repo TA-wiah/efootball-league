@@ -482,6 +482,31 @@ class CompetitionApiTest(Helpers, TestCase):
         self.assertIn("Unlucky Defender (own goal)", page)
         self.assertNotIn("Unknown player", page)
 
+    def test_same_player_written_differently_counts_once(self):
+        from competitions.models import Match, MatchEvent, Player
+        from competitions import engine
+        cs = self.comp(visibility="public")
+        ids = self.teams(["Reds", "Blues"])
+        self.owner.call("post", f"{self.base}/competitions/{cs}/entries", {"teamIds": ids})
+        self.owner.call("post", f"{self.base}/competitions/{cs}/generate", {})
+        m = Match.objects.filter(competition__slug=cs).select_related("home__team", "away__team").first()
+        url = f"{self.base}/matches/{m.id}/events"
+        for name in ("Messi", "Lionel Messi", "Messi Lionel", "Luis Suarez", "Luiz Suarez"):
+            self.owner.call("post", url, {"kind": "goal", "side": "home", "minute": 10, "playerName": name})
+        self.owner.call("post", url, {"kind": "goal", "side": "away", "minute": 20, "playerName": "Messi"})      # another team's Messi
+        rows = {(r["name"], r["team"].name): r["goals"] for r in engine.scorers(MatchEvent.objects.filter(match=m).select_related("match__home__team", "match__away__team", "player", "assist"))}
+        home, away = m.home.team.name, m.away.team.name
+        self.assertEqual(rows, {("Lionel Messi", home): 3, ("Luis Suarez", home): 2, ("Messi", away): 1})
+        # a typed name that matches the squad is linked to that player
+        star = Player.objects.create(team=m.home.team, name="Andriy Shevchenko", position="FW")
+        r = self.owner.call("post", url, {"kind": "goal", "side": "home", "minute": 30, "playerName": "shevchenko"}).json()
+        self.assertEqual(r["event"]["playerId"], star.id)
+        # the tidy-up tool groups the names and renames them for good
+        names = self.owner.get(f"{self.base}/teams/{m.home.team_id}/names").json()
+        self.assertIn(["Lionel Messi", "Messi Lionel", "Messi"], [[x["name"] for x in g] for g in names["groups"]])
+        self.owner.call("post", f"{self.base}/teams/{m.home.team_id}/names", {"from": "Messi", "to": "Lionel Messi"})
+        self.assertEqual(MatchEvent.objects.filter(match=m, side="home", player_name="Messi").count(), 0)
+
     def test_knockout_dates_follow_the_group_stage(self):
         from datetime import date, timedelta
         cs, url, e = self.groups_comp()
