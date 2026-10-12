@@ -228,8 +228,9 @@ def join(user, inv):
 def me(request, user, ip):
     from competitions.reports import settle_overdue
     settle_overdue()                                  # quick when there's nothing due; runs at most every 5 minutes
-    from competitions.reminders import send_due
+    from competitions.reminders import send_due, send_squad_due
     send_due()                                        # match reminders (at most every 10 minutes)
+    send_squad_due()                                  # "complete your squad" (each team at most weekly; checked hourly)
     orgs = []
     if user:
         for m in Membership.objects.select_related("org").filter(user=user).order_by("org__name"):

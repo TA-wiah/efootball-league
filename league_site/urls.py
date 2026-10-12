@@ -13,6 +13,7 @@ from proleague import api as pro
 from competitions import reports as rep
 from competitions import friendlies as fr
 from competitions import ailogo
+from competitions import lineup
 from superadmin import api as sa
 
 handler404 = "league.http.not_found"
@@ -169,6 +170,8 @@ urlpatterns = [
     path("api/orgs/<slug:slug>/teams/<int:team_id>", c.team_detail),
     path("api/orgs/<slug:slug>/teams/<int:team_id>/logo", c.team_logo),
     path("api/orgs/<slug:slug>/teams/<int:team_id>/names", c.team_names),
+    path("api/orgs/<slug:slug>/teams/<int:team_id>/lineup-scan", lineup.lineup_scan),
+    path("api/orgs/<slug:slug>/teams/<int:team_id>/lineup", lineup.lineup_save),
     path("api/orgs/<slug:slug>/teams/<int:team_id>/name-check", c.team_name_check),
     path("api/orgs/<slug:slug>/teams/<int:team_id>/invitations", c.team_invitations),
     path("api/orgs/<slug:slug>/teams/<int:team_id>/players", c.team_players),

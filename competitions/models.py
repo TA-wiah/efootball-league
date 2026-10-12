@@ -90,6 +90,8 @@ class Team(Logo):
     description = models.TextField(blank=True, max_length=2000)
     created = models.DateTimeField(auto_now_add=True)
     suspended = models.BooleanField(default=False)          # set by a super admin: no public page
+    lineup_at = models.DateTimeField(null=True, blank=True)        # last lineup saved (screenshot or by hand)
+    squad_reminded = models.DateTimeField(null=True, blank=True)   # last "complete your squad" reminder
 
     def __str__(self):
         return self.name
@@ -100,6 +102,8 @@ class Player(models.Model):
     name = models.CharField(max_length=80)
     number = models.PositiveSmallIntegerField(null=True, blank=True)
     position = models.CharField(max_length=3, choices=POSITIONS, blank=True)
+    rating = models.PositiveSmallIntegerField(null=True, blank=True)        # eFootball card rating (from the lineup)
+    lineup = models.CharField(max_length=7, blank=True, choices=[("", "—"), ("starter", "Starting XI"), ("sub", "Substitute")])
     active = models.BooleanField(default=True)
     created = models.DateTimeField(auto_now_add=True)
 
