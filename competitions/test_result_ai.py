@@ -85,3 +85,27 @@ class ResultAiTest(Helpers, TestCase):
         self.assertIn("automatically", m.notes)
         self.assertEqual(MatchEvent.objects.filter(match=m).count(), 1, "the claim that listed goals is used")
         self.assertEqual(r["match"]["homeScore"], 2)
+
+    def test_game_names_put_the_screen_on_the_right_sides(self):
+        """On the platform the teams are Kumasi Lions and Accra Tigers; in eFootball they play as Barcelona and Madrid."""
+        home, away = self.m.home.team, self.m.away.team
+        screen = self.screen({"name": "FC BARCELONA", "score": 3, "goals": []}, {"name": "REAL MADRID", "score": 0, "goals": []})
+        with mock.patch.object(lineup, "read_with", screen):
+            r = self.players["away"].call("post", f"/api/report/{self.m.id}/read", {"image": PNG}).json()
+        self.assertFalse(r["sure"], "names don't match ours: the player is asked which one they were")
+        self.assertTrue(r["other"]["swapped"] != r["swapped"], "the other way round is offered too")
+        # the away team saves the name it plays as; now the screen is read the right way round without asking
+        self.assertEqual(self.players["away"].call("post", f"/api/orgs/{self.slug}/teams/{away.id}/game-name", {"gameName": "Barcelona"}).status_code, 200)
+        with mock.patch.object(lineup, "read_with", screen):
+            r = self.players["away"].call("post", f"/api/report/{self.m.id}/read", {"image": PNG}).json()
+        self.assertTrue(r["sure"])
+        self.assertEqual((r["homeScore"], r["awayScore"]), (0, 3), "Barcelona (the away team here) won 3-0")
+        # saying what you played as works too, and is remembered for a team that has no name saved yet
+        with mock.patch.object(lineup, "read_with", screen):
+            r = self.players["home"].call("post", f"/api/report/{self.m.id}/read", {"image": PNG, "side": "home", "playedAs": "Real Madrid"}).json()
+        self.assertEqual((r["homeScore"], r["awayScore"]), (0, 3))
+        self.send("home", "home", 0, 3)
+        self.players["home"].call("post", f"/api/report/{self.m.id}/proof", {"side": "home", "kind": "result", "image": PNG, "homeScore": 0, "awayScore": 3, "playedAs": "Real Madrid"})
+        self.assertEqual(Team.objects.get(id=home.id).game_name, "Real Madrid")
+        stranger = self.signup("nosy2")
+        self.assertEqual(stranger.call("post", f"/api/orgs/{self.slug}/teams/{away.id}/game-name", {"gameName": "x"}).status_code, 404)
