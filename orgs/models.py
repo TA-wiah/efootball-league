@@ -32,6 +32,7 @@ class Organization(models.Model):
     permissions = models.JSONField(default=dict, blank=True)          # owner's overrides: {permission: [roles]}
     in_rankings = models.BooleanField(default=True)                   # include our teams in the platform rankings
     open_to_friendlies = models.BooleanField(default=False)
+    auto_confirm_results = models.BooleanField(default=False)         # both teams send the same score: confirmed without waiting
     auto_sms_reminders = models.BooleanField(default=False)           # text match reminders automatically (uses SMS credits)           # all our teams can be found and challenged, private ones too
 
     def __str__(self):

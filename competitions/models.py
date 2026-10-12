@@ -194,6 +194,7 @@ class MatchProof(models.Model):
     content_type = models.CharField(max_length=30)
     note = models.CharField(max_length=200, blank=True)
     home_score = models.PositiveSmallIntegerField(null=True, blank=True)   # the score this team says it was
+    events = models.JSONField(default=list, blank=True)   # the goals the team says happened (checked by them; often read by AI)
     away_score = models.PositiveSmallIntegerField(null=True, blank=True)
     uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="+")
     created = models.DateTimeField(auto_now_add=True)
