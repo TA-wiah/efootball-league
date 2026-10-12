@@ -49,9 +49,13 @@ def config():
     from superadmin import store
     s = store.get("ai")
     vision = s.get("vision") if s.get("vision") in ("openai", "gemini") else "openai"
-    key = s.get("gemini_key", "") if vision == "gemini" else s.get("api_key", "")
-    return {"enabled": bool(s.get("enabled")) and bool(key), "vision": vision, "key": key,
-            "daily_limit": int(s.get("daily_limit") or 5) * MAX_IMAGES}     # each use can be up to 10 screenshots
+    if vision == "gemini":
+        keys = [s.get(k, "") for k in ("gemini_key", "gemini_key2", "gemini_key3", "gemini_key4", "gemini_key5") if s.get(k, "")]
+    else:
+        keys = [s["api_key"]] if s.get("api_key") else []
+    return {"enabled": bool(s.get("enabled")) and bool(keys), "vision": vision, "keys": keys,
+            "daily_limit": int(s.get("daily_limit") or 5) * MAX_IMAGES,      # each use can be up to 10 screenshots
+            "daily_total": int(s.get("vision_daily_total") or 0)}
 
 
 def member_access(user, slug, team_id):
@@ -69,19 +73,43 @@ def member_access(user, slug, team_id):
         return org, m, t
 
 
+_turn = {"n": 0}
+
+
+class Busy(Exception):
+    pass
+
+
 def read_image(cfg, image):
+    """Try the keys in turn (each request starts with the next key, spreading the load); a busy or failing key hands
+    over to the next one."""
+    keys = cfg["keys"]
+    start = _turn["n"] % len(keys)
+    _turn["n"] += 1
+    last = None
+    for i in range(len(keys)):
+        try:
+            return read_with(cfg, keys[(start + i) % len(keys)], image)
+        except Busy as e:
+            last = e
+    if isinstance(last, Busy) and str(last) == "429":
+        raise ApiError(429, "The AI service is busy (its limit may be used up for now). Try again in a minute.")
+    raise ApiError(502, "The AI service isn't working right now. Please contact the platform administrator.")
+
+
+def read_with(cfg, key, image):
     if cfg["vision"] == "gemini":
         mime, b64 = image[5:].split(";base64,", 1)
         payload = {"contents": [{"parts": [{"text": PROMPT}, {"inline_data": {"mime_type": mime, "data": b64}}]}],
                    "generationConfig": {"temperature": 0, "responseMimeType": "application/json"}}
         req = urllib.request.Request(GEMINI, data=json.dumps(payload).encode(), method="POST",
-                                     headers={"Content-Type": "application/json", "x-goog-api-key": cfg["key"]})
+                                     headers={"Content-Type": "application/json", "x-goog-api-key": key})
     else:
         payload = {"model": MODEL, "response_format": {"type": "json_object"}, "temperature": 0,
                    "messages": [{"role": "user", "content": [{"type": "text", "text": PROMPT},
                                                              {"type": "image_url", "image_url": {"url": image, "detail": "high"}}]}]}
         req = urllib.request.Request(API, data=json.dumps(payload).encode(), method="POST",
-                                     headers={"Content-Type": "application/json", "Authorization": f"Bearer {cfg['key']}"})
+                                     headers={"Content-Type": "application/json", "Authorization": f"Bearer {key}"})
     try:
         with urllib.request.urlopen(req, timeout=90) as r:
             data = json.loads(r.read().decode())
@@ -89,11 +117,11 @@ def read_image(cfg, image):
             return json.loads(data["candidates"][0]["content"]["parts"][0]["text"])
         return json.loads(data["choices"][0]["message"]["content"])
     except urllib.error.HTTPError as e:
-        if e.code == 429:
-            raise ApiError(429, "The AI service is busy (its free limit may be used up for now). Try again in a minute.") from None
-        raise ApiError(502, "The AI service isn't working right now. Please contact the platform administrator.") from None
+        if e.code == 400:                                   # the request itself: another key won't help
+            raise ApiError(400, "The AI service couldn't read that image. Try another screenshot.") from None
+        raise Busy(str(e.code)) from None                   # busy, bad key, server trouble: try the next key
     except (urllib.error.URLError, TimeoutError):
-        raise ApiError(502, "The AI service couldn't be reached. Try again in a moment.") from None
+        raise Busy("network") from None
     except (KeyError, IndexError, ValueError):
         raise ApiError(502, "The AI service sent back something unexpected. Try again.") from None
 
@@ -228,7 +256,11 @@ def lineup_scan(request, user, ip, slug, team_id):
         raise ApiError(400, "Choose a screenshot (PNG, JPG or WebP).")
     if over(key, cfg["daily_limit"], 86400):
         raise ApiError(429, f"That's today's {cfg['daily_limit']} screenshots. Try again tomorrow, or add the players by hand.")
+    if cfg["daily_total"] and over("ailineup:all", cfg["daily_total"], 86400):
+        raise ApiError(429, "The platform has read all the screenshots it can today. Try again tomorrow, or type the lineup.")
     hit(key, cfg["daily_limit"] + 1, 86400)
+    if cfg["daily_total"]:
+        hit("ailineup:all", cfg["daily_total"] + 1, 86400)
     raw = read_image(cfg, image)
     rows, formation = clean(raw)
     return {"screen": screen_of(raw, rows) if rows else "", "players": rows, "formation": formation}
