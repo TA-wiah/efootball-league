@@ -8,6 +8,7 @@ can't be paired for sure is left for people to choose, and they review the list 
 Uses the platform's AI service (Platform settings → AI): OpenAI, or Google Gemini (has a free tier).
 """
 import json
+import logging
 import re
 import time
 import urllib.error
@@ -25,7 +26,9 @@ from .models import POSITIONS, Player
 
 API = "https://api.openai.com/v1/chat/completions"
 MODEL = "gpt-4.1-mini"
-GEMINI = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+GEMINI = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+GEMINI_MODEL = "gemini-flash-latest"      # always Google's current Flash model, so a retired version never breaks reading
+log = logging.getLogger("league")
 MAX_IMAGES = 10
 CODES = {k for k, _ in POSITIONS if k}
 GAME = CODES - {"DF", "MF", "FW"}
@@ -34,11 +37,13 @@ PROMPT = """This is a screenshot from the football video game eFootball. It is o
 - "lineup": the Game Plan screen, a pitch with player cards (the starting XI) and a list of cards beside or below it
   (substitutes and reserves).
 - "collection": a grid of player cards (the player list), none of them on a pitch.
-Each card shows a rating number, a position code (GK, CB, LB, RB, DMF, CMF, LMF, RMF, AMF, LWF, RWF, SS, CF) and,
-on collection cards, the player's name printed on the card (sometimes sideways).
-Read only text that is printed on the screen. Never identify or guess who a person is from their face, appearance,
-kit, flag or badge. If a card has no printed name, use an empty string for the name.
-Return JSON: {"screen": "lineup", "players": [{"position": "CF", "rating": 102, "starter": true, "name": ""}], "formation": "4-2-1-3"}
+Each card shows a rating number, a position code (GK, CB, LB, RB, DMF, CMF, LMF, RMF, AMF, LWF, RWF, SS, CF), a small
+national flag or club badge under the position, and, on collection cards, the player's name printed on the card
+(sometimes sideways).
+For "badge" give the country of that flag (e.g. "Argentina") or the club of that badge (e.g. "Barcelona"), or "" if
+there is none or you can't tell. Read names only from printed text. Never identify or guess who a person is from
+their face or appearance, and never use the flag or badge to guess a name. If a card has no printed name, use "".
+Return JSON: {"screen": "lineup", "players": [{"position": "CF", "rating": 102, "starter": true, "name": "", "badge": "Barcelona"}], "formation": "4-2-1-3"}
 On a lineup screen list the starters first (from the goalkeeper forward), then the substitutes in the order shown.
 On a collection screen every card has "starter": false and there is no formation. If it isn't an eFootball screen,
 return {"screen": "", "players": []}."""
@@ -54,6 +59,7 @@ def config():
     else:
         keys = [s["api_key"]] if s.get("api_key") else []
     return {"enabled": bool(s.get("enabled")) and bool(keys), "vision": vision, "keys": keys,
+            "gemini_model": s.get("gemini_model") or GEMINI_MODEL,
             "daily_limit": int(s.get("lineup_per_day") or 1) * MAX_IMAGES,   # each upload can be up to 10 screenshots
             "daily_total": int(s.get("vision_daily_total") or 0)}
 
@@ -94,15 +100,21 @@ def read_image(cfg, image):
             last = e
     if isinstance(last, Busy) and str(last) == "429":
         raise ApiError(429, "The AI service is busy (its limit may be used up for now). Try again in a minute.")
+    if isinstance(last, Busy) and str(last) == "404":
+        raise ApiError(502, "The AI model chosen in Platform settings isn't available. Please contact the platform administrator.")
+    if isinstance(last, Busy) and str(last) in ("401", "403", "key"):
+        raise ApiError(502, "The AI service didn't accept the platform's key. Please contact the platform administrator.")
     raise ApiError(502, "The AI service isn't working right now. Please contact the platform administrator.")
 
 
-def read_with(cfg, key, image):
+def read_with(cfg, key, image, think=False):
     if cfg["vision"] == "gemini":
         mime, b64 = image[5:].split(";base64,", 1)
-        payload = {"contents": [{"parts": [{"text": PROMPT}, {"inline_data": {"mime_type": mime, "data": b64}}]}],
-                   "generationConfig": {"temperature": 0, "responseMimeType": "application/json"}}
-        req = urllib.request.Request(GEMINI, data=json.dumps(payload).encode(), method="POST",
+        gen = {"temperature": 0, "responseMimeType": "application/json"}
+        if not think:                                       # reading printed text needs no "thinking": seconds instead of minutes
+            gen["thinkingConfig"] = {"thinkingBudget": 0}
+        payload = {"contents": [{"parts": [{"text": PROMPT}, {"inline_data": {"mime_type": mime, "data": b64}}]}], "generationConfig": gen}
+        req = urllib.request.Request(GEMINI.format(model=cfg.get("gemini_model") or GEMINI_MODEL), data=json.dumps(payload).encode(), method="POST",
                                      headers={"Content-Type": "application/json", "x-goog-api-key": key})
     else:
         payload = {"model": MODEL, "response_format": {"type": "json_object"}, "temperature": 0,
@@ -111,15 +123,22 @@ def read_with(cfg, key, image):
         req = urllib.request.Request(API, data=json.dumps(payload).encode(), method="POST",
                                      headers={"Content-Type": "application/json", "Authorization": f"Bearer {key}"})
     try:
-        with urllib.request.urlopen(req, timeout=90) as r:
+        with urllib.request.urlopen(req, timeout=75) as r:
             data = json.loads(r.read().decode())
         if cfg["vision"] == "gemini":
-            return json.loads(data["candidates"][0]["content"]["parts"][0]["text"])
+            parts = data["candidates"][0]["content"]["parts"]
+            return json.loads("".join(p.get("text", "") for p in parts if not p.get("thought")))
         return json.loads(data["choices"][0]["message"]["content"])
     except urllib.error.HTTPError as e:
+        detail = e.read().decode("utf-8", "replace")[:300]
+        log.warning("Reading a lineup screenshot failed (%s, HTTP %s): %s", cfg["vision"], e.code, detail)   # for the admin: the real reason
+        if e.code == 400 and "API key" in detail:            # Gemini says a bad key with 400
+            raise Busy("key") from None
+        if e.code == 400 and "thinking" in detail.lower() and not think and cfg["vision"] == "gemini":
+            return read_with(cfg, key, image, think=True)   # a model that must think: ask again without the setting
         if e.code == 400:                                   # the request itself: another key won't help
             raise ApiError(400, "The AI service couldn't read that image. Try another screenshot.") from None
-        raise Busy(str(e.code)) from None                   # busy, bad key, server trouble: try the next key
+        raise Busy(str(e.code)) from None                   # busy, bad key, retired model, server trouble: try the next key
     except (urllib.error.URLError, TimeoutError):
         raise Busy("network") from None
     except (KeyError, IndexError, ValueError):
@@ -144,7 +163,8 @@ def clean(raw):
         starter = bool(p.get("starter")) and starters < 11
         starters += starter
         name = re.sub(r"\s+", " ", str(p.get("name") or "")).strip()[:80]
-        out.append({"position": pos, "rating": rating, "starter": starter, "name": name})
+        badge = re.sub(r"[^a-z0-9 ]+", "", str(p.get("badge") or "").lower()).strip()[:40]
+        out.append({"position": pos, "rating": rating, "starter": starter, "name": name, "badge": badge})
         if len(out) >= MAX_PLAYERS:
             break
     formation = str(raw.get("formation") or "")[:12] if isinstance(raw, dict) else ""
@@ -179,24 +199,39 @@ def merge(reads):
     rows = [dict(p) for p in lineup["players"]]
     used = set()
 
+    same_badge = lambda row, c: bool(row.get("badge") and row.get("badge") == c.get("badge"))
+
     def cands(row, gap=None):
-        return [i for i, c in enumerate(pool) if i not in used and c["position"] == row["position"] and row["rating"] and c["rating"]
-                and (row["rating"] - c["rating"] == gap if gap is not None else -1 <= row["rating"] - c["rating"] <= 8)]
+        """Cards this lineup card can be: the same position, or another position with the same flag or badge (a player
+        used out of position, like an LB card at CB); when the badge narrows it down, only those."""
+        out = [i for i, c in enumerate(pool) if i not in used and (c["position"] == row["position"] or same_badge(row, pool[i]))
+               and row["rating"] and c["rating"] and (row["rating"] - c["rating"] == gap if gap is not None else -1 <= row["rating"] - c["rating"] <= 8)]
+        both = [i for i in out if same_badge(row, pool[i]) and pool[i]["position"] == row["position"]]
+        badged = [i for i in out if same_badge(row, pool[i])]
+        if both:                                             # same position and badge first
+            return both
+        if badged:                                           # then the same badge in another position
+            return badged
+        return [i for i in out if pool[i]["position"] == row["position"]]
 
     gaps = []
-    changed = True
-    while changed:                                           # pair the sure ones first: only one card fits
-        changed = False
-        for row in rows:
-            if row["name"]:
-                continue
-            c = cands(row)
-            if len(c) == 1:
-                row["name"], row["fromShot"] = pool[c[0]]["name"], True
-                used.add(c[0])
-                gaps.append(row["rating"] - pool[c[0]]["rating"])
-                changed = True
-    if gaps:                                                 # then use the team boost worked out from those
+
+    def sure():                                              # pair every row only one card fits, again and again
+        changed = True
+        while changed:
+            changed = False
+            for row in rows:
+                if row["name"]:
+                    continue
+                c = cands(row)
+                if len(c) == 1:
+                    row["name"], row["fromShot"] = pool[c[0]]["name"], True
+                    used.add(c[0])
+                    gaps.append(row["rating"] - pool[c[0]]["rating"])
+                    changed = True
+
+    sure()
+    if gaps:                                                 # then use the usual team boost worked out from those
         gap = max(set(gaps), key=gaps.count)
         for row in rows:
             if not row["name"]:
@@ -204,6 +239,7 @@ def merge(reads):
                 if len(c) == 1:
                     row["name"], row["fromShot"] = pool[c[0]]["name"], True
                     used.add(c[0])
+        sure()                                               # pairing some can leave only one card for others
     named = {" ".join(sorted(engine.name_tokens(r["name"]))) for r in rows if r["name"]}
     extras = [c for i, c in enumerate(pool) if i not in used and " ".join(sorted(engine.name_tokens(c["name"]))) not in named]
     return rows, extras[:60], lineup.get("formation", "")
