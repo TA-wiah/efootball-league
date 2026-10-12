@@ -407,7 +407,7 @@ def scorers(events):
     merged = []
     for team_rows in by_team.values():
         groups = []
-        for r in sorted(team_rows, key=lambda r: (r["playerId"] is None, -len(name_tokens(r["name"])))):
+        for r in sorted(team_rows, key=lambda r: (r["playerId"] is None, -len(name_tokens(r["name"])), -len(r["name"]), -r["goals"] - r["assists"])):
             home = next((g for g in groups if any(same_player(r["name"], x["name"]) for x in g)
                          and not (r["playerId"] and any(x["playerId"] and x["playerId"] != r["playerId"] for x in g))), None)
             (home.append(r) if home is not None else groups.append([r]))
