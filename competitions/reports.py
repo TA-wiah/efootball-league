@@ -97,7 +97,8 @@ def report_json(m, sides, staff):
                       "homeScore": m.home_score, "awayScore": m.away_score, "decided": m.decided or None, "notes": m.notes or None,
                       "competition": {"name": m.competition.name, "slug": m.competition.slug, "org": m.competition.org.slug},
                       "round": m.round_name or f"Round {m.round}"},
-            "roomCode": m.room_code or None, "sides": sides, "staff": staff, "aiRead": ai_on(), "autoConfirm": m.competition.org.auto_confirm_results, "checkin": {"home": ms(m.home_checkin), "away": ms(m.away_checkin)},
+            "roomCode": m.room_code or None, "sides": sides, "staff": staff, "aiRead": ai_on(), "autoConfirm": m.competition.org.auto_confirm_results,
+            "gameNames": {"home": m.home.team.game_name if m.home else "", "away": m.away.team.game_name if m.away else ""}, "checkin": {"home": ms(m.home_checkin), "away": ms(m.away_checkin)},
             "checkinOpen": bool(opens and opens <= now and (dl is None or now <= dl) and m.status in ("scheduled", "live")),
             "checkinOpens": opens.isoformat() if opens else None, "deadline": dl.isoformat() if dl else None,
             "whatsapp": whatsapp_link(m) if is_pro(m) else None, "kinds": MatchProof.KINDS,
@@ -175,6 +176,11 @@ def report_proof(request, user, ip, match_id):
     team = (m.home if side == "home" else m.away).team.name
     log(m.competition.org, user, f"{team} sent a screenshot ({MatchProof.KINDS[kind].lower()}) for match #{m.id}"
                                  + (f", saying {hs}-{as_}" if hs is not None else ""))
+    played_as = text(b, "playedAs", 60)
+    team_obj = (m.home if side == "home" else m.away).team
+    if kind == "result" and played_as and not team_obj.game_name:
+        team_obj.game_name = played_as
+        team_obj.save(update_fields=["game_name"])
     if kind == "result":
         auto_confirm(request, m)
         m.refresh_from_db()
@@ -290,10 +296,18 @@ def report_read(request, user, ip, match_id):
         raise ApiError(429, "The platform's daily limit for reading screenshots is reached. Enter the score yourself.")
     if hit(f"result:try:{user.id}", 30, 3600):
         raise ApiError(429, "Too many tries in the last hour. Enter the score yourself, or try later.")
-    out = clean_result(read_image(dict(cfg, prompt=RESULT_PROMPT), image),
-                       m.home.team.name if m.home else "", m.away.team.name if m.away else "")
+    b = body(request, 1_000_000)
+    side = b.get("side") if b.get("side") in sides else (sides[0] if len(sides) == 1 else None)
+    played_as = text(b, "playedAs", 60)                  # the name this team plays as in eFootball, if the player says
+    names = {s: [t.name, t.game_name] for s, t in (("home", m.home.team if m.home else None), ("away", m.away.team if m.away else None)) if t}
+    if side and played_as:
+        names[side].append(played_as)
+    raw = read_image(dict(cfg, prompt=RESULT_PROMPT), image)
+    out = clean_result(raw, names.get("home", []), names.get("away", []))
     if not out:
         raise ApiError(400, "That doesn't look like an eFootball result screen. Enter the score yourself.")
+    out["other"] = clean_result(raw, [], [], swap=not out["swapped"])    # the other way round, if the player says so
+    out["mySide"] = side
     hit(key, limit + 1, 86400)
     hit("lineup:read:all", 10 ** 6, 86400)
     return out

@@ -418,13 +418,23 @@ def team_like(printed, team_name):
     return 1 if a & b or any(engine._near(x, y) for x in a for y in b) else 0
 
 
-def clean_result(raw, home_name, away_name):
-    """The result screen read by the AI, put on our home/away sides: {homeScore, awayScore, events, swapped}."""
+def like_any(printed, names):
+    return max([team_like(printed, n) for n in names if n] or [0])
+
+
+def clean_result(raw, home_names, away_names, swap=None):
+    """The result screen read by the AI, put on our home/away sides: {homeScore, awayScore, events, swapped, sure}.
+    `home_names`/`away_names`: every name a side may appear as (its name here, the name it plays as in eFootball).
+    `swap`: force the orientation (True: the screen's left team is our away team)."""
     if not isinstance(raw, dict) or not raw.get("isResult") or not isinstance(raw.get("left"), dict) or not isinstance(raw.get("right"), dict):
         return None
+    home_names = [home_names] if isinstance(home_names, str) else list(home_names)
+    away_names = [away_names] if isinstance(away_names, str) else list(away_names)
     left, right = raw["left"], raw["right"]
-    swapped = (team_like(str(left.get("name") or ""), away_name) + team_like(str(right.get("name") or ""), home_name)
-               > team_like(str(left.get("name") or ""), home_name) + team_like(str(right.get("name") or ""), away_name))
+    ln, rn = str(left.get("name") or ""), str(right.get("name") or "")
+    straight, crossed = like_any(ln, home_names) + like_any(rn, away_names), like_any(ln, away_names) + like_any(rn, home_names)
+    swapped = crossed > straight if swap is None else bool(swap)
+    sure = swap is not None or straight != crossed
     home, away = (right, left) if swapped else (left, right)
 
     def score(x):
@@ -451,8 +461,9 @@ def clean_result(raw, home_name, away_name):
     hs, as_ = score(home), score(away)
     if hs is None or as_ is None:
         return None
-    return {"homeScore": hs, "awayScore": as_, "events": events, "swapped": swapped,
-            "printed": {"home": str(home.get("name") or "")[:60], "away": str(away.get("name") or "")[:60]}}
+    return {"homeScore": hs, "awayScore": as_, "events": events, "swapped": swapped, "sure": sure,
+            "printed": {"home": str(home.get("name") or "")[:60], "away": str(away.get("name") or "")[:60]},
+            "screen": {"left": ln[:60], "right": rn[:60]}}
 
 
 def clean_events(items):
@@ -468,3 +479,14 @@ def clean_events(items):
         assist = "" if kind == "own_goal" else re.sub(r"\s+", " ", str(g.get("assist") or "")).strip()[:80]
         out.append({"side": g["side"], "kind": kind, "name": name, "minute": minute, "assist": assist})
     return out
+
+
+@endpoint("POST", login_required=True)
+def team_game_name(request, user, ip, slug, team_id):
+    """The name this team plays as in eFootball (a club like Barcelona, or its own): result screens show it."""
+    org, m, t = member_access(user, slug, team_id)
+    t.game_name = text(body(request), "gameName", 60)
+    t.save(update_fields=["game_name"])
+    from .api import log
+    log(org, user, f"set {t.name}'s eFootball name to {t.game_name}" if t.game_name else f"cleared {t.name}'s eFootball name")
+    return {"ok": True, "gameName": t.game_name}

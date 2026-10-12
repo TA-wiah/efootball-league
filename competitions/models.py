@@ -91,6 +91,7 @@ class Team(Logo):
     created = models.DateTimeField(auto_now_add=True)
     suspended = models.BooleanField(default=False)          # set by a super admin: no public page
     lineup_at = models.DateTimeField(null=True, blank=True)        # last lineup saved (screenshot or by hand)
+    game_name = models.CharField(max_length=60, blank=True)        # the team they play as in eFootball (shown on result screens)
     squad_reminded = models.DateTimeField(null=True, blank=True)   # last "complete your squad" reminder
 
     def __str__(self):

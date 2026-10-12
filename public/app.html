@@ -278,6 +278,9 @@ table .btn.bad[data-armed],.dt .btn.bad[data-armed],table .btn.bad:hover,.dt .bt
 .glr{display:grid;grid-template-columns:minmax(0,1.2fr) 64px minmax(0,1.6fr) minmax(0,1.4fr) minmax(0,1fr) auto;gap:6px;align-items:center;margin:6px 0}.glr input,.glr select{margin:0}
 @media(max-width:640px){.glr{grid-template-columns:minmax(0,1fr) 64px auto;grid-template-areas:"side min x" "name name name" "assist assist kind"}.glr>:nth-child(1){grid-area:side}.glr>:nth-child(2){grid-area:min}.glr>:nth-child(3){grid-area:name}.glr>:nth-child(4){grid-area:assist}.glr>:nth-child(5){grid-area:kind}.glr>:nth-child(6){grid-area:x}.glr{padding-bottom:8px;border-bottom:1px solid var(--line)}}
 .okline{display:flex;gap:8px;align-items:flex-start;margin:0 0 10px;padding:10px 12px;border-radius:9px;background:rgba(19,144,74,.14);color:#c9f5dc;font-size:14px}.okline .ic{color:var(--ok,#5fe39a);flex:none;width:16px;height:16px;margin-top:2px}
+
+.weare{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:0 0 12px}.weare legend{padding:0 6px;color:var(--tx2);font-size:14px;font-weight:600}
+.weare label{display:flex;align-items:center;gap:8px;min-height:40px;margin:2px 0;cursor:pointer}.weare input{width:20px;height:20px;margin:0;accent-color:var(--gold)}
 </style></head><body>
 <header class="top"><a class="brand" href="/"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 13v3M8 20h8M9.5 20l.5-4h4l.5 4"/></svg><span>Competition Manager</span></a><nav id="topnav" aria-label="Account"></nav></header>
 <main class="w" id="main"><div class="card note">Loading…</div></main>
@@ -1104,6 +1107,8 @@ function teamPage(id){api(api0("/teams/"+id)).then(function(r){if(!r.ok)return f
   var reload=function(){teamPage(id)};
   (function(){var sec=$("sec"),top=sec.firstElementChild,lu=$("lineup"),sq=[].filter.call(sec.children,function(c){var g=c.querySelector(".gh");return g&&/^SQUAD/.test(g.textContent)})[0];
     if(sq)top.after(sq);if(lu)top.after(lu)})();
+  if(posOk){var hc=$("sec").firstElementChild;hc.insertAdjacentHTML("beforeend",'<form class="row" id="tgn" novalidate style="margin-top:12px;align-items:end"><label for="tgni" style="margin:0">In eFootball we play as<input id="tgni" maxlength="60" placeholder="e.g. FC Barcelona, or your own team name" value="'+esc(t.gameName||"")+'"></label><div><button class="btn g">Save</button></div></form><p class="note" style="margin:4px 0 0">Result screenshots show this name, so the score and goals are put on the right team.</p>');
+    $("tgn").onsubmit=function(e){e.preventDefault();api(api0("/teams/"+id+"/game-name"),"POST",{gameName:val("tgni")}).then(function(r){toast(r.ok?(r.data.gameName?"Saved: you play as "+r.data.gameName:"Cleared"):r.data.error,!r.ok);if(r.ok)t.gameName=r.data.gameName})}}
   bindTeamPeople(t,id);teamNames(id);if(posOk)lineupCard(t,id,reload);
   var patch=function(pid,d){return api(api0("/players/"+pid),"PATCH",d).then(function(r){toast(r.ok?"Saved":r.data.error,!r.ok);return r})};
   if(posOk){document.querySelectorAll("[data-pp]").forEach(function(i){i.onchange=function(){patch(i.dataset.pp,{position:i.value}).then(function(r){if(r.ok)reload()})}});
@@ -1648,7 +1653,7 @@ function reportView(id){document.title="Match report · Competition Manager";UM(
         (R.checkinOpen?R.sides.filter(function(s){return!R.checkin[s]}).map(function(s){return'<button class="btn" data-ck="'+s+'">'+ic("check")+' We’re here: '+esc(name(s))+'</button> '}).join(""):
           (R.checkinOpens&&new Date(R.checkinOpens)>new Date()&&R.sides.length?'<p class="note">“We’re here” opens at '+esc(when(R.checkinOpens))+' (an hour before kick-off).</p>':''))+'</div>'+
       (R.sides.length&&M.status!=="finished"&&M.status!=="cancelled"?'<form class="card" id="pf2" novalidate><div class="gh">Send the result</div><p class="note" style="margin-top:0">Add the full-time result screen from eFootball'+(R.aiRead?': the score and the scorers are read for you. Check them, then send.':', then enter the score it shows.')+' '+(R.autoConfirm?'When both teams send the same score it’s confirmed straight away; otherwise the organization checks it.':'The organization checks it and confirms the score.')+'</p>'+(R.sides.length>1?'<label for="psd">For<select id="psd">'+R.sides.map(function(s){return'<option value="'+s+'">'+esc(name(s))+'</option>'}).join("")+'</select></label>':'')+
-        '<label for="pkd">What they show<select id="pkd">'+opts(R.kinds,M.kickoff&&new Date(M.kickoff)<new Date()?"result":"start")+'</select></label><label for="pim" class="drop">'+ic("plus")+'<b>Add screenshots</b><span>The result screen first'+(R.aiRead?': the score and scorers are read for you':'')+' · you can pick several</span><input id="pim" class="vh" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple></label><p class="note" id="pfn" style="margin:6px 0 0"></p><div id="pai" aria-live="polite"></div>'+
+        '<label for="pkd">What they show<select id="pkd">'+opts(R.kinds,M.kickoff&&new Date(M.kickoff)<new Date()?"result":"start")+'</select></label><label for="pim" class="drop">'+ic("plus")+'<b>Add screenshots</b><span>The result screen first'+(R.aiRead?': the score and scorers are read for you':'')+' · you can pick several</span><input id="pim" class="vh" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple></label><p class="note" id="pfn" style="margin:6px 0 0"></p><label for="pas2">We play as (in eFootball)<input id="pas2" maxlength="60" placeholder="e.g. FC Barcelona, or your own team name" value="'+esc((R.gameNames||{})[R.sides[0]]||"")+'"></label><div id="pai" aria-live="polite"></div>'+
         '<div id="psc" class="row" hidden><label for="phs">'+esc(M.home)+' scored<input id="phs" type="number" min="0" max="99"></label><label for="pas">'+esc(M.away)+' scored<input id="pas" type="number" min="0" max="99"></label></div><div id="pgl"></div>'+
         '<label for="pnt">Note (optional)<input id="pnt" maxlength="200" placeholder="e.g. the connection dropped at 60′"></label>'+
         '<div class="actions"><button class="btn" id="pgo">'+ic("plus")+' Send</button>'+(R.whatsapp?'<a class="btn g" href="'+esc(R.whatsapp)+'" target="_blank" rel="noopener">WhatsApp the result</a>':'')+'</div></form>':'')+'</div>'+
@@ -1664,7 +1669,7 @@ function reportView(id){document.title="Match report · Competition Manager";UM(
         busy(b,true,"…");api("/api/report/"+id+"/approve","POST",{proofId:+b.dataset.appr}).then(function(r){busy(b,false);toast(r.ok?"Result confirmed: "+M.home+" "+c.homeScore+"–"+c.awayScore+" "+M.away+(r.data.goalsAdded?" · "+r.data.goalsAdded+" goal"+(r.data.goalsAdded===1?"":"s")+" added":""):r.data.error,!r.ok);load()})})}});
     if(!$("pf2"))return;
     // goals sent with the result (read by AI from the screenshot, or typed): the team checks them before sending
-    var G=[],KINDG={goal:"Goal",penalty_goal:"Penalty",own_goal:"Own goal"};
+    var G=[],playedAs="",KINDG={goal:"Goal",penalty_goal:"Penalty",own_goal:"Own goal"};
     var drawG=function(){var box=$("pgl");if(!box)return;if(val("pkd")!=="result"){box.innerHTML="";return}
       box.innerHTML='<div class="gl"><div class="gh" style="font-size:15px">Goals'+(G.length?' · '+G.length:'')+'</div>'+(G.length?G.map(function(g,i){
         return'<div class="glr"><select data-gs="'+i+'" aria-label="Team"><option value="home"'+(g.side==="home"?" selected":"")+'>'+esc(M.home)+'</option><option value="away"'+(g.side==="away"?" selected":"")+'>'+esc(M.away)+'</option></select>'+
@@ -1679,13 +1684,19 @@ function reportView(id){document.title="Match report · Competition Manager";UM(
       box.querySelectorAll("[data-gx]").forEach(function(b){b.onclick=function(){G.splice(+b.dataset.gx,1);drawG()}});
       $("gadd").onclick=function(){G.push({side:R.sides[0]||"home",kind:"goal",name:"",minute:null,assist:""});drawG()}};
     var readShot=function(){var f=$("pim").files[0];if(!R.aiRead||val("pkd")!=="result"||!f)return;$("pai").innerHTML='<div class="prog"><i style="width:35%"></i></div><p class="note">Reading the result screen… usually 5–20 seconds.</p>';
-      shrinkShot(f,function(img){api("/api/report/"+id+"/read","POST",{image:img}).then(function(r){if(!r.ok){$("pai").innerHTML='<p class="note">'+esc(r.data.error)+'</p>';return}var d=r.data;
-        $("phs").value=d.homeScore;$("pas").value=d.awayScore;G=d.events;drawG();
-        $("pai").innerHTML='<p class="okline">'+ic("check")+' Read from the screenshot: <b>'+esc(M.home)+' '+d.homeScore+'–'+d.awayScore+' '+esc(M.away)+'</b>'+(d.events.length?' and '+d.events.length+' goal'+(d.events.length===1?"":"s"):'')+'. Check everything below before sending.'+(d.swapped?' (The screen showed the teams the other way round; they’re put on the right sides.)':'')+'</p>'})})};
+      var mySide=$("psd")?val("psd"):R.sides[0];
+      shrinkShot(f,function(img){api("/api/report/"+id+"/read","POST",{image:img,side:mySide,playedAs:val("pas2")}).then(function(r){if(!r.ok){$("pai").innerHTML='<p class="note">'+esc(r.data.error)+'</p>';return}var d=r.data,alt=d.other;
+        // which team on the screen was us? (the game shows eFootball names, not ours); the choice turns the result the right way round
+        var use=function(x){$("phs").value=x.homeScore;$("pas").value=x.awayScore;G=x.events.slice();drawG();playedAs=x.printed[mySide]||"";
+          $("pai").innerHTML='<div class="okline">'+ic("check")+'<span>Read from the screenshot: <b>'+esc(M.home)+' '+x.homeScore+'–'+x.awayScore+' '+esc(M.away)+'</b>'+(x.events.length?' and '+x.events.length+' goal'+(x.events.length===1?"":"s"):'')+'. Check everything below before sending.</span></div>'+
+            (alt?'<fieldset class="weare"><legend>Which one were you, '+esc(name(mySide))+'?</legend>'+[[d,"a"],[alt,"b"]].map(function(o){var x2=o[0],n2=x2.printed[mySide]||"?",sc=mySide==="home"?x2.homeScore:x2.awayScore;
+              return'<label><input type="radio" name="weare" value="'+o[1]+'"'+(x2===x?" checked":"")+'> <b>'+esc(n2)+'</b> <span class="note">('+sc+' goal'+(sc===1?"":"s")+')</span></label>'}).join("")+(d.sure?'':'<p class="note" style="margin:6px 0 0">The names on the screen don’t match yours, so please pick.</p>')+'</fieldset>':'');
+          $("pai").querySelectorAll('[name="weare"]').forEach(function(r2){r2.onchange=function(){use(r2.value==="a"?d:alt)}})};
+        use(d)})})};
     $("pim").onchange=function(){var fs=[].slice.call(this.files);$("pfn").textContent=fs.length?fs.length+" screenshot"+(fs.length===1?"":"s")+": "+fs.map(function(f){return f.name}).join(", "):"";readShot()};
     $("pkd").onchange=function(){$("psc").hidden=this.value!=="result";drawG();readShot()};drawG();$("psc").hidden=$("pkd").value!=="result";
     $("pf2").onsubmit=function(e){e.preventDefault();var files=[].slice.call($("pim").files),b=$("pgo");if(!files.length){toast("Choose at least one screenshot",true);return}
-      var base={side:$("psd")?val("psd"):R.sides[0],kind:val("pkd"),note:val("pnt")};if(base.kind==="result"){base.homeScore=val("phs");base.awayScore=val("pas");if(base.homeScore===""||base.awayScore===""){toast("Enter the score shown on the screenshot",true);return}
+      var base={side:$("psd")?val("psd"):R.sides[0],kind:val("pkd"),note:val("pnt"),playedAs:playedAs||val("pas2")};if(base.kind==="result"){base.homeScore=val("phs");base.awayScore=val("pas");if(base.homeScore===""||base.awayScore===""){toast("Enter the score shown on the screenshot",true);return}
         var gh=G.filter(function(g){return g.side==="home"}).length,ga=G.length-gh;if(G.length&&(gh>+base.homeScore||ga>+base.awayScore)){toast("More goals are listed than the score. Fix the goals or the score.",true);return}}
       var sent=0,i=0;busy(b,true,"Sending…");var next=function(){if(i>=files.length){busy(b,false);toast(sent+" screenshot"+(sent===1?"":"s")+" sent");load();return}
         var extra=(i===0&&base.kind==="result"&&G.length)?{events:G}:{};
