@@ -240,6 +240,7 @@ th{font-family:var(--cond);font-size:13px}
   <nav class="nav" aria-label="Main">
     <a href="/competitions"{% if nav == "competitions" %} class="on"{% endif %}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M12 13v3M8 20h8"/></svg><span class="long">Competitions</span></a>
     {% if rankings_on %}<a href="/rankings"{% if nav == "rankings" %} class="on"{% endif %}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 21V11M12 21V5M16 21v-7M4 21h16"/></svg><span class="long">Rankings</span></a>{% endif %}
+    <a href="/updates"{% if nav == "updates" %} class="on"{% endif %} aria-label="Updates"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg><span class="long">Updates</span></a>
     <a href="/search"{% if nav == "search" %} class="on"{% endif %} aria-label="Search"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span class="long">Search</span></a>
     <a href="/app" class="login">Log in</a>
   </nav>

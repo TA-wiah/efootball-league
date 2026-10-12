@@ -54,7 +54,7 @@ def config():
     else:
         keys = [s["api_key"]] if s.get("api_key") else []
     return {"enabled": bool(s.get("enabled")) and bool(keys), "vision": vision, "keys": keys,
-            "daily_limit": int(s.get("daily_limit") or 5) * MAX_IMAGES,      # each use can be up to 10 screenshots
+            "daily_limit": int(s.get("lineup_per_day") or 1) * MAX_IMAGES,   # each upload can be up to 10 screenshots
             "daily_total": int(s.get("vision_daily_total") or 0)}
 
 

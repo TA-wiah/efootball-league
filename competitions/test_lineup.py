@@ -87,12 +87,14 @@ class LineupTest(Helpers, TestCase):
         self.assertEqual(res["added"], 0, "everyone named is already in the squad")
         self.assertEqual(Team.objects.get(id=self.tid).players.count(), 13, "no duplicates")
         # the daily limit: each use can be up to 10 screenshots
-        store.update("ai", {"daily_limit": 1})
+        self.assertEqual(self.owner.get(self.scan).json()["limit"], 10, "one upload a day by default: up to 10 screenshots")
         self.assertEqual(self.owner.get(self.scan).json()["left"], 8)
         with mock.patch.object(lineup, "read_image", lambda cfg, image: READ):
             for _ in range(8):
                 self.assertEqual(self.owner.call("post", self.scan, {"image": IMG}).status_code, 200)
             self.assertEqual(self.owner.call("post", self.scan, {"image": IMG}).status_code, 429)
+        store.update("ai", {"lineup_per_day": 2})
+        self.assertEqual(self.owner.get(self.scan).json()["left"], 10, "a second upload when the platform allows two")
 
     def test_names_from_the_players_list_screenshots(self):
         store.update("ai", {"enabled": True, "vision": "gemini", "gemini_key": "AIza-test", "daily_limit": 3})

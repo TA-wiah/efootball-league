@@ -768,6 +768,8 @@ def platform_settings(request, user, ip):
                 raise ApiError(400, "Choose the image model.")
             if "vision" in changes and changes["vision"] not in ("openai", "gemini"):
                 raise ApiError(400, "Choose who reads screenshots.")
+            if "lineup_per_day" in changes and (not isinstance(changes["lineup_per_day"], int) or not 1 <= changes["lineup_per_day"] <= 20):
+                raise ApiError(400, "Lineup uploads per person per day must be from 1 to 20.")
             if "vision_daily_total" in changes and (not isinstance(changes["vision_daily_total"], int) or not 0 <= changes["vision_daily_total"] <= 100000):
                 raise ApiError(400, "The platform's daily screenshots must be from 0 (no cap) to 100,000.")
             if "daily_limit" in changes and (not isinstance(changes["daily_limit"], int) or not 1 <= changes["daily_limit"] <= 100):

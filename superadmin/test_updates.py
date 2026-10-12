@@ -31,7 +31,7 @@ class UpdatesTest(Helpers, TestCase):
         page = Client().get("/updates").content.decode()
         self.assertIn("Fill your squad from screenshots", page)
         self.assertNotIn("Results sent by teams, approved by you", page, "role-only updates never go public")
-        self.assertIn('href="/updates"', Client().get("/competitions").content.decode(), "linked in the footer")
+        self.assertIn('aria-label="Updates"', Client().get("/competitions").content.decode(), "in the top bar")
 
     def test_super_admins_write_them(self):
         self.assertEqual(self.boss.call("post", "/api/admin/updates", {"title": "Hi", "audience": ["public"]}).status_code, 403)
