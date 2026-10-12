@@ -963,7 +963,14 @@ def team_name_check(request, user, ip, slug, team_id):
     if len(hits) == 1:
         return {"as": hits[0].name, "squad": True}
     used = known_name(t, name)
-    return {"as": used if used and used != name else None, "squad": False}
+    from .positions import elsewhere, from_others, key
+    try:
+        team_access(user, slug, t.id)
+        may_add = len(name) >= 2 and not hits
+    except ApiError:
+        may_add = False
+    g = from_others(elsewhere([used or name], exclude_team=t.id).get(key(used or name))) if may_add else None
+    return {"as": used if used and used != name else None, "squad": False, "canAdd": may_add, "guess": g}
 
 
 @endpoint("GET", "POST", login_required=True)
@@ -1071,7 +1078,7 @@ def org_awards(request, user, ip, slug):
     xi = team_of_the_season(mine)
     return {"enabled": True, "year": a["year"],
             "awards": [{"key": x["key"], "name": x["name"], "who": x["who"], "team": team_brief(x["team"]), "stat": x["stat"], "how": x["how"]} for x in a["awards"]],
-            "xi": {k: [{"name": p["name"], "team": team_brief(p["team"]), "stat": p["stat"], "pos": p["pos"]} for p in v] for k, v in xi["xi"].items()}}
+            "xi": {k: [{"name": p["name"], "team": team_brief(p["team"]), "stat": p["stat"], "pos": p["pos"], "auto": p["auto"]} for p in v] for k, v in xi["xi"].items()}}
 
 
 @endpoint("GET", login_required=True)
@@ -1130,7 +1137,8 @@ def team_detail(request, user, ip, slug, team_id):
         mine = m.teams.filter(id=t.id).exists()
         people = [{"id": x.id, "username": x.user.username, "role": x.role, "roleLabel": ROLE_INFO[x.role][0]}
                   for x in t.assigned_staff.select_related("user").order_by("role", "user__username")]
-        return {"team": {**team_json(t, players=True), "members": people, "mine": mine, "friendlies": team_friendlies(t),
+        from .positions import for_team
+        return {"team": {**team_json(t, players=True), "members": people, "mine": mine, "friendlies": team_friendlies(t), "guesses": for_team(t),
                          "inviteRoles": team_invite_roles(m) if (mine or can(m.role, "members.invite", org)) else []}}
     if request.method == "PATCH":
         org, m, t = team_access(user, slug, team_id)
@@ -1216,11 +1224,16 @@ def player_detail(request, user, ip, slug, player_id):
     p = Player.objects.select_related("team").filter(team__org=org, id=player_id).first()
     if not p:
         raise ApiError(404, "Player not found.")
-    team_access(user, slug, p.team_id)
+    b = body(request) if request.method == "PATCH" else {}
+    try:
+        team_access(user, slug, p.team_id)
+    except ApiError as e:                                   # players and staff of this team may set positions (only)
+        if e.status != 403 or request.method != "PATCH" or set(b) != {"position"} or not m.teams.filter(id=p.team_id).exists():
+            raise
     if request.method == "DELETE":
         p.delete()
         return {"ok": True}
-    apply_player(p, body(request))
+    apply_player(p, b)
     p.save()
     return {"ok": True, "player": player_json(p)}
 

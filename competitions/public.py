@@ -261,7 +261,8 @@ def xi_view(t):
     out = []
     for label, short, k in rows:
         players = [{**p, "t": team_view(p["team"], public_team_ids([p["team"].id])), "org": p["team"].org,
-                    "pos": p["pos"] if p["pos"] not in ("DF", "MF", "FW") else ""} for p in t["xi"][k]]
+                    "pos": p["pos"] if p["pos"] not in ("DF", "MF", "FW") else ({"DF": "DEF", "MF": "MID", "FW": "FWD"}[p["pos"]] if p["auto"] else "")}
+                   for p in t["xi"][k]]
         out.append({"label": label, "short": short, "players": players, "missing": {"GK": 1, "DF": 4, "MF": 3, "FW": 3}[k] - len(players)})
     return {"rows": out, "filled": t["filled"], "year": t["year"]}
 
