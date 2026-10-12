@@ -2,7 +2,7 @@
 {% block content %}
 <section class="card">
   <div class="hero">{% include "public/_crest.html" with t=t size=72 %}<div><h1>{{ team.name }}</h1>
-    {% if rank %}<a href="/rankings" class="pill gold" style="text-decoration:none;margin:4px 0">Ranked #{{ rank.world }} in the world{% if rank.inCountry %} · #{{ rank.inCountry }} in {{ rank.country }}{% endif %}{% if rank.inRegion %} · #{{ rank.inRegion }} in {{ rank.region }}{% endif %} · rating {{ rank.rating }}</a>{% endif %}
+    {% if rank %}<a href="/rankings" class="rankchips" aria-label="Rankings: number {{ rank.world }} in the world{% if rank.inCountry %}, {{ rank.inCountry }} in {{ rank.country }}{% endif %}{% if rank.inRegion %}, {{ rank.inRegion }} in {{ rank.region }}{% endif %}, rating {{ rank.rating }}"><span class="pill gold">World #{{ rank.world }}</span>{% if rank.inCountry %}<span class="pill">{{ rank.country }} #{{ rank.inCountry }}</span>{% endif %}{% if rank.inRegion %}<span class="pill">{{ rank.region }} #{{ rank.inRegion }}</span>{% endif %}<span class="pill">Rating {{ rank.rating }}</span></a>{% endif %}
     <div class="note">{% if team.city %}{{ team.city }}{% endif %}{% if team.city and team.venue %} · {% endif %}{% if team.venue %}Home ground: {{ team.venue }}{% endif %}{% if team.founded %} · Founded {{ team.founded }}{% endif %}{% if team.colors %} · Colours: {{ team.colors }}{% endif %}</div>
     {% if form %}<div style="margin-top:6px">{% for f in form %}<span class="fm {{ f }}">{{ f }}</span>{% endfor %} <span class="note">last {{ form|length }}</span></div>{% endif %}
   </div></div>

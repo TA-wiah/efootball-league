@@ -50,7 +50,7 @@ class RankingsTest(Helpers, TestCase):
         self.assertLess(data["teams"][-1]["rating"], 1500)
         self.assertAlmostEqual(sum(r["rating"] for r in data["teams"]), 1500 * 6, places=6, msg="points move, never appear")
         team_page = Client().get(f"/team/{data['teams'][0]['team'].slug}").content.decode()
-        self.assertIn("Ranked #1 in the world", team_page)
+        self.assertIn("World #1", team_page)
         # an organization can keep its teams out; private competitions never count
         self.b.call("patch", f"/api/orgs/{self.sb}", {"inRankings": False})
         html = Client().get("/rankings").content.decode()
@@ -134,7 +134,8 @@ class RankingsTest(Helpers, TestCase):
         self.assertEqual((lions["inCountry"], lions["country"], lions["inRegion"], lions["region"]), (1, "Ghana", 1, "Central"))
         self.assertEqual(rows["Tigers"]["inCountry"], 2)
         page = Client().get(f"/team/{Match.objects.filter(competition__slug=c1).first().competition.entries.get(team__name='Lions').team.slug}").content.decode()
-        self.assertIn("in the world · #1 in Ghana · #1 in Central", page)
+        for chip in ("World #", "Ghana #1", "Central #1"):
+            self.assertIn(chip, page)
         self.assertIn("How the rankings work", Client().get("/rankings").content.decode())
         m = Match.objects.filter(competition__slug=c1).select_related("home__team").first()
         self.a.call("post", f"{b1}/matches/{m.id}/events", {"kind": "goal", "side": "home", "minute": 9, "playerName": "Kofi Mensah"})

@@ -34,8 +34,8 @@ class DiscoverTest(Helpers, TestCase):
 
     def test_landing_explains_the_platform(self):
         html = self.text("/")
-        for s in ("What the platform does", "Organizer log in", "Browse competitions", "League organizers", "Teams", "Fans",
-                  "Automatic standings", "Kasoa Sunday League", "Browse by country", "Ghana"):
+        for s in ("Built for eFootball", "Log in", "Browse competitions", "League organizers", "Teams", "Fans",
+                  "Results you can trust", "Kasoa Sunday League", "Browse by country", "Ghana"):
             self.assertIn(s, html)
         self.assertNotIn("/app/signup", html, "creating needs a login: no sign-up or create buttons on public pages")
         self.assertNotIn("/app/new", html)
@@ -96,7 +96,7 @@ class DiscoverTest(Helpers, TestCase):
 
     def test_original_league_moves_to_classic_with_opt_out(self):
         self.assertIn("eFootball", self.text("/classic"))
-        self.assertIn("What the platform does", self.text("/"))
+        self.assertIn("Built for eFootball", self.text("/"))
         with override_settings(HOME_PAGE="league", LEAGUE_PATH="/"):
             self.assertIn("eFootball", self.text("/"))
         self.assertIn("/competitions", self.text("/sitemap.xml"))

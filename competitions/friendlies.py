@@ -8,6 +8,7 @@ accept or decline. On acceptance the match is created in the challenger organiza
 series: no league table, results and head-to-head only), with both teams entered, so both sides can check in, send
 screenshots and follow it like any other match.
 """
+import re
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
@@ -86,7 +87,7 @@ def challenge_json(ch, org, mine_ids, staff=False):
     to = side_json(ch.to_team) if ch.to_team_id else {"name": "Any team (open request)" if is_open(ch) else "Their choice of team", "choice": True,
                                                        "open": is_open(ch), "logo": None, "org": {"name": ch.to_org.name, "slug": ch.to_org.slug}}
     return {"id": ch.id, "direction": "sent" if sent else "received", "from": side_json(ch.from_team), "to": to,
-            "kickoff": ch.kickoff.isoformat(), "message": ch.message or None, "status": st, "created": ms(ch.created),
+            "kickoff": ch.kickoff.isoformat(), "message": ch.message or None, "status": st, "created": ms(ch.created), "roomCode": ch.room_code or None,
             "by": getattr(ch.created_by, "username", None), "answeredBy": getattr(ch.answered_by, "username", None),
             "match": {"id": ch.match_id, "slug": ch.match.slug} if ch.match_id else None,
             "internal": internal, "host": ch.from_team.org.slug,
@@ -169,12 +170,17 @@ def delete_friendly(ch):
             e.delete()
 
 
+def room(b):
+    """The eFootball room code typed in a challenge or on a match: letters, digits, spaces and dashes."""
+    return re.sub(r"[^A-Za-z0-9 \-]", "", str(b.get("roomCode") or "")).strip()[:24]
+
+
 def make_match(ch):
     """The friendly itself, in the challenger organization's "Friendlies" series with both teams entered."""
     c = host_series(ch.from_team.org)
     home, _ = Entry.objects.get_or_create(competition=c, team=ch.from_team)
     away, _ = Entry.objects.get_or_create(competition=c, team=ch.to_team)
-    return Match.objects.create(competition=c, stage="league", round=1, round_name="Friendly", home=home, away=away, kickoff=ch.kickoff,
+    return Match.objects.create(competition=c, stage="league", round=1, round_name="Friendly", home=home, away=away, kickoff=ch.kickoff, room_code=ch.room_code,
                                 slug=engine.unique_slug(Match, f"{ch.from_team.name} v {ch.to_team.name} friendly", "match", limit=120))
 
 
@@ -237,13 +243,13 @@ def org_friendlies(request, user, ip, slug):
         raise ApiError(429, "Too many challenges. Try again later.")
     if both:                                         # you manage both teams: no need to ask, the match is set straight away
         with transaction.atomic():
-            ch = FriendlyChallenge.objects.create(from_team=mine_t, to_team=other, to_org=other.org, kickoff=kickoff, message=text(b, "message", 300),
+            ch = FriendlyChallenge.objects.create(from_team=mine_t, to_team=other, to_org=other.org, kickoff=kickoff, message=text(b, "message", 300), room_code=room(b),
                                                   created_by=user, status="accepted", answered_by=user, answered=now)
             ch.match = make_match(ch)
             ch.save(update_fields=["match"])
         log(org, user, f"arranged a friendly: {mine_t.name} v {other.name}")
         return {"ok": True, "challenge": challenge_json(ch, org, mine_ids)}
-    ch = FriendlyChallenge.objects.create(from_team=mine_t, to_team=other, to_org=other.org, kickoff=kickoff, message=text(b, "message", 300), created_by=user)
+    ch = FriendlyChallenge.objects.create(from_team=mine_t, to_team=other, to_org=other.org, kickoff=kickoff, message=text(b, "message", 300), room_code=room(b), created_by=user)
     if other.org_id == org.id:
         log(org, user, f"challenged {other.name} to a friendly against {mine_t.name}")
         notify(other, f"{mine_t.name} challenged {other.name} to a friendly",
@@ -280,7 +286,7 @@ def challenge_org(request, user, org, mine_t, mine_ids, b):
         raise ApiError(409, f"{mine_t.name} already has a challenge waiting for {other.name}.")
     if hit(f"friendly:{org.id}", 30, 3600):
         raise ApiError(429, "Too many challenges. Try again later.")
-    ch = FriendlyChallenge.objects.create(from_team=mine_t, to_org=other, kickoff=kickoff, message=text(b, "message", 300), created_by=user)
+    ch = FriendlyChallenge.objects.create(from_team=mine_t, to_org=other, kickoff=kickoff, message=text(b, "message", 300), room_code=room(b), created_by=user)
     log(org, user, f"challenged {other.name} to a friendly against {mine_t.name} (they choose their team)")
     log(other, None, f"{mine_t.name} ({org.name}) challenged {other.name} to a friendly: choose a team to play")
     notify(None, f"{mine_t.name} challenged {other.name} to a friendly",
@@ -295,7 +301,8 @@ def board_json(ch, mine_ids, user=None, assigned=()):
     """`mine`: you posted it, or it's for a team you're on (staff who manage every team can still take others' requests)."""
     return {"id": ch.id, "team": side_json(ch.from_team), "kickoff": ch.kickoff.isoformat(), "message": ch.message or None,
             "by": getattr(ch.created_by, "username", None), "status": state(ch),
-            "mine": bool(user and ch.created_by_id == user.id) or ch.from_team_id in assigned, "canCancel": ch.from_team_id in mine_ids}
+            "mine": bool(user and ch.created_by_id == user.id) or ch.from_team_id in assigned, "canCancel": ch.from_team_id in mine_ids,
+            "roomCode": (ch.room_code or None) if ch.to_team_id and (ch.from_team_id in mine_ids or ch.to_team_id in mine_ids) else None}
 
 
 @endpoint("GET", "POST", login_required=True)
@@ -337,7 +344,7 @@ def friendly_board(request, user, ip, slug):
             raise ApiError(409, "There's already a challenge waiting between these two teams.")
         if hit(f"friendly:{org.id}", 30, 3600):
             raise ApiError(429, "Too many challenges. Try again later.")
-        ch = FriendlyChallenge.objects.create(from_team=team, to_team=other, to_org=org, kickoff=kickoff, message=text(b, "message", 300), created_by=user)
+        ch = FriendlyChallenge.objects.create(from_team=team, to_team=other, to_org=org, kickoff=kickoff, message=text(b, "message", 300), room_code=room(b), created_by=user)
         log(org, user, f"{team.name} challenged {other.name} to a friendly")
         notify(other, f"{team.name} challenged {other.name} to a friendly",
                [f"{team.name} wants to play {other.name}.", f"Proposed kick-off: {kickoff:%a %d %b %Y, %H:%M} UTC."]
@@ -349,7 +356,7 @@ def friendly_board(request, user, ip, slug):
         raise ApiError(409, f"{team.name} already has 3 open requests. Cancel one first.")
     if hit(f"friendly:{org.id}", 30, 3600):
         raise ApiError(429, "Too many requests. Try again later.")
-    ch = FriendlyChallenge.objects.create(from_team=team, to_org=org, kickoff=kickoff, message=text(b, "message", 300), created_by=user)
+    ch = FriendlyChallenge.objects.create(from_team=team, to_org=org, kickoff=kickoff, message=text(b, "message", 300), room_code=room(b), created_by=user)
     log(org, user, f"{team.name} is looking for a friendly ({kickoff:%a %d %b, %H:%M} UTC)")
     notify(None, f"{team.name} is looking for a friendly", [f"{team.name} wants a friendly: {kickoff:%a %d %b %Y, %H:%M} UTC.",
                                                            "Any team can take it on the Find a friendly page."] + ([f"Message: {ch.message}"] if ch.message else []),
@@ -454,6 +461,11 @@ def org_friendly_action(request, user, ip, slug, ch_id, action):
                         ch.match.save(update_fields=["kickoff"])
             if "message" in b:
                 ch.message = text(b, "message", 300)
+            if "roomCode" in b:
+                ch.room_code = room(b)
+                if ch.match_id:
+                    ch.match.room_code = ch.room_code
+                    ch.match.save(update_fields=["room_code"])
             ch.save()
             pair = f"{ch.from_team.name} v {to_name(ch)}"
             for o in {ch.from_team.org, ch.to_org}:

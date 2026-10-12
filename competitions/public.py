@@ -95,9 +95,15 @@ def team_view(t, linkable):
             "initials": "".join(ch for ch in (t.short_name or t.name) if ch.isalnum())[:3].upper(), "hue": sum(map(ord, t.name)) * 31 % 360}
 
 
+AWAIT_AFTER = timezone.timedelta(hours=2)
+
+
 def match_view(m, linkable):
     home, away = m.home.team if m.home else None, m.away.team if m.away else None
-    return {"slug": m.slug, "home": team_view(home, linkable), "away": team_view(away, linkable), "kickoff": m.kickoff,
+    played = m.home_score is not None and m.away_score is not None
+    awaiting = (not played and m.status in ("scheduled", "live") and m.kickoff is not None and m.home_id and m.away_id
+                and m.kickoff < timezone.now() - AWAIT_AFTER)
+    return {"awaiting": awaiting, "slug": m.slug, "home": team_view(home, linkable), "away": team_view(away, linkable), "kickoff": m.kickoff,
             "round": m.round_name or f"Round {m.round}", "group": m.group, "leg": m.leg, "stage": m.stage, "status": m.status,
             "status_label": STATUS_L[m.status], "played": m.home_score is not None and m.away_score is not None, "notes": m.notes,
             "home_label": bracket.label(m.home_from) or "To be decided", "away_label": bracket.label(m.away_from) or "To be decided",
@@ -224,6 +230,12 @@ def match(request, slug):
                                  if e.kind == "own_goal" else (e.player.name if e.player else e.player_name),
                        "assist": e.assist.name if e.assist else e.assist_name,
                        "note": e.note})
+    # trust: the result was confirmed by the organization; a result screenshot backs it; not every scorer recorded
+    trust = None
+    if mv["played"] and m.status == "finished":
+        goals = sum(1 for e in events if e["kind"] in ("goal", "penalty_goal", "own_goal"))
+        trust = {"org": c.org.name, "proof": m.proofs.filter(kind="result").exists(),
+                 "missing": max(0, (m.home_score or 0) + (m.away_score or 0) - goals) if events else 0}
     # knockout: aggregate over two legs
     aggregate = None
     if m.stage == "knockout" and m.home_id and m.away_id:
@@ -250,7 +262,7 @@ def match(request, slug):
     from proleague.logic import is_pro, whatsapp_link
     wa = whatsapp_link(m) if is_pro(c) and m.status != "finished" else ""
     report = f"/app/report/{m.id}" if is_pro(c) and m.status in ("scheduled", "live", "postponed") else ""
-    ctx = {"c": c, "m": mv, "events": events, "aggregate": aggregate, "whatsapp": wa, "report": report, "decided": m.decided, "table": table, "same_round": same_round, "referee": m.referee,
+    ctx = {"c": c, "m": mv, "events": events, "aggregate": aggregate, "trust": trust, "whatsapp": wa, "report": report, "decided": m.decided, "table": table, "same_round": same_round, "referee": m.referee,
            "title": title + (f" {m.home_score}–{m.away_score}" if mv["played"] else ""), "description": desc,
            "logo": logo("competition", c), "share_image": logo("competition", c) or org_logo(c.org), "notes": m.notes}
     return page(request, "match.html", ctx, index=c.visibility == "public" and not c.hidden, private=c.hidden)

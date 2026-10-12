@@ -90,7 +90,7 @@ def report_json(m, sides, staff):
                       "homeScore": m.home_score, "awayScore": m.away_score, "decided": m.decided or None, "notes": m.notes or None,
                       "competition": {"name": m.competition.name, "slug": m.competition.slug, "org": m.competition.org.slug},
                       "round": m.round_name or f"Round {m.round}"},
-            "sides": sides, "staff": staff, "checkin": {"home": ms(m.home_checkin), "away": ms(m.away_checkin)},
+            "roomCode": m.room_code or None, "sides": sides, "staff": staff, "checkin": {"home": ms(m.home_checkin), "away": ms(m.away_checkin)},
             "checkinOpen": bool(opens and opens <= now and (dl is None or now <= dl) and m.status in ("scheduled", "live")),
             "checkinOpens": opens.isoformat() if opens else None, "deadline": dl.isoformat() if dl else None,
             "whatsapp": whatsapp_link(m) if is_pro(m) else None, "kinds": MatchProof.KINDS,
@@ -168,6 +168,17 @@ def report_proof(request, user, ip, match_id):
     log(m.competition.org, user, f"{team} sent a screenshot ({MatchProof.KINDS[kind].lower()}) for match #{m.id}"
                                  + (f", saying {hs}-{as_}" if hs is not None else ""))
     return {"ok": True, "proof": proof_json(p), **report_json(m, sides, staff)}
+
+
+@endpoint("POST", login_required=True)
+def report_room(request, user, ip, match_id):
+    """The room code to join in eFootball: either team (or the league) can set or change it."""
+    from .friendlies import room
+    m, sides, staff = match_for(user, match_id)
+    m.room_code = room(body(request))
+    m.save(update_fields=["room_code"])
+    log(m.competition.org, user, f"set the room code for match #{m.id}" if m.room_code else f"removed the room code for match #{m.id}")
+    return report_json(m, sides, staff)
 
 
 @endpoint("POST", login_required=True)
