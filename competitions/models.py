@@ -13,7 +13,16 @@ COMP_STATUS = [("draft", "Draft"), ("active", "In progress"), ("completed", "Com
 MATCH_STATUS = [("scheduled", "Scheduled"), ("live", "Live"), ("finished", "Finished"), ("postponed", "Postponed"), ("cancelled", "Cancelled")]
 EVENT_KINDS = [("goal", "Goal"), ("penalty_goal", "Penalty goal"), ("own_goal", "Own goal"), ("yellow", "Yellow card"),
                ("second_yellow", "Second yellow"), ("red", "Red card"), ("substitution", "Substitution")]
-POSITIONS = [("", "—"), ("GK", "Goalkeeper"), ("DF", "Defender"), ("MF", "Midfielder"), ("FW", "Forward")]
+# eFootball positions; DF / MF / FW are the older "any defender / midfielder / forward" choices (still valid)
+POSITIONS = [("", "—"), ("GK", "GK · Goalkeeper"), ("CB", "CB · Centre back"), ("LB", "LB · Left back"), ("RB", "RB · Right back"),
+             ("DMF", "DMF · Defensive midfielder"), ("CMF", "CMF · Centre midfielder"), ("LMF", "LMF · Left midfielder"),
+             ("RMF", "RMF · Right midfielder"), ("AMF", "AMF · Attacking midfielder"), ("LWF", "LWF · Left winger"),
+             ("RWF", "RWF · Right winger"), ("SS", "SS · Second striker"), ("CF", "CF · Centre forward"),
+             ("DF", "Defender (any)"), ("MF", "Midfielder (any)"), ("FW", "Forward (any)")]
+# which line of the pitch each position plays in, and where across it (0 left, 1 centre, 2 right)
+LINE = {"GK": "GK", "CB": "DF", "LB": "DF", "RB": "DF", "DF": "DF", "DMF": "MF", "CMF": "MF", "LMF": "MF", "RMF": "MF", "AMF": "MF",
+        "MF": "MF", "LWF": "FW", "RWF": "FW", "SS": "FW", "CF": "FW", "FW": "FW"}
+SIDE = {"LB": 0, "LMF": 0, "LWF": 0, "RB": 2, "RMF": 2, "RWF": 2}
 
 
 class Logo(models.Model):
@@ -90,7 +99,7 @@ class Player(models.Model):
     team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="players")
     name = models.CharField(max_length=80)
     number = models.PositiveSmallIntegerField(null=True, blank=True)
-    position = models.CharField(max_length=2, choices=POSITIONS, blank=True)
+    position = models.CharField(max_length=3, choices=POSITIONS, blank=True)
     active = models.BooleanField(default=True)
     created = models.DateTimeField(auto_now_add=True)
 

@@ -162,7 +162,8 @@ def team_of_the_season(where=lambda o: True):
     """The year's best XI (4-3-3) from players in the system: forwards by goals, midfielders by assists and goals,
     defenders and the goalkeeper by their team's defence (fewest conceded, clean sheets). Positions come from the teams'
     squads; scorers typed by name are matched to the squad when the name is there. Friendlies don't count."""
-    from .models import Player
+    from .engine import same_player
+    from .models import LINE, SIDE, Player
     data = compute()
     s = settings_()
     season = {tid: r for tid, r in data["season"].items() if r["played"] >= s["min_matches"] and where(r["team"].org)}
@@ -172,7 +173,7 @@ def team_of_the_season(where=lambda o: True):
         squads.setdefault(pl.team_id, []).append(pl)
     def position(p):
         for pl in squads.get(p["team"].id, []):
-            if (p["playerId"] and pl.id == p["playerId"]) or (not p["playerId"] and pl.name.strip().lower() == p["name"].strip().lower()):
+            if (p["playerId"] and pl.id == p["playerId"]) or (not p["playerId"] and same_player(pl.name, p["name"])):
                 return pl.position
         return ""
     defence = lambda tid: (season[tid]["cs"] / season[tid]["played"], -season[tid]["ga"] / season[tid]["played"]) if tid in season else (0, -99)
@@ -182,26 +183,29 @@ def team_of_the_season(where=lambda o: True):
         if key in picked or len(xi[slot]) >= {"GK": 1, "DF": 4, "MF": 3, "FW": 3}[slot]:
             return False
         picked.add(key)
-        xi[slot].append({"name": row["name"], "team": row["team"], "stat": stat})
+        xi[slot].append({"name": row["name"], "team": row["team"], "stat": stat, "pos": row.get("pos") or ""})
         return True
     plural = lambda n, w: f"{n} {w if n == 1 else (w + 'es' if w.endswith('ch') else w + 's')}"
     rated = [dict(p, pos=position(p)) for p in stats]
-    for p in sorted([p for p in rated if p["pos"] == "FW" or (not p["pos"] and p["goals"] > p["assists"])], key=lambda p: (-(p["goals"] * 3 + p["assists"]), p["name"].lower())):
+    line = lambda p: LINE.get(p["pos"], "")
+    for p in sorted([p for p in rated if line(p) == "FW" or (not p["pos"] and p["goals"] > p["assists"])], key=lambda p: (-(p["goals"] * 3 + p["assists"]), p["name"].lower())):
         add("FW", p, f"{plural(p['goals'], 'goal')} · {plural(p['assists'], 'assist')}")
-    for p in sorted([p for p in rated if p["pos"] == "MF" or (not p["pos"] and p["assists"] >= p["goals"])], key=lambda p: (-(p["assists"] * 3 + p["goals"] * 2), p["name"].lower())):
+    for p in sorted([p for p in rated if line(p) == "MF" or (not p["pos"] and p["assists"] >= p["goals"])], key=lambda p: (-(p["assists"] * 3 + p["goals"] * 2), p["name"].lower())):
         add("MF", p, f"{plural(p['assists'], 'assist')} · {plural(p['goals'], 'goal')}")
     # defenders and goalkeeper: from the best defences' squads (and any defender who scored or assisted)
     backs = [{"name": pl.name, "team": pl.team, "playerId": pl.id, "pos": pl.position, "goals": 0, "assists": 0}
-             for tid in season for pl in squads.get(tid, []) if pl.position in ("DF", "GK")]
+             for tid in season for pl in squads.get(tid, []) if LINE.get(pl.position) in ("DF", "GK")]
     for b in backs:
         for p in rated:
-            if p["team"].id == b["team"].id and p["name"].strip().lower() == b["name"].strip().lower():
+            if p["team"].id == b["team"].id and (p["playerId"] == b["playerId"] or (not p["playerId"] and same_player(p["name"], b["name"]))):
                 b["goals"], b["assists"] = p["goals"], p["assists"]
     dstat = lambda b: f"{season[b['team'].id]['cs']} clean sheet{'' if season[b['team'].id]['cs'] == 1 else 's'} · {season[b['team'].id]['ga']} conceded in {plural(season[b['team'].id]['played'], 'match')}"
     for b in sorted([b for b in backs if b["pos"] == "GK"], key=lambda b: (defence(b["team"].id), b["name"].lower()), reverse=True):
         add("GK", b, dstat(b))
-    for b in sorted([b for b in backs if b["pos"] == "DF"], key=lambda b: (defence(b["team"].id), b["goals"] + b["assists"]), reverse=True):
+    for b in sorted([b for b in backs if line(b) == "DF"], key=lambda b: (defence(b["team"].id), b["goals"] + b["assists"]), reverse=True):
         add("DF", b, dstat(b))
+    for v in xi.values():                                   # left to right: LB, CB, CB, RB · LWF, CF, RWF
+        v.sort(key=lambda p: SIDE.get(p["pos"], 1))
     filled = sum(len(v) for v in xi.values())
     return {"year": data["year"], "xi": xi, "filled": filled}
 

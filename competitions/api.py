@@ -1071,7 +1071,7 @@ def org_awards(request, user, ip, slug):
     xi = team_of_the_season(mine)
     return {"enabled": True, "year": a["year"],
             "awards": [{"key": x["key"], "name": x["name"], "who": x["who"], "team": team_brief(x["team"]), "stat": x["stat"], "how": x["how"]} for x in a["awards"]],
-            "xi": {k: [{"name": p["name"], "team": team_brief(p["team"]), "stat": p["stat"]} for p in v] for k, v in xi["xi"].items()}}
+            "xi": {k: [{"name": p["name"], "team": team_brief(p["team"]), "stat": p["stat"], "pos": p["pos"]} for p in v] for k, v in xi["xi"].items()}}
 
 
 @endpoint("GET", login_required=True)

@@ -257,11 +257,12 @@ def match(request, slug):
 
 
 def xi_view(t):
-    rows = [("Forwards", "FW"), ("Midfielders", "MF"), ("Defenders", "DF"), ("Goalkeeper", "GK")]
+    rows = [("Forwards", "FWD", "FW"), ("Midfielders", "MID", "MF"), ("Defenders", "DEF", "DF"), ("Goalkeeper", "GK", "GK")]
     out = []
-    for label, k in rows:
-        players = [{**p, "t": team_view(p["team"], public_team_ids([p["team"].id])), "org": p["team"].org} for p in t["xi"][k]]
-        out.append({"label": label, "players": players, "missing": {"GK": 1, "DF": 4, "MF": 3, "FW": 3}[k] - len(players)})
+    for label, short, k in rows:
+        players = [{**p, "t": team_view(p["team"], public_team_ids([p["team"].id])), "org": p["team"].org,
+                    "pos": p["pos"] if p["pos"] not in ("DF", "MF", "FW") else ""} for p in t["xi"][k]]
+        out.append({"label": label, "short": short, "players": players, "missing": {"GK": 1, "DF": 4, "MF": 3, "FW": 3}[k] - len(players)})
     return {"rows": out, "filled": t["filled"], "year": t["year"]}
 
 
