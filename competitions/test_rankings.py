@@ -83,6 +83,24 @@ class RankingsTest(Helpers, TestCase):
         for name in homes:
             self.assertIn(name, podium)
 
+    def test_players_ranking_merges_names_within_a_team_only(self):
+        from .models import MatchEvent
+        b1, c1 = self.league(self.a, self.sa, ["Lions", "Tigers"])
+        m = Match.objects.filter(competition__slug=c1).select_related("home__team", "away__team").first()
+        self.a.call("patch", f"{b1}/matches/{m.id}", {"homeScore": 4, "awayScore": 1})
+        for name in ("Messi", "Lionel Messi", "Messi Lionel", "Lami Yamal"):     # typed directly, the old way
+            MatchEvent.objects.create(match=m, kind="goal", side="home", minute=10, player_name=name)
+        MatchEvent.objects.create(match=m, kind="goal", side="away", minute=20, player_name="Lionel Messi")
+        MatchEvent.objects.create(match=m, kind="goal", side="home", minute=30, player_name="Lamine Yamal")
+        self.root.call("patch", "/api/admin/settings", {"section": "rankings", "changes": {"enabled": True, "min_matches": 1}})
+        got = sorted((p["team"].name, p["name"], p["goals"]) for p in rankings.compute()["players"])
+        self.assertEqual(got, sorted([(m.home.team.name, "Lionel Messi", 3), (m.home.team.name, "Lamine Yamal", 2),
+                                      (m.away.team.name, "Lionel Messi", 1)]), "same team: one player; another team: someone else")
+        html = Client().get("/rankings/players").content.decode()
+        self.assertIn("Lionel Messi", html)
+        for other in ("Messi Lionel", "Lami Yamal", ">Messi<"):
+            self.assertNotIn(other, html, "shown once, under the fullest name")
+
     def test_awards_with_names_set_by_the_super_admin(self):
         b1, c1 = self.league(self.a, self.sa, ["Lions", "Tigers"])
         b2, c2 = self.league(self.b, self.sb, ["Eagles", "Hawks"])
