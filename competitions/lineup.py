@@ -281,7 +281,7 @@ def lineup_scan(request, user, ip, slug, team_id):
     to 10, then asks lineup_merge to put them together)."""
     org, m, t = member_access(user, slug, team_id)
     cfg = config()
-    key = f"ailineup:{user.id}"
+    key = f"lineup:read:{user.id}"          # successful reads only: a failed attempt never uses up anyone's allowance
     if request.method == "GET":
         used = Hit.objects.filter(key=key, ts__gte=time.time() - 86400).count()
         return {"enabled": cfg["enabled"], "left": max(0, cfg["daily_limit"] - used), "limit": cfg["daily_limit"], "names": known_names(t), "perUse": MAX_IMAGES}
@@ -291,14 +291,17 @@ def lineup_scan(request, user, ip, slug, team_id):
     if not re.match(r"^data:image/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$", image):
         raise ApiError(400, "Choose a screenshot (PNG, JPG or WebP).")
     if over(key, cfg["daily_limit"], 86400):
-        raise ApiError(429, f"That's today's {cfg['daily_limit']} screenshots. Try again tomorrow, or add the players by hand.")
-    if cfg["daily_total"] and over("ailineup:all", cfg["daily_total"], 86400):
-        raise ApiError(429, "The platform has read all the screenshots it can today. Try again tomorrow, or type the lineup.")
-    hit(key, cfg["daily_limit"] + 1, 86400)
-    if cfg["daily_total"]:
-        hit("ailineup:all", cfg["daily_total"] + 1, 86400)
+        raise ApiError(429, f"You've used today's {cfg['daily_limit']} screenshots. Try again tomorrow, or type the lineup.")
+    if cfg["daily_total"] and over("lineup:read:all", cfg["daily_total"], 86400):
+        raise ApiError(429, "The platform's daily limit for reading screenshots (shared by everyone, set by the platform admins) "
+                            "is reached. Try again tomorrow, or type the lineup.")
+    if hit(f"lineup:try:{user.id}", 40, 3600):              # many failing attempts in an hour: slow down (these don't use the allowance)
+        raise ApiError(429, "Too many tries in the last hour. Wait a little, then try again.")
     raw = read_image(cfg, image)
     rows, formation = clean(raw)
+    if rows:                                                 # only a screenshot that was actually read counts
+        hit(key, cfg["daily_limit"] + 1, 86400)
+        hit("lineup:read:all", 10 ** 6, 86400)              # the platform's total (shown to admins, and used by the optional cap)
     return {"screen": screen_of(raw, rows) if rows else "", "players": rows, "formation": formation}
 
 

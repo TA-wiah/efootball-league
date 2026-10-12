@@ -192,7 +192,7 @@ class GeminiKeysTest(Helpers, TestCase):
             self.assertEqual(self.owner.call("post", self.scan, {"image": IMG}).status_code, 200)
             r = self.owner.call("post", self.scan, {"image": IMG})
         self.assertEqual(r.status_code, 429)
-        self.assertIn("platform has read all", r.json()["error"])
+        self.assertIn("shared by everyone", r.json()["error"])
 
 
 class MergeTest(TestCase):
@@ -216,3 +216,22 @@ class MergeTest(TestCase):
         rows, _, _ = lineup.merge([shot, cards])
         self.assertEqual([r["name"] for r in rows][:2], ["Josko Gvardiol", "Frenkie de Jong"], "an LB and a CMF card played at CB")
         self.assertIn(rows[2]["name"], ("", "Willian Pacho"), "the same club written differently never blocks a pairing")
+
+
+class FailedReadsTest(Helpers, TestCase):
+    def test_failed_reads_never_use_the_allowance(self):
+        owner = self.signup("boss")
+        slug = self.new_org(owner)
+        tid = owner.call("post", f"/api/orgs/{slug}/teams", {"name": "Lions"}).json()["team"]["id"]
+        scan = f"/api/orgs/{slug}/teams/{tid}/lineup-scan"
+        store.update("ai", {"enabled": True, "vision": "gemini", "gemini_key": "k1", "vision_daily_total": 1})
+        with mock.patch.object(lineup, "read_with", lambda cfg, key, image: (_ for _ in ()).throw(lineup.Busy("503"))):
+            for _ in range(3):
+                self.assertEqual(owner.call("post", scan, {"image": IMG}).status_code, 502)
+        with mock.patch.object(lineup, "read_with", lambda cfg, key, image: {"players": []}):
+            owner.call("post", scan, {"image": IMG})                  # nothing read: doesn't count either
+        self.assertEqual(owner.get(scan).json()["left"], 10, "failed and empty reads don't count")
+        with mock.patch.object(lineup, "read_with", lambda cfg, key, image: READ):
+            self.assertEqual(owner.call("post", scan, {"image": IMG}).status_code, 200, "the platform cap still has room")
+            self.assertEqual(owner.call("post", scan, {"image": IMG}).status_code, 429, "now the shared cap of 1 is used")
+        self.assertEqual(self.signup("root").get("/api/admin/settings").status_code in (403, 404), True)
