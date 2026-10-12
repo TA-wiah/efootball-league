@@ -98,8 +98,9 @@ class RankingsTest(Helpers, TestCase):
                                       (m.away.team.name, "Lionel Messi", 1)]), "same team: one player; another team: someone else")
         html = Client().get("/rankings/players").content.decode()
         self.assertIn("Lionel Messi", html)
-        for other in ("Messi Lionel", "Lami Yamal", ">Messi<"):
-            self.assertNotIn(other, html, "shown once, under the fullest name")
+        self.assertIn("also typed as Messi, Messi Lionel", html, "shown once, under the fullest name, with how else it was typed")
+        self.assertIn("also typed as Lami Yamal", html)
+        self.assertNotIn(">Messi<", html)
 
     def test_awards_with_names_set_by_the_super_admin(self):
         b1, c1 = self.league(self.a, self.sa, ["Lions", "Tigers"])

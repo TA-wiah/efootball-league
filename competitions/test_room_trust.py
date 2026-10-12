@@ -69,3 +69,10 @@ class PublicTrustTest(Helpers, TestCase):
         self.assertIn("2 goals without a name", page)
         self.assertNotIn("Awaiting result", page)
         self.assertIn('<h1 class="sr">', page, "the match page has a real heading")
+
+
+class TiesTest(TestCase):
+    def test_tied_scorers_share_a_place(self):
+        from .engine import shared_ranks
+        rows = shared_ranks([{"goals": 5, "assists": 2}, {"goals": 5, "assists": 2}, {"goals": 5, "assists": 1}, {"goals": 3, "assists": 0}])
+        self.assertEqual([(r["rank"], r["tied"]) for r in rows], [(1, True), (1, True), (3, False), (4, False)])

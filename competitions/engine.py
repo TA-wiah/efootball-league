@@ -415,7 +415,20 @@ def scorers(events):
             best = g[0]                                       # a squad player first, else the fullest name
             merged.append({**best, "goals": sum(x["goals"] for x in g), "assists": sum(x["assists"] for x in g),
                            "aliases": sorted({x["name"] for x in g} - {best["name"]})})
-    return sorted(merged, key=lambda r: (-r["goals"], -r["assists"], r["name"].lower()))
+    out = sorted(merged, key=lambda r: (-r["goals"], -r["assists"], r["name"].lower()))
+    return shared_ranks(out)
+
+
+def shared_ranks(rows):
+    """Same goals and assists, same place: 1, =1, 3 (marked "tied" so pages can show "=1")."""
+    for i, r in enumerate(rows):
+        prev = rows[i - 1] if i else None
+        if prev and (prev["goals"], prev["assists"]) == (r["goals"], r["assists"]):
+            r["rank"], r["tied"] = prev["rank"], True
+            prev["tied"] = True
+        else:
+            r["rank"], r["tied"] = i + 1, False
+    return rows
 
 
 # ---------- logos ----------

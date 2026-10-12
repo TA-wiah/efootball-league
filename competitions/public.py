@@ -51,6 +51,7 @@ def page(request, template, ctx, *, index=True, private=False, banner=None):
     site = store.site()
     ctx.setdefault("description", site["description"])
     ctx.update(site_name=site["name"] or "Competition Manager", site_description=site["description"],
+               join_text=f"Join me on {site['name'] or 'Competition Manager'}: manage and play eFootball competitions, made easy.",
                share=ctx.get("share_image") or ctx.get("logo") or store.site_logo_url())
     ctx.update(nonce=nonce, base=base, url=base + request.path, index=index and not private, private_preview=private if banner is None else banner,
                app_url="/app")
@@ -521,9 +522,11 @@ def rankings_page(request, tab=""):
     for p in data["players"]:
         team = p["team"]
         if team and where(team.org) or (not team and not country):
-            players.append({**p, "position": len(players) + 1, "t": team_view(team, set()) if team else None, "org": team.org if team else None})
+            players.append({**p, "t": team_view(team, set()) if team else None, "org": team.org if team else None})
         if len(players) >= 100:
             break
+    for p in engine.shared_ranks(players):                 # places within the chosen area; ties share a place
+        p["position"] = p["rank"]
     podium = []                                       # Player of the Year: name, team and organization (same names stay apart)
     for p in sorted(data.get("year_players", []), key=lambda p: (-(p["goals"] + p["assists"]), -p["goals"], p["name"].lower())):
         team = p["team"]
