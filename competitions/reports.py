@@ -5,6 +5,7 @@ Who can report for a team: people in the team's organization who manage teams (o
 assigned people (team managers, coaches, players). Screenshots are private: only the two teams and the competition's
 staff can see them.
 """
+import re
 import time
 
 from django.db import transaction
@@ -76,7 +77,13 @@ def match_for(user, match_id):
 def proof_json(p):
     return {"id": p.id, "side": p.side, "kind": p.kind, "kindLabel": MatchProof.KINDS.get(p.kind, p.kind), "url": f"/media/proof/{p.id}",
             "note": p.note or None, "homeScore": p.home_score, "awayScore": p.away_score, "by": getattr(p.uploaded_by, "username", None),
+            "events": p.events or [],
             "created": ms(p.created)}
+
+
+def ai_on():
+    from .lineup import config
+    return config()["enabled"]
 
 
 def report_json(m, sides, staff):
@@ -90,7 +97,7 @@ def report_json(m, sides, staff):
                       "homeScore": m.home_score, "awayScore": m.away_score, "decided": m.decided or None, "notes": m.notes or None,
                       "competition": {"name": m.competition.name, "slug": m.competition.slug, "org": m.competition.org.slug},
                       "round": m.round_name or f"Round {m.round}"},
-            "roomCode": m.room_code or None, "sides": sides, "staff": staff, "checkin": {"home": ms(m.home_checkin), "away": ms(m.away_checkin)},
+            "roomCode": m.room_code or None, "sides": sides, "staff": staff, "aiRead": ai_on(), "autoConfirm": m.competition.org.auto_confirm_results, "checkin": {"home": ms(m.home_checkin), "away": ms(m.away_checkin)},
             "checkinOpen": bool(opens and opens <= now and (dl is None or now <= dl) and m.status in ("scheduled", "live")),
             "checkinOpens": opens.isoformat() if opens else None, "deadline": dl.isoformat() if dl else None,
             "whatsapp": whatsapp_link(m) if is_pro(m) else None, "kinds": MatchProof.KINDS,
@@ -160,13 +167,17 @@ def report_proof(request, user, ip, match_id):
             raise ApiError(400, "The score must be whole numbers.") from None
         if not (0 <= hs <= 99 and 0 <= as_ <= 99):
             raise ApiError(400, "The score must be from 0 to 99.")
+    from .lineup import clean_events
     p = MatchProof.objects.create(match=m, side=side, kind=kind, image=raw, content_type=ctype, note=text(b, "note", 200),
-                                  home_score=hs, away_score=as_, uploaded_by=user)
+                                  home_score=hs, away_score=as_, uploaded_by=user, events=clean_events(b.get("events")) if kind == "result" else [])
     if m.status in ("scheduled", "live"):
         check_in(m, side)                                  # sending proof also counts as showing up
     team = (m.home if side == "home" else m.away).team.name
     log(m.competition.org, user, f"{team} sent a screenshot ({MatchProof.KINDS[kind].lower()}) for match #{m.id}"
                                  + (f", saying {hs}-{as_}" if hs is not None else ""))
+    if kind == "result":
+        auto_confirm(request, m)
+        m.refresh_from_db()
     return {"ok": True, "proof": proof_json(p), **report_json(m, sides, staff)}
 
 
@@ -181,6 +192,69 @@ def report_room(request, user, ip, match_id):
     return report_json(m, sides, staff)
 
 
+def add_goals(m, events):
+    """The goals sent with the confirmed result, added to the match (only when no goals are logged yet). Names that
+    match a squad player are linked to that player."""
+    from .engine import same_player
+    from .models import MatchEvent
+    if not events or m.events.filter(kind__in=["goal", "penalty_goal", "own_goal"]).exists():
+        return 0
+    squads = {side: list((m.home if side == "home" else m.away).team.players.filter(active=True)) for side in ("home", "away")}
+
+    def link(name, side):
+        hits = [x for x in squads[side] if name and same_player(name, x.name)]
+        return (hits[0], "") if len(hits) == 1 else (None, name)
+    n = 0
+    for e in events:
+        scorer_side = e["side"] if e["kind"] != "own_goal" else ("away" if e["side"] == "home" else "home")   # own goal: the other team's player
+        who, who_name = link(e["name"], scorer_side)
+        helper, helper_name = link(e["assist"], e["side"]) if e["assist"] else (None, "")
+        MatchEvent.objects.create(match=m, kind=e["kind"], side=e["side"], minute=e["minute"], player=who, player_name=who_name,
+                                  assist=helper, assist_name=helper_name)
+        n += 1
+    return n
+
+
+def confirm(request, m, p, by_user, how):
+    """Use this result: score, status, goals (when sent), knockout progress, and tell both teams."""
+    team = (m.home if p.side == "home" else m.away).team.name
+    m.home_score, m.away_score, m.decided = p.home_score, p.away_score, ""
+    if m.status != "finished":
+        m.status, m.finished_at = "finished", timezone.now()
+    m.notes = (m.notes + "\n" if m.notes else "") + how
+    m.save()
+    goals = add_goals(m, p.events)
+    bracket.resolve(m.competition)
+    log(m.competition.org, by_user, f"confirmed {m.home.team.name} {p.home_score}–{p.away_score} {m.away.team.name} from {team}'s screenshot"
+        + (f" ({goals} goal{'' if goals == 1 else 's'} added)" if goals else ""))
+    from league.http import site_url
+    from .reminders import email_teams
+    from .reminders import text_team
+    for t in (m.home.team, m.away.team):
+        text_team(t, f"Result confirmed by {m.competition.org.name}: {m.home.team.name} {p.home_score}-{p.away_score} {m.away.team.name}.")
+    email_teams([m.home.team_id, m.away.team_id], f"Result confirmed: {m.home.team.name} {p.home_score}–{p.away_score} {m.away.team.name}",
+                [f"{m.competition.org.name} confirmed the result of {m.home.team.name} v {m.away.team.name}: {p.home_score}–{p.away_score}."],
+                f"{site_url(request)}/app/report/{m.id}", "Open the match")
+    return goals
+
+
+def auto_confirm(request, m):
+    """When the organization allows it: both teams sent the same score, so it's confirmed without waiting."""
+    if m.home_score is not None or not m.competition.org.auto_confirm_results or not m.home_id or not m.away_id:
+        return False
+    latest = {}
+    for p in m.proofs.filter(kind="result", home_score__isnull=False).order_by("created", "id"):
+        latest[p.side] = p
+    if set(latest) != {"home", "away"}:
+        return False
+    h, a = latest["home"], latest["away"]
+    if (h.home_score, h.away_score) != (a.home_score, a.away_score):
+        return False
+    use = h if len(h.events) >= len(a.events) else a          # the claim that says more about the goals
+    confirm(request, m, use, None, "Result confirmed automatically: both teams sent the same score.")
+    return True
+
+
 @endpoint("POST", login_required=True)
 def report_approve(request, user, ip, match_id):
     """The organization confirms a result a team sent (with its screenshot)."""
@@ -191,22 +265,38 @@ def report_approve(request, user, ip, match_id):
     if not p:
         raise ApiError(404, "That result isn't here any more.")
     team = (m.home if p.side == "home" else m.away).team.name
-    m.home_score, m.away_score, m.decided = p.home_score, p.away_score, ""
-    if m.status != "finished":
-        m.status, m.finished_at = "finished", timezone.now()
-    m.notes = (m.notes + "\n" if m.notes else "") + f"Result confirmed from {team}'s screenshot."
-    m.save()
-    bracket.resolve(m.competition)
-    log(m.competition.org, user, f"confirmed {m.home.team.name} {p.home_score}–{p.away_score} {m.away.team.name} from {team}'s screenshot")
-    from league.http import site_url
-    from .reminders import email_teams
-    from .reminders import text_team
-    for t in (m.home.team, m.away.team):
-        text_team(t, f"Result confirmed by {m.competition.org.name}: {m.home.team.name} {p.home_score}-{p.away_score} {m.away.team.name}.")
-    email_teams([m.home.team_id, m.away.team_id], f"Result confirmed: {m.home.team.name} {p.home_score}–{p.away_score} {m.away.team.name}",
-                [f"{m.competition.org.name} confirmed the result of {m.home.team.name} v {m.away.team.name}: {p.home_score}–{p.away_score}."],
-                f"{site_url(request)}/app/report/{m.id}", "Open the match")
-    return report_json(m, sides, staff)
+    goals = confirm(request, m, p, user, f"Result confirmed from {team}'s screenshot.")
+    return {**report_json(m, sides, staff), "goalsAdded": goals}
+
+
+@endpoint("POST", login_required=True)
+def report_read(request, user, ip, match_id):
+    """Read a result screenshot with AI: the score and the goals, put on this match's home and away sides, for the
+    team to check before sending. Only screenshots actually read count toward the daily allowance."""
+    from league.logic import over
+    from league.models import Hit
+    from .lineup import RESULT_PROMPT, clean_result, config, read_image
+    m, sides, staff = match_for(user, match_id)
+    cfg = config()
+    if not cfg["enabled"]:
+        raise ApiError(400, "Reading screenshots isn't switched on for this platform.")
+    image = str(body(request, 1_000_000).get("image") or "")
+    if not re.match(r"^data:image/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$", image):
+        raise ApiError(400, "Choose a screenshot (PNG, JPG or WebP).")
+    key, limit = f"result:read:{user.id}", 20
+    if over(key, limit, 86400):
+        raise ApiError(429, "That's today's result screenshots read for you. Enter the score yourself.")
+    if cfg["daily_total"] and over("lineup:read:all", cfg["daily_total"], 86400):
+        raise ApiError(429, "The platform's daily limit for reading screenshots is reached. Enter the score yourself.")
+    if hit(f"result:try:{user.id}", 30, 3600):
+        raise ApiError(429, "Too many tries in the last hour. Enter the score yourself, or try later.")
+    out = clean_result(read_image(dict(cfg, prompt=RESULT_PROMPT), image),
+                       m.home.team.name if m.home else "", m.away.team.name if m.away else "")
+    if not out:
+        raise ApiError(400, "That doesn't look like an eFootball result screen. Enter the score yourself.")
+    hit(key, limit + 1, 86400)
+    hit("lineup:read:all", 10 ** 6, 86400)
+    return out
 
 
 def pending_results(org):

@@ -112,6 +112,7 @@ urlpatterns = [
     path("api/report/<int:match_id>", rep.report),
     path("api/report/<int:match_id>/checkin", rep.report_checkin),
     path("api/report/<int:match_id>/room", rep.report_room),
+    path("api/report/<int:match_id>/read", rep.report_read),
     path("api/report/<int:match_id>/proof", rep.report_proof),
     path("api/report/<int:match_id>/proof/<int:proof_id>", rep.report_proof_delete),
     path("media/proof/<int:proof_id>", rep.proof_file),

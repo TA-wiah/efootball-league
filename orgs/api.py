@@ -80,7 +80,7 @@ def org_json(org):
     return {"id": org.id, "name": org.name, "slug": org.slug, "description": org.description, "country": org.country,
             "region": org.region, "created": ms(org.created), "status": org.status, "kind": org.kind, "kindLabel": KIND_L.get(org.kind, "Organization"),
             "timezone": org.timezone, "brandColor": org.brand_color or None, "logo": org_logo(org), "website": org.site(),
-            "inRankings": org.in_rankings, "openToFriendlies": org.open_to_friendlies, "autoSmsReminders": org.auto_sms_reminders}
+            "inRankings": org.in_rankings, "openToFriendlies": org.open_to_friendlies, "autoSmsReminders": org.auto_sms_reminders, "autoConfirmResults": org.auto_confirm_results}
 
 
 def org_card(m):
@@ -453,6 +453,8 @@ def org_detail(request, user, ip, slug):
             org.open_to_friendlies = b["openToFriendlies"] is True
         if "autoSmsReminders" in b:
             org.auto_sms_reminders = b["autoSmsReminders"] is True
+        if "autoConfirmResults" in b:
+            org.auto_confirm_results = b["autoConfirmResults"] is True
         org.save()
         log(org, user, "updated the organization settings")
         return {"ok": True, "org": org_json(org)}

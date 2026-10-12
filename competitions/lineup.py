@@ -49,6 +49,17 @@ On a collection screen every card has "starter": false and there is no formation
 return {"screen": "", "players": []}."""
 
 
+RESULT_PROMPT = """This is a screenshot of the full-time result screen of the football video game eFootball.
+It shows two teams (left and right) with their names, the final score, and under each team the goal scorers with the
+minute of each goal (sometimes "(PK)" or "P" for a penalty, "(OG)" for an own goal) and sometimes the assist.
+Read only text printed on the screen. Never identify or guess who a person is from their face or appearance.
+Return JSON: {"isResult": true, "left": {"name": "Team A", "score": 2, "goals": [{"name": "L. Messi", "minute": 23,
+"penalty": false, "ownGoal": false, "assist": "D. Rice"}]}, "right": {"name": "Team B", "score": 1, "goals": []}}
+List each team's goals under the team that got the goal (an own goal goes under the team it counts for, with the
+player's printed name and "ownGoal": true). Use "" when an assist isn't shown. If it isn't an eFootball result screen,
+return {"isResult": false}."""
+
+
 def config():
     """Reading screenshots: Gemini when the platform chose it (free tier), otherwise OpenAI."""
     from superadmin import store
@@ -113,12 +124,12 @@ def read_with(cfg, key, image, think=False):
         gen = {"temperature": 0, "responseMimeType": "application/json"}
         if not think:                                       # reading printed text needs no "thinking": seconds instead of minutes
             gen["thinkingConfig"] = {"thinkingBudget": 0}
-        payload = {"contents": [{"parts": [{"text": PROMPT}, {"inline_data": {"mime_type": mime, "data": b64}}]}], "generationConfig": gen}
+        payload = {"contents": [{"parts": [{"text": cfg.get("prompt") or PROMPT}, {"inline_data": {"mime_type": mime, "data": b64}}]}], "generationConfig": gen}
         req = urllib.request.Request(GEMINI.format(model=cfg.get("gemini_model") or GEMINI_MODEL), data=json.dumps(payload).encode(), method="POST",
                                      headers={"Content-Type": "application/json", "x-goog-api-key": key})
     else:
         payload = {"model": MODEL, "response_format": {"type": "json_object"}, "temperature": 0,
-                   "messages": [{"role": "user", "content": [{"type": "text", "text": PROMPT},
+                   "messages": [{"role": "user", "content": [{"type": "text", "text": cfg.get("prompt") or PROMPT},
                                                              {"type": "image_url", "image_url": {"url": image, "detail": "high"}}]}]}
         req = urllib.request.Request(API, data=json.dumps(payload).encode(), method="POST",
                                      headers={"Content-Type": "application/json", "Authorization": f"Bearer {key}"})
@@ -395,3 +406,65 @@ def squad_todo(team):
     if len(with_pos) < 11:
         return f"only {len(with_pos)} player{'' if len(with_pos) == 1 else 's'} with a position"
     return None
+
+
+def team_like(printed, team_name):
+    """How well a name printed on the result screen fits one of our teams (0 none … 2 sure)."""
+    a, b = set(engine.name_tokens(printed)), set(engine.name_tokens(team_name))
+    if not a or not b:
+        return 0
+    if a == b:
+        return 2
+    return 1 if a & b or any(engine._near(x, y) for x in a for y in b) else 0
+
+
+def clean_result(raw, home_name, away_name):
+    """The result screen read by the AI, put on our home/away sides: {homeScore, awayScore, events, swapped}."""
+    if not isinstance(raw, dict) or not raw.get("isResult") or not isinstance(raw.get("left"), dict) or not isinstance(raw.get("right"), dict):
+        return None
+    left, right = raw["left"], raw["right"]
+    swapped = (team_like(str(left.get("name") or ""), away_name) + team_like(str(right.get("name") or ""), home_name)
+               > team_like(str(left.get("name") or ""), home_name) + team_like(str(right.get("name") or ""), away_name))
+    home, away = (right, left) if swapped else (left, right)
+
+    def score(x):
+        try:
+            v = int(x.get("score"))
+        except (TypeError, ValueError):
+            return None
+        return v if 0 <= v <= 99 else None
+
+    events = []
+    for side, team in (("home", home), ("away", away)):
+        for g in (team.get("goals") or [])[:20]:
+            if not isinstance(g, dict):
+                continue
+            name = re.sub(r"\s+", " ", str(g.get("name") or "")).strip()[:80]
+            try:
+                minute = int(g.get("minute"))
+                minute = minute if 0 <= minute <= 150 else None
+            except (TypeError, ValueError):
+                minute = None
+            kind = "own_goal" if g.get("ownGoal") else "penalty_goal" if g.get("penalty") else "goal"
+            assist = "" if kind == "own_goal" else re.sub(r"\s+", " ", str(g.get("assist") or "")).strip()[:80]
+            events.append({"side": side, "kind": kind, "name": name, "minute": minute, "assist": assist})
+    hs, as_ = score(home), score(away)
+    if hs is None or as_ is None:
+        return None
+    return {"homeScore": hs, "awayScore": as_, "events": events, "swapped": swapped,
+            "printed": {"home": str(home.get("name") or "")[:60], "away": str(away.get("name") or "")[:60]}}
+
+
+def clean_events(items):
+    """Goals sent with a result: what a team checked before sending (from the AI or typed)."""
+    out = []
+    for g in (items if isinstance(items, list) else [])[:30]:
+        if not isinstance(g, dict) or g.get("side") not in ("home", "away"):
+            continue
+        kind = g.get("kind") if g.get("kind") in ("goal", "penalty_goal", "own_goal") else "goal"
+        m = g.get("minute")
+        minute = m if isinstance(m, int) and not isinstance(m, bool) and 0 <= m <= 150 else None
+        name = re.sub(r"\s+", " ", str(g.get("name") or "")).strip()[:80]
+        assist = "" if kind == "own_goal" else re.sub(r"\s+", " ", str(g.get("assist") or "")).strip()[:80]
+        out.append({"side": g["side"], "kind": kind, "name": name, "minute": minute, "assist": assist})
+    return out
