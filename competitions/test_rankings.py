@@ -228,6 +228,31 @@ class RankingsTest(Helpers, TestCase):
         self.assertIn("Kofi Striker", names)
         self.assertNotIn("Eli Hawk", names, "only this organization's players")
 
+    def test_efootball_positions_in_the_best_xi(self):
+        from competitions.models import Player, Team
+        b1, c1 = self.league(self.a, self.sa, ["Lions", "Tigers"])
+        lions = Team.objects.get(name="Lions")
+        made = {}
+        for name, pos in (("Rui Right", "RB"), ("Cole Centre", "CB"), ("Lee Left", "LB"), ("Gigi Keeper", "GK"), ("Dan Holder", "DMF"), ("Wil Wing", "LWF"), ("Sam Striker", "SS")):
+            made[name] = self.a.call("post", f"{b1}/teams/{lions.id}/players", {"name": name, "position": pos}).json()["player"]["id"]
+        self.assertEqual(Player.objects.get(id=made["Dan Holder"]).position, "DMF", "eFootball positions are accepted")
+        self.assertEqual(self.a.call("patch", f"{b1}/players/{made['Sam Striker']}", {"position": "CF"}).status_code, 200)
+        self.assertEqual(self.a.call("patch", f"{b1}/players/{made['Sam Striker']}", {"position": "XYZ"}).status_code, 400)
+        m = Match.objects.filter(competition__slug=c1).select_related("home__team").first()
+        side = "home" if m.home.team_id == lions.id else "away"
+        self.a.call("patch", f"{b1}/matches/{m.id}", {"homeScore": 3 if side == "home" else 0, "awayScore": 0 if side == "home" else 3})
+        for who, helper in (("Sam Striker", "Dan Holder"), ("Wil Wing", "Dan Holder"), ("Dan Holder", None)):
+            self.a.call("post", f"{b1}/matches/{m.id}/events", {"kind": "goal", "side": side, "minute": 5, "playerId": made[who], **({"assistId": made[helper]} if helper else {})})
+        self.root.call("patch", "/api/admin/settings", {"section": "rankings", "changes": {"enabled": True, "min_matches": 1}})
+        xi = rankings.team_of_the_season()["xi"]
+        self.assertEqual([(p["name"], p["pos"]) for p in xi["DF"]], [("Lee Left", "LB"), ("Cole Centre", "CB"), ("Rui Right", "RB")], "left to right")
+        self.assertEqual([p["name"] for p in xi["GK"]], ["Gigi Keeper"])
+        self.assertIn(("Dan Holder", "DMF"), [(p["name"], p["pos"]) for p in xi["MF"]])
+        self.assertEqual([p["name"] for p in xi["FW"]][:2], ["Wil Wing", "Sam Striker"], "LWF on the left, CF in the middle")
+        page = Client().get("/rankings/awards").content.decode()
+        for pos in ("<i>LB</i>", "<i>CB</i>", "<i>DMF</i>", "<i>CF</i>", "pmarks h"):
+            self.assertIn(pos, page)
+
     def test_margin_and_penalties(self):
         self.assertEqual((rankings.margin_factor(1), rankings.margin_factor(2), rankings.margin_factor(3)), (1.0, 1.5, 1.75))
 
