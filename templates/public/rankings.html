@@ -7,6 +7,9 @@
 .rk tr:nth-child(-n+3) td:first-child{color:var(--gold)}
 .rk .elo{font-family:var(--cond);font-weight:800;font-size:20px;color:var(--gold)}
 .rkhead{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.hic{width:18px;height:18px;vertical-align:-3px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;color:var(--gold)}
+.medal svg{width:34px;height:34px}.medal .rib{fill:#2563eb}.medal circle{stroke:rgba(0,0,0,.25);stroke-width:1}.medal text{font:800 8px var(--cond),sans-serif;fill:#1a1a1a}
+.medal.m1 circle{fill:#f5c400}.medal.m2 circle{fill:#cfd6e0}.medal.m3 circle{fill:#cd7f32}
 .how summary{cursor:pointer;list-style:none}.how summary::-webkit-details-marker{display:none}.howg{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-top:12px}
 .howg>div{background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:12px;padding:12px 14px}.howg p{margin:6px 0 0;color:var(--tx2);font-size:14px}
 .pitch{position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:18px;min-height:640px;padding:38px 16px 34px;border-radius:14px;overflow:hidden;
@@ -31,16 +34,16 @@
 <nav class="tabs" style="margin:0 0 16px" aria-label="Rankings"><a href="/rankings{% if country %}?country={{ country|urlencode }}{% if region %}&amp;region={{ region|urlencode }}{% endif %}{% endif %}" class="{% if not tab %}on{% endif %}">Teams</a><a href="/rankings/players{% if country %}?country={{ country|urlencode }}{% if region %}&amp;region={{ region|urlencode }}{% endif %}{% endif %}" class="{% if tab == 'players' %}on{% endif %}">Players</a><a href="/rankings/awards{% if country %}?country={{ country|urlencode }}{% if region %}&amp;region={{ region|urlencode }}{% endif %}{% endif %}" class="{% if tab == 'awards' %}on{% endif %}">Awards</a></nav>
 {% if tab != "awards" %}<details class="card how" id="how"{% if not rows and not players %} open{% endif %}><summary><b>How the rankings work</b> <span class="note">(tap to read)</span></summary>
   <div class="howg">
-    <div><b>⭐ Every team has a rating</b><p>Everyone starts at <b>1500</b>. Win and your rating goes up; lose and it goes down. The points move from the loser to the winner, so beating a strong team earns much more than beating a weak one, and a bigger win counts a little more.</p></div>
-    <div><b>🔢 Example</b><p>Two teams both on 1500: the winner goes to about <b>1516</b>, the loser to 1484. If a 1400 team beats a 1600 team, the winner jumps about <b>24</b> points: a surprise is worth more.</p></div>
-    <div><b>🌍 World, country, region</b><p><b>World</b> is everyone on the platform. Choose a <b>country</b> (or a region inside it) at the top to see only teams from there: the number is the team's place in that list. The country and region come from each organization's profile.</p></div>
-    <div><b>✅ What counts</b><p>Results in <b>public</b> competitions. A draw on penalties counts as a draw. {% if friendly_weight == 0 %}Friendlies <b>don't count</b>: they have their own friendly tables.{% elif friendly_weight == 1 %}Friendlies count <b>fully</b>.{% else %}Friendlies count <b>half</b>.{% endif %} Walkovers, forfeits and abandoned matches don't count.</p></div>
-    <div><b>❓ Not on the list?</b><p>A team appears after <b>{{ min_matches }}</b> match{{ min_matches|pluralize:"es" }} in public competitions. Private competitions don't count, and an organization can choose to keep its teams out (Organization settings).</p></div>
-    <div><b>👟 Players</b><p>Players are ranked by goals, then assists, from the goals and assists organizers enter on match pages.</p></div>
+    <div><b><svg class="hic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg> Every team has a rating</b><p>Everyone starts at <b>1500</b>. Win and your rating goes up; lose and it goes down. The points move from the loser to the winner, so beating a strong team earns much more than beating a weak one, and a bigger win counts a little more.</p></div>
+    <div><b><svg class="hic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14v18H5zM8 7h8M8 12h2M12 12h2M16 12h0M8 16h2M12 16h2"/></svg> Example</b><p>Two teams both on 1500: the winner goes to about <b>1516</b>, the loser to 1484. If a 1400 team beats a 1600 team, the winner jumps about <b>24</b> points: a surprise is worth more.</p></div>
+    <div><b><svg class="hic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 100 18 9 9 0 000-18zM3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg> World, country, region</b><p><b>World</b> is everyone on the platform. Choose a <b>country</b> (or a region inside it) at the top to see only teams from there: the number is the team's place in that list. The country and region come from each organization's profile.</p></div>
+    <div><b><svg class="hic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l5 5L20 6"/></svg> What counts</b><p>Results in <b>public</b> competitions. A draw on penalties counts as a draw. {% if friendly_weight == 0 %}Friendlies <b>don't count</b>: they have their own friendly tables.{% elif friendly_weight == 1 %}Friendlies count <b>fully</b>.{% else %}Friendlies count <b>half</b>.{% endif %} Walkovers, forfeits and abandoned matches don't count.</p></div>
+    <div><b><svg class="hic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 100 18 9 9 0 000-18zM9.5 9.5a2.5 2.5 0 114 2c-.9.6-1.5 1.1-1.5 2.2M12 17h0"/></svg> Not on the list?</b><p>A team appears after <b>{{ min_matches }}</b> match{{ min_matches|pluralize:"es" }} in public competitions. Private competitions don't count, and an organization can choose to keep its teams out (Organization settings).</p></div>
+    <div><b><svg class="hic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15V6h6l1 4 5 2c2 .8 4 2 4 4v1H4zM4 19h16"/></svg> Players</b><p>Players are ranked by goals, then assists, from the goals and assists organizers enter on match pages.</p></div>
   </div></details>{% endif %}
 {% if tab == "awards" %}
 <section class="card"><div class="gh">Awards {{ year }} · worldwide</div>
-  <div class="awards">{% for a in awards %}<div class="award"><div class="an">🏆 {{ a.name }}</div>{% include "public/_crest.html" with t=a.t size=48 %}
+  <div class="awards">{% for a in awards %}<div class="award"><div class="an"><svg class="hic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v4a5 5 0 01-10 0zM7 6H4v1a3 3 0 003 3M17 6h3v1a3 3 0 01-3 3M12 13v3M8 20h8M9.5 20l.5-4h4l.5 4"/></svg> {{ a.name }}</div>{% include "public/_crest.html" with t=a.t size=48 %}
     <b class="aw">{{ a.who }}</b>{% if a.key in "poty boot assists" %}<span class="pt">{% if a.t.link %}<a href="/team/{{ a.t.slug }}">{{ a.t.name }}</a>{% else %}{{ a.t.name }}{% endif %}</span>{% endif %}
     <span class="po">{{ a.org.name }}{% if a.org.country %} · {{ a.org.country }}{% endif %}</span><span class="ps">{{ a.stat }}</span><small class="ah">{{ a.how }}</small></div>
   {% empty %}<p class="note">No awards yet: they come from this year's matches in public competitions (goals, cards and results entered by organizers).</p>{% endfor %}</div>
@@ -67,7 +70,7 @@
 </section>
 {% else %}
 {% if podium %}<section class="card poty"><div class="gh">{{ poty_name }} {{ year }}{% if area != "Worldwide" %} · {{ area }}{% endif %}</div>
-  <div class="podium">{% for p in podium %}<div class="pod p{{ forloop.counter }}"><div class="medal">{% if forloop.first %}🥇{% elif forloop.counter == 2 %}🥈{% else %}🥉{% endif %}</div>
+  <div class="podium">{% for p in podium %}<div class="pod p{{ forloop.counter }}"><div class="medal m{{ forloop.counter }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="rib" d="M7 2h4l2 6H9zM13 2h4l-2 6h-4z"/><circle cx="12" cy="15" r="6.5"/><text x="12" y="17.6" text-anchor="middle">{{ forloop.counter }}</text></svg></div>
     {% include "public/_crest.html" with t=p.t size=56 %}<b class="pn">{{ p.name }}</b>
     <span class="pt">{% if p.t.link %}<a href="/team/{{ p.t.slug }}">{{ p.t.name }}</a>{% else %}{{ p.t.name }}{% endif %}</span><span class="po">{{ p.org.name }}{% if p.org.country %} · {{ p.org.country }}{% endif %}</span>
     <span class="ps"><b>{{ p.goals }}</b> goal{{ p.goals|pluralize }} · <b>{{ p.assists }}</b> assist{{ p.assists|pluralize }}</span></div>{% endfor %}</div>

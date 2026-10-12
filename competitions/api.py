@@ -915,7 +915,10 @@ def match_events(request, user, ip, slug, match_id):
         if p or not name or not squad_of:
             return p, name
         hits = [x for x in squad_of.team.players.filter(active=True) if engine.same_player(name, x.name)]
-        return (hits[0], "") if len(hits) == 1 else (None, name)
+        if len(hits) == 1:
+            return hits[0], ""
+        used = known_name(squad_of.team, name)                # else the name this team already uses for them
+        return None, used or name
 
     who, who_name = by_name("playerId", "playerName")
     helper, helper_name = by_name("assistId", "assistName") if b["kind"] != "own_goal" else (None, "")
@@ -925,14 +928,51 @@ def match_events(request, user, ip, slug, match_id):
     return {"ok": True, "event": event_json(ev)}
 
 
+def team_events(t):
+    return MatchEvent.objects.filter(Q(match__home__team=t, side="home") | Q(match__away__team=t, side="away"), kind__in=["goal", "penalty_goal"])
+
+
+def known_name(team, name):
+    """The fullest name this team uses for this player (more words, then longer, then more used) if exactly one
+    player fits; the typed name itself when it's the fullest."""
+    counts = {}
+    for e in team_events(team).only("player_name", "assist_name"):
+        for n in (e.player_name.strip(), e.assist_name.strip()):
+            if n:
+                counts[n] = counts.get(n, 0) + 1
+    fits = [n for n in counts if engine.same_player(name, n)]
+    groups = []
+    for n in fits:                                      # names that also match each other are one player
+        g = next((g for g in groups if any(engine.same_player(n, x) for x in g)), None)
+        (g.append(n) if g is not None else groups.append([n]))
+    if len(groups) != 1:
+        return None
+    best = max(groups[0] + [name], key=lambda n: (len(engine.name_tokens(n)), len(n), counts.get(n, 0)))
+    return best if best != name else None
+
+
+@endpoint("GET", login_required=True)
+def team_name_check(request, user, ip, slug, team_id):
+    """While typing a scorer's name: who it will be saved as."""
+    org, m = access(user, slug, "results.enter")
+    t = team_of(org, team_id)
+    name = (request.GET.get("name") or "").strip()[:80]
+    if not name:
+        return {"as": None}
+    hits = [p for p in t.players.filter(active=True) if engine.same_player(name, p.name)]
+    if len(hits) == 1:
+        return {"as": hits[0].name, "squad": True}
+    used = known_name(t, name)
+    return {"as": used if used and used != name else None, "squad": False}
+
+
 @endpoint("GET", "POST", login_required=True)
 def team_names(request, user, ip, slug, team_id):
     """The names typed for a team's goals and assists, grouped when they look like the same player. POST
     {"from": "Messi", "to": "Lionel Messi"} renames everywhere for this team (to tidy the records for good)."""
     org, m = access(user, slug, "results.enter")
     t = team_of(org, team_id)
-    events = MatchEvent.objects.filter(Q(match__home__team=t, side="home") | Q(match__away__team=t, side="away"),
-                                       kind__in=["goal", "penalty_goal"])
+    events = team_events(t)
     if request.method == "POST":
         b = body(request)
         old, new = text(b, "from", 80), text(b, "to", 80)

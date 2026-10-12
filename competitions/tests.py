@@ -501,9 +501,17 @@ class CompetitionApiTest(Helpers, TestCase):
         star = Player.objects.create(team=m.home.team, name="Andriy Shevchenko", position="FW")
         r = self.owner.call("post", url, {"kind": "goal", "side": "home", "minute": 30, "playerName": "shevchenko"}).json()
         self.assertEqual(r["event"]["playerId"], star.id)
+        # a name typed later is saved as the name the team already uses
+        r = self.owner.call("post", url, {"kind": "goal", "side": "home", "minute": 40, "playerName": "Lami Yamal"}).json()
+        self.assertEqual(r["event"]["playerName"], "Lami Yamal")
+        r = self.owner.call("post", url, {"kind": "goal", "side": "home", "minute": 41, "playerName": "Yamal"}).json()
+        self.assertEqual(r["event"]["playerName"], "Lami Yamal", "same player: saved under the fuller name already used")
+        chk = self.owner.get(f"{self.base}/teams/{m.home.team_id}/name-check?name=messi").json()
+        self.assertIn(chk["as"], ("Lionel Messi", "Messi Lionel"))
+        self.assertEqual(self.owner.get(f"{self.base}/teams/{m.home.team_id}/name-check?name=Mbappe").json()["as"], None)
         # the tidy-up tool groups the names and renames them for good
         names = self.owner.get(f"{self.base}/teams/{m.home.team_id}/names").json()
-        self.assertIn(["Lionel Messi", "Messi Lionel", "Messi"], [[x["name"] for x in g] for g in names["groups"]])
+        self.assertIn(["Lionel Messi", "Messi"], [[x["name"] for x in g] for g in names["groups"]], "Messi Lionel was saved as Lionel Messi")
         self.owner.call("post", f"{self.base}/teams/{m.home.team_id}/names", {"from": "Messi", "to": "Lionel Messi"})
         self.assertEqual(MatchEvent.objects.filter(match=m, side="home", player_name="Messi").count(), 0)
 

@@ -388,7 +388,7 @@ def test_email(request, me, ip):
         raise ApiError(400, "Add your own email address first.")
     if hit(f"smtptest:{me.id}", 5, 3600):
         raise ApiError(429, "Too many test emails. Try again later.")
-    txt, html = emailer.body("Email works ✔", [f"Hi {me.username},", "Your mail settings are working."], base_url(request), "Open the league", "Sent from the admin panel.")
+    txt, html = emailer.body("Email works", [f"Hi {me.username},", "Your mail settings are working."], base_url(request), "Open the league", "Sent from the admin panel.")
     try:
         emailer.send(me.email, f"{emailer.SITE}: test email", txt, html)
     except emailer.MailError as e:

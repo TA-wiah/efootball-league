@@ -906,7 +906,7 @@ def test_email(request, user, ip):
     to = text(body(request), "to", 254) or user.email
     if not to or not EMAIL_RE.fullmatch(to):
         raise ApiError(400, "Enter the address to send the test to.")
-    txt, html = emailer.body("Email works ✔", [f"Hi {user.username},", "Your platform email settings are working."],
+    txt, html = emailer.body("Email works", [f"Hi {user.username},", "Your platform email settings are working."],
                              site_url(request), "Open the platform", "Sent from the super admin settings.")
     try:
         emailer.send(to, f"{store.site()['name']}: test email", txt, html)
