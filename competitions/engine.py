@@ -344,10 +344,14 @@ def name_tokens(name):
 
 
 def _near(a, b):
-    """Two words that are the same, or one letter apart (Luis / Luiz) when long enough."""
+    """Two words that are the same, a shortened form (Lami / Lamine), one letter apart (Luis / Luiz), or two
+    letters apart in long words (Ronaldinho / Ronaldiho)."""
     if a == b:
         return True
-    if min(len(a), len(b)) < 4 or abs(len(a) - len(b)) > 1:
+    if min(len(a), len(b)) >= 3 and (a.startswith(b) or b.startswith(a)):
+        return True
+    limit = 2 if min(len(a), len(b)) >= 6 else 1
+    if min(len(a), len(b)) < 4 or abs(len(a) - len(b)) > limit:
         return False
     prev = list(range(len(b) + 1))
     for i, ca in enumerate(a, 1):
@@ -355,13 +359,14 @@ def _near(a, b):
         for j, cb in enumerate(b, 1):
             cur.append(min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (ca != cb)))
         prev = cur
-    return prev[-1] <= 1
+    return prev[-1] <= limit
 
 
 def same_player(a, b):
     """Do two names typed for the same team mean the same player? Same words in any order ("Messi Lionel" /
     "Lionel Messi"), an extra first name or initials ("Messi" / "Lionel Messi", "P. E. Aubameyang" / "Aubameyang"),
-    or a one-letter typo ("Luis Suarez" / "Luiz Suarez"). Only ever used inside one team."""
+    a shortened or misspelt word next to one that matches exactly ("Lami Yamal" / "Lamine Yamal", "Luis Suarez" /
+    "Luiz Suarez"). Only ever used inside one team."""
     ta, tb = name_tokens(a), name_tokens(b)
     if not ta or not tb:
         return False
