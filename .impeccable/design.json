@@ -1,0 +1,432 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-12T15:31:22.847894+00:00",
+  "title": "Design System: Competition Manager",
+  "extensions": {
+    "colorMeta": {
+      "night-navy": {
+        "role": "neutral",
+        "displayName": "Night Navy",
+        "canonical": "#07132b",
+        "tonalRamp": [
+          "#0b1d42",
+          "#12306e",
+          "#19449a",
+          "#2057c5",
+          "#3a71df",
+          "#739ae8",
+          "#a7c0f1",
+          "#e0e9fa"
+        ]
+      },
+      "deep-navy": {
+        "role": "neutral",
+        "displayName": "Deep Navy",
+        "canonical": "#0b1d3f",
+        "tonalRamp": [
+          "#0b1e41",
+          "#13326d",
+          "#1b4698",
+          "#225ac3",
+          "#3c73dd",
+          "#749ce7",
+          "#a8c1f0",
+          "#e1e9fa"
+        ]
+      },
+      "card-navy": {
+        "role": "neutral",
+        "displayName": "Card Navy",
+        "canonical": "#0e2148",
+        "tonalRamp": [
+          "#0c1d40",
+          "#15316b",
+          "#1d4495",
+          "#2558c0",
+          "#3f72da",
+          "#769ae4",
+          "#aac0ee",
+          "#e1e9f9"
+        ]
+      },
+      "well-navy": {
+        "role": "neutral",
+        "displayName": "Well Navy",
+        "canonical": "#0a1834",
+        "tonalRamp": [
+          "#0c1e40",
+          "#15316b",
+          "#1d4596",
+          "#2559c0",
+          "#3f72da",
+          "#769be5",
+          "#a9c0ef",
+          "#e1e9f9"
+        ]
+      },
+      "touchline": {
+        "role": "neutral",
+        "displayName": "Touchline",
+        "canonical": "#1d3563",
+        "tonalRamp": [
+          "#11203b",
+          "#1d3563",
+          "#284a8a",
+          "#345fb2",
+          "#4d79cb",
+          "#819fda",
+          "#b0c3e8",
+          "#e3eaf7"
+        ]
+      },
+      "touchline-strong": {
+        "role": "neutral",
+        "displayName": "Touchline Strong",
+        "canonical": "#2b4d8a",
+        "tonalRamp": [
+          "#12213a",
+          "#1e3661",
+          "#2a4c88",
+          "#3762af",
+          "#507bc8",
+          "#83a1d8",
+          "#b1c4e7",
+          "#e4eaf7"
+        ]
+      },
+      "scorebug-gold": {
+        "role": "primary",
+        "displayName": "Scorebug Gold",
+        "canonical": "#f5c400",
+        "tonalRamp": [
+          "#4c3d00",
+          "#806600",
+          "#b28f00",
+          "#e6b800",
+          "#ffd11a",
+          "#ffde5c",
+          "#ffeb99",
+          "#fff8db"
+        ]
+      },
+      "scorebug-gold-pressed": {
+        "role": "primary",
+        "displayName": "Scorebug Gold Pressed",
+        "canonical": "#e0b000",
+        "tonalRamp": [
+          "#4c3c00",
+          "#806400",
+          "#b28c00",
+          "#e6b400",
+          "#ffce1a",
+          "#ffdc5c",
+          "#ffe999",
+          "#fff7db"
+        ]
+      },
+      "scorebug-gold-hover": {
+        "role": "primary",
+        "displayName": "Scorebug Gold Hover",
+        "canonical": "#ffd633",
+        "tonalRamp": [
+          "#4c3d00",
+          "#806600",
+          "#b28f00",
+          "#e6b700",
+          "#ffd11a",
+          "#ffde5c",
+          "#ffeb99",
+          "#fff8db"
+        ]
+      },
+      "floodlight-white": {
+        "role": "neutral",
+        "displayName": "Floodlight White",
+        "canonical": "#f5f8ff",
+        "tonalRamp": [
+          "#00174c",
+          "#002680",
+          "#0036b2",
+          "#0045e6",
+          "#1a5eff",
+          "#5c8dff",
+          "#99b8ff",
+          "#dbe6ff"
+        ]
+      },
+      "terrace-text": {
+        "role": "neutral",
+        "displayName": "Terrace Text",
+        "canonical": "#d5e0f7",
+        "tonalRamp": [
+          "#0c1d40",
+          "#14306b",
+          "#1d4496",
+          "#2557c1",
+          "#3e71da",
+          "#769ae5",
+          "#a9c0ef",
+          "#e1e9f9"
+        ]
+      },
+      "stand-grey": {
+        "role": "neutral",
+        "displayName": "Stand Grey",
+        "canonical": "#9fb2d6",
+        "tonalRamp": [
+          "#172236",
+          "#263859",
+          "#354e7d",
+          "#4565a1",
+          "#5e7eba",
+          "#8da3ce",
+          "#b8c6e0",
+          "#e6ebf4"
+        ]
+      },
+      "link-sky": {
+        "role": "neutral",
+        "displayName": "Link Sky",
+        "canonical": "#8ab8ff",
+        "tonalRamp": [
+          "#001e4c",
+          "#003280",
+          "#0046b2",
+          "#005ae6",
+          "#1a74ff",
+          "#5c9cff",
+          "#99c1ff",
+          "#dbe9ff"
+        ]
+      },
+      "pitch-green": {
+        "role": "state",
+        "displayName": "Pitch Green",
+        "canonical": "#13904a",
+        "tonalRamp": [
+          "#094423",
+          "#0f713a",
+          "#159e51",
+          "#1bcb68",
+          "#34e482",
+          "#6feca6",
+          "#a5f3c7",
+          "#dffbec"
+        ]
+      },
+      "win-green": {
+        "role": "state",
+        "displayName": "Win Green",
+        "canonical": "#5fe39a",
+        "tonalRamp": [
+          "#0b4123",
+          "#136d3b",
+          "#1b9853",
+          "#22c36a",
+          "#3cdd84",
+          "#74e7a7",
+          "#a8f0c8",
+          "#e1faec"
+        ]
+      },
+      "red-card": {
+        "role": "state",
+        "displayName": "Red Card",
+        "canonical": "#e5243b",
+        "tonalRamp": [
+          "#44080f",
+          "#720e19",
+          "#a01324",
+          "#cd182e",
+          "#e73247",
+          "#ee6d7c",
+          "#f4a4ad",
+          "#fbdfe2"
+        ]
+      },
+      "danger-red": {
+        "role": "state",
+        "displayName": "Danger Red",
+        "canonical": "#b3152b",
+        "tonalRamp": [
+          "#440810",
+          "#720d1b",
+          "#a01326",
+          "#cd1831",
+          "#e7324b",
+          "#ee6d7f",
+          "#f4a4af",
+          "#fbdfe3"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Page titles."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section and card titles, team names."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card headers with the gold tab; buttons."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Running text, fields, table cells."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Table headers, tags, eyebrows."
+      },
+      "numeral": {
+        "displayName": "Numeral",
+        "purpose": "KPI tiles and scoreboards."
+      }
+    },
+    "shadows": [
+      {
+        "name": "card-low",
+        "value": "0 1px 0 rgba(255,255,255,.04) inset, 0 10px 30px -12px rgba(0,0,0,.6)",
+        "purpose": "The rare lifted surface; most depth is tonal."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state",
+        "value": "150ms ease",
+        "purpose": "Hover and focus changes on buttons, links and borders."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "phone",
+        "value": "560px"
+      },
+      {
+        "name": "phone-wide",
+        "value": "620px"
+      },
+      {
+        "name": "small",
+        "value": "640px"
+      },
+      {
+        "name": "tablet",
+        "value": "760px"
+      },
+      {
+        "name": "wide",
+        "value": "900px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The main action on a screen: gold, condensed, firm.",
+      "html": "<button class=\"ds-btn\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\"><path d=\"M12 5v14M5 12h14\"/></svg>Create competition</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;gap:6px;padding:11px 16px;border:0;border-radius:8px;background:#f5c400;color:#07132b;font:700 16px/1 'Barlow Condensed','Arial Narrow','Roboto Condensed',sans-serif;letter-spacing:.3px;cursor:pointer;transition:background .15s}.ds-btn:hover{background:#ffd633}.ds-btn:focus-visible{outline:2px solid #ffd633;outline-offset:2px}.ds-btn:active{background:#e0b000}"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Secondary actions next to a primary one.",
+      "html": "<button class=\"ds-btn-g\">Add a row</button>",
+      "css": ".ds-btn-g{padding:11px 16px;border:1px solid #2b4d8a;border-radius:8px;background:rgba(255,255,255,.04);color:#f5f8ff;font:700 16px/1 'Barlow Condensed','Arial Narrow','Roboto Condensed',sans-serif;letter-spacing:.3px;cursor:pointer;transition:border-color .15s}.ds-btn-g:hover,.ds-btn-g:focus-visible{border-color:#f5c400;outline:0}"
+    },
+    {
+      "name": "Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Text fields and selects: sunken navy, gold border on focus.",
+      "html": "<label class=\"ds-lab\">Team name<input class=\"ds-in\" value=\"Kumasi Tigers\"></label>",
+      "css": ".ds-lab{display:block;color:#d5e0f7;font:600 14px/1.4 Barlow,system-ui,sans-serif}.ds-in{display:block;width:260px;margin-top:4px;padding:11px;border:1px solid #1d3563;border-radius:9px;background:#0a1834;color:#f5f8ff;font:15px Barlow,system-ui,sans-serif}.ds-in:focus{border-color:#f5c400;outline:0}"
+    },
+    {
+      "name": "Card with tab",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Containers: Card Navy with a skewed gold tab before the title.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-gh\">Fixtures</div><p>Next: Lions v Tigers, Saturday 18:00.</p></div>",
+      "css": ".ds-card{width:300px;padding:16px;border-radius:12px;background:#0e2148;color:#f5f8ff;font:15px/1.5 Barlow,system-ui,sans-serif}.ds-card p{margin:8px 0 0;color:#d5e0f7}.ds-gh{display:flex;align-items:center;gap:8px;font:700 17px/1 'Barlow Condensed','Arial Narrow','Roboto Condensed',sans-serif;letter-spacing:.8px;text-transform:uppercase}.ds-gh:before{content:'';width:5px;height:16px;background:#f5c400;transform:skewX(-16deg)}"
+    },
+    {
+      "name": "Tag",
+      "kind": "chip",
+      "refersTo": "tag",
+      "description": "Roles, statuses and positions, like a TV caption.",
+      "html": "<span class=\"ds-tag\">Coach</span> <span class=\"ds-tag ds-gold\">Owner</span> <span class=\"ds-tag ds-live\">Live</span>",
+      "css": ".ds-tag{display:inline-block;padding:2px 8px;border-radius:3px;background:#1d3563;color:#f5f8ff;font:700 12.5px/1.4 'Barlow Condensed','Arial Narrow','Roboto Condensed',sans-serif;letter-spacing:.4px}.ds-gold{background:#f5c400;color:#07132b}.ds-live{background:#e5243b;color:#fff}"
+    },
+    {
+      "name": "Scorebug",
+      "kind": "custom",
+      "refersTo": "scorebug",
+      "description": "Every score: a gold parallelogram in broadcast type.",
+      "html": "<div class=\"ds-row\"><b>Lions</b><span class=\"ds-sc\">2 &ndash; 1</span><b>Tigers</b></div>",
+      "css": ".ds-row{display:flex;align-items:center;gap:10px;color:#f5f8ff;font:700 18px 'Barlow Condensed','Arial Narrow','Roboto Condensed',sans-serif}.ds-sc{padding:1px 13px;background:#f5c400;color:#07132b;font:800 20px/1.3 'Barlow Condensed','Arial Narrow','Roboto Condensed',sans-serif;letter-spacing:1.5px;clip-path:polygon(7px 0,100% 0,calc(100% - 7px) 100%,0 100%)}"
+    },
+    {
+      "name": "Top bar",
+      "kind": "nav",
+      "refersTo": "navigation",
+      "description": "Navy bar with a skewed gold underline under the brand.",
+      "html": "<nav class=\"ds-nav\"><b>Competition Manager</b><a>Competitions</a><a>Rankings</a><a class=\"on\">Updates</a></nav>",
+      "css": ".ds-nav{position:relative;display:flex;align-items:center;gap:16px;width:560px;padding:12px 16px;background:rgba(7,19,43,.95);border-bottom:1px solid #1d3563;color:#d5e0f7;font:600 14px 'Barlow Condensed','Arial Narrow','Roboto Condensed',sans-serif}.ds-nav b{margin-right:auto;color:#f5f8ff;font:800 20px 'Barlow Condensed','Arial Narrow','Roboto Condensed',sans-serif}.ds-nav a{padding:6px 10px;border-radius:8px;cursor:pointer}.ds-nav a:hover,.ds-nav a.on{color:#f5f8ff;background:rgba(255,255,255,.06)}.ds-nav:after{content:'';position:absolute;left:0;bottom:-2px;width:150px;height:3px;background:#f5c400;transform:skewX(-24deg);transform-origin:left bottom}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Floodlit Matchday",
+    "overview": "Every screen is a night match under floodlights, seen through a TV broadcast. The ground is deep navy (#07132b) with a faint stadium glow in the top corner and vertical mowing stripes so subtle they read as texture, not pattern. On top of it, the information arrives the way a football broadcast shows it: scores in a gold parallelogram scorebug, headings in tall condensed capitals, short slanted gold tabs marking where each section starts.\n\nThe feel is sporty and energetic: slanted edges, gold that lands like a goal graphic, numbers set big and condensed like a stadium screen. The energy comes from shape and type, not from extra color or effects. It is an operating tool first (organizers and teams act on it daily, mostly on phones), so tables and forms stay calm and scannable, and the broadcast flourishes live at the edges: the scorebug, the section tab, the slanted underline under the top bar, the pitch on the Team of the Season.\n\nSame world on both surfaces: the public site (`templates/public/`) and the dashboard (`public/app.html`) share one palette and type pairing. There is one theme, dark; light mode is not part of the system.",
+    "keyCharacteristics": [
+      "Deep navy ground with a soft floodlight glow and faint vertical pitch stripes.",
+      "Gold (#f5c400) as the single accent: scores, primary actions, active states, section tabs.",
+      "Barlow Condensed for everything that speaks (headings, labels, buttons, numbers); Barlow for reading.",
+      "Slanted geometry: skewed tabs (-16° to -24°), parallelogram scorebugs, never decorative curves.",
+      "Inline SVG line icons; no emojis anywhere."
+    ],
+    "rules": [
+      {
+        "name": "The One Floodlight Rule",
+        "body": "Gold is the only accent. It marks what matters (the score, the main action, where you are) and nothing else; a screen where everything is gold has no score.",
+        "section": "colors"
+      },
+      {
+        "name": "The Card Colors Rule",
+        "body": "Green and red mean what they mean on a pitch: win or qualify, lose or danger. Never use them as decoration or as a second accent.",
+        "section": "colors"
+      },
+      {
+        "name": "The Broadcast Caps Rule",
+        "body": "Anything announced is condensed; anything read is not. Never set paragraphs in Barlow Condensed, and never set a score or a heading in body Barlow.",
+        "section": "typography"
+      },
+      {
+        "name": "The Floodlight-Only Rule",
+        "body": "Light comes from the stadium, not from the components: no glowing buttons, no neon outlines, no layered drop shadows on cards.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** keep gold for scores, the main action and \"you are here\"; one gold focus per area.",
+      "**Do** set scores in the scorebug shape and headings in Barlow Condensed 800.",
+      "**Do** use slanted shapes (skewed tabs, parallelograms) for energy, and keep tappable things as firm rounded rectangles.",
+      "**Do** use inline SVG line icons (2px stroke, round caps) in `currentColor`.",
+      "**Do** design every screen for a phone first; tables and brackets scroll in their own box."
+    ],
+    "donts": [
+      "**Don't** use emojis anywhere; use the SVG icon set.",
+      "**Don't** use real clubs' badges, names or brand marks in logos, art or examples.",
+      "**Don't** add a second accent color or decorative gradients; navy tones and gold carry the brand.",
+      "**Don't** use green or red except for win/qualify and lose/danger.",
+      "**Don't** add glows, neon outlines or heavy shadows; the floodlight in the background is the only light.",
+      "**Don't** pile on effects to make it \"sporty\"; the energy comes from slant, condensed type and big numbers."
+    ]
+  }
+}
