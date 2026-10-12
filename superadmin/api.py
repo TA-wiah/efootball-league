@@ -766,6 +766,8 @@ def platform_settings(request, user, ip):
         if section == "ai":
             if "model" in changes and changes["model"] not in ("gpt-image-1", "dall-e-3"):
                 raise ApiError(400, "Choose the image model.")
+            if "vision" in changes and changes["vision"] not in ("openai", "gemini"):
+                raise ApiError(400, "Choose who reads screenshots.")
             if "daily_limit" in changes and (not isinstance(changes["daily_limit"], int) or not 1 <= changes["daily_limit"] <= 100):
                 raise ApiError(400, "The daily limit per person must be from 1 to 100.")
         if section == "rankings" and "friendly_weight" in changes and changes["friendly_weight"] not in ("0", "0.5", "1"):
