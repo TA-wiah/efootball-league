@@ -40,7 +40,8 @@ class PublicPagesTest(Helpers, TestCase):
         self.assertIn(__import__("html").escape(m.home.team.name, quote=False), page)
         self.assertIn('property="og:title"', page)
         self.assertNotIn('name="robots" content="noindex"', page)
-        self.assertIn("Copy public link", page)
+        self.assertIn("Share on WhatsApp", page)
+        self.assertIn("Join me on", page, "every share invites people to the platform")
         resp = anon.get(f"/competition/{self.cs}")
         nonce = resp["Content-Security-Policy"].split("'nonce-")[1].split("'")[0]
         self.assertIn(f'<script nonce="{nonce}">', resp.content.decode(), "the page script carries this response's CSP nonce")

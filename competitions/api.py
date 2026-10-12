@@ -1077,7 +1077,7 @@ def org_rankings(request, user, ip, slug):
     players = []
     for i, p in enumerate(allp, 1):
         if p["team"] and p["team"].id in ids:
-            players.append({"name": p["name"], "team": team_brief(p["team"]), "goals": p["goals"], "assists": p["assists"], "world": i,
+            players.append({"name": p["name"], "team": team_brief(p["team"]), "goals": p["goals"], "assists": p["assists"], "world": p.get("rank", i), "tied": p.get("tied", False),
                             "inCountry": next((j for j, x in enumerate(in_country, 1) if x is p), None), "country": org.country or ""})
         if len(players) >= 15:
             break

@@ -8,7 +8,7 @@
 .rk .elo{font-family:var(--cond);font-weight:800;font-size:20px;color:var(--gold)}
 .rkhead{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .hic{width:18px;height:18px;vertical-align:-3px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;color:var(--gold)}
-.medal svg{width:34px;height:34px}.medal .rib{fill:#2563eb}.medal circle{stroke:rgba(0,0,0,.25);stroke-width:1}.medal text{font:800 8px var(--cond),sans-serif;fill:#1a1a1a}
+.medal svg{width:34px;height:34px}.medal .rib{fill:#2b4d8a}.medal circle{stroke:rgba(0,0,0,.25);stroke-width:1}.medal text{font:800 8px var(--cond),sans-serif;fill:#1a1a1a}
 .medal.m1 circle{fill:#f5c400}.medal.m2 circle{fill:#cfd6e0}.medal.m3 circle{fill:#cd7f32}
 .how summary{cursor:pointer;list-style:none}.how summary::-webkit-details-marker{display:none}.howg{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-top:12px}
 .howg>div{background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:12px;padding:12px 14px}.howg p{margin:6px 0 0;color:var(--tx2);font-size:14px}
@@ -91,8 +91,8 @@
 <section class="card"><div class="tbl"><table class="st rk">
   <thead><tr><th>#</th><th class="tl">Player</th><th>Goals</th><th>Assists</th></tr></thead>
   <tbody>{% for p in players %}<tr>
-    <td>{{ p.position }}</td>
-    <td class="tl"><span class="tm">{% if p.t %}{% include "public/_crest.html" with t=p.t size=24 %}{% endif %}<span>{{ p.name }}<span class="org">{% if p.t %}{{ p.t.name }}{% endif %}{% if p.org %} · {{ p.org.name }}{% endif %}</span></span></span></td>
+    <td>{% if p.tied %}={% endif %}{{ p.position }}</td>
+    <td class="tl"><span class="tm">{% if p.t %}{% include "public/_crest.html" with t=p.t size=24 %}{% endif %}<span>{{ p.name }}<span class="org">{% if p.t %}{{ p.t.name }}{% endif %}{% if p.org %} · {{ p.org.name }}{% endif %}{% if p.aliases %} · also typed as {{ p.aliases|join:", " }}{% endif %}</span></span></span></td>
     <td class="elo">{{ p.goals }}</td><td>{{ p.assists }}</td>
   </tr>{% empty %}<tr><td colspan="4" class="note">No goals recorded in public competitions yet. Goals come from the match details organizers enter.</td></tr>{% endfor %}</tbody>
 </table></div></section>
