@@ -281,6 +281,9 @@ table .btn.bad[data-armed],.dt .btn.bad[data-armed],table .btn.bad:hover,.dt .bt
 
 .weare{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:0 0 12px}.weare legend{padding:0 6px;color:var(--tx2);font-size:14px;font-weight:600}
 .weare label{display:flex;align-items:center;gap:8px;min-height:40px;margin:2px 0;cursor:pointer}.weare input{width:20px;height:20px;margin:0;accent-color:var(--gold)}
+
+/* messages sit above the phone menu bar, never under it */
+@media(max-width:900px){body.has-tabbar .toast{bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:60}}
 </style></head><body>
 <header class="top"><a class="brand" href="/"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 13v3M8 20h8M9.5 20l.5-4h4l.5 4"/></svg><span>Competition Manager</span></a><nav id="topnav" aria-label="Account"></nav></header>
 <main class="w" id="main"><div class="card note">Loading…</div></main>
@@ -312,7 +315,7 @@ function toast(msg,bad){var t=$("toast");t.textContent=msg;t.className="toast"+(
 window.addEventListener("unhandledrejection",function(e){var s=$("ctab")&&/Loading/.test($("ctab").textContent)?$("ctab"):$("sec")&&/Loading/.test($("sec").textContent)?$("sec"):null;
   if(s)s.innerHTML='<div class="card">'+errBox({data:{error:"This page couldn't load. Refresh to try again; if it keeps happening, tell the platform admin."}})+'</div>';if(window.console)console.error(e.reason)});
 function errBox(r){return'<div class="err" role="alert">'+esc((r&&r.data&&r.data.error)||"Something went wrong.")+'</div>'}
-function main(html,wide){var m=$("main");m.className="w"+(wide?" wide":"");m.innerHTML=html;window.scrollTo(0,0)}
+function main(html,wide){var m=$("main");m.className="w"+(wide?" wide":"");m.innerHTML=html;window.scrollTo(0,0);document.body.classList.toggle("has-tabbar",!!m.querySelector(".tabbar"))}
 function safeNext(){var n=new URLSearchParams(location.search).get("next")||"";return/^\/(?!\/)/.test(n)?n:(ME&&ME.superAdmin?"/admin":"/app")}
 function copy(text,btn){var done=function(){if(btn){var o=btn.innerHTML;btn.textContent="Copied";setTimeout(function(){btn.innerHTML=o},1600)}toast("Link copied")};
   if(navigator.clipboard)navigator.clipboard.writeText(text).then(done,function(){prompt("Copy this link:",text)});else prompt("Copy this link:",text)}
@@ -414,7 +417,11 @@ function U(inner,o){o=o||{};var L=function(h,label,on){return'<a href="'+h+'" da
     (ORGS.length?'<div class="ag open"><div class="agh-static">Your organizations</div><div class="agi">'+ORGS.map(function(g){return L("/app/org/"+g.slug,'<span class="dot" style="background:'+safeColor(g.brandColor)+'"></span>'+esc(g.name),false)}).join("")+'</div></div>':'')+
     '<div class="asb-f"><a href="/competitions">Public competitions</a><a href="/">Public home page</a>'+(ME.leagueAccess?'<a href="/classic">Original league site</a>':'')+'</div>';
   return'<div class="ashell"><aside class="asb" id="asb" aria-label="'+(o.org?"Organization menu":"Dashboard menu")+'">'+side+'</aside>'+
-    '<div class="amain"><div class="abar"><button type="button" class="btn g sm amenu" id="amenu" aria-controls="asb">'+ic("menu")+' Menu</button>'+(o.crumbs||"")+'</div>'+inner+'</div></div>'+(o.org&&ORG?tabBar(o.section):"")}
+    '<div class="amain"><div class="abar"><button type="button" class="btn g sm amenu" id="amenu" aria-controls="asb">'+ic("menu")+' Menu</button>'+(o.crumbs||"")+'</div>'+inner+'</div></div>'+(o.org&&ORG?tabBar(o.section):ME?homeTabBar(o.key):"")}
+// phones, outside an organization: my organizations, my matches, profile, help, and the full menu
+function homeTabBar(cur){var items=[["orgs",mineUrl(),"Clubs","users"],["matches","/app/matches","Matches","cal"],["profile","/app/profile","Profile","user"],["support","/app/support","Help","mail"]];
+  return'<nav class="tabbar" aria-label="Quick menu">'+items.map(function(i){var on=(cur||"orgs")===i[0];return'<a href="'+i[1]+'" data-nav'+(on?' class="on" aria-current="page"':'')+'>'+ic(i[3])+'<span>'+i[2]+'</span></a>'}).join("")+
+    '<button type="button" data-tbmore aria-controls="asb">'+ic("menu")+'<span>More</span></button></nav>'}
 // phones: the four places people go most, in thumb reach; More opens the full menu
 function tabBar(cur){var to=teamOnly(),items=to?[["overview","Home","home"],["mymatches","Matches","cal"],["myteam","Team","shield"],["findfriendly","Friendly","users"]]:
     [["overview","Home","home"],["fixtures","Matches","cal"],["teams","Teams","shield"],["friendlies","Friendlies","users"]];
