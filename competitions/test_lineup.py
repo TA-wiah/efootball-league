@@ -151,3 +151,43 @@ class LineupTest(Helpers, TestCase):
         rows = [{"name": f"P{i}", "position": "GK" if i == 0 else "CB", "starter": True} for i in range(11)]
         self.owner.call("post", self.save, {"players": rows})
         self.assertEqual([t["name"] for t in self.owner.get(self.base + "/summary").json()["squadTodo"]], ["Tigers"], "Lions is complete now")
+
+
+class GeminiKeysTest(Helpers, TestCase):
+    def setUp(self):
+        self.owner = self.signup("boss")
+        slug = self.new_org(self.owner)
+        tid = self.owner.call("post", f"/api/orgs/{slug}/teams", {"name": "Lions"}).json()["team"]["id"]
+        self.scan = f"/api/orgs/{slug}/teams/{tid}/lineup-scan"
+        store.update("ai", {"enabled": True, "vision": "gemini", "gemini_key": "k1", "gemini_key2": "k2", "gemini_key3": "k3", "daily_limit": 5})
+
+    def test_keys_take_turns_and_a_busy_key_hands_over(self):
+        used = []
+
+        def fake(cfg, key, image):
+            used.append(key)
+            if key == "k1":
+                raise lineup.Busy("429")
+            return READ
+        lineup._turn["n"] = 0
+        with mock.patch.object(lineup, "read_with", fake):
+            self.assertEqual(self.owner.call("post", self.scan, {"image": IMG}).status_code, 200)
+            self.assertEqual(used, ["k1", "k2"], "k1 busy: k2 took over")
+            used.clear()
+            self.owner.call("post", self.scan, {"image": IMG})
+            self.assertEqual(used, ["k2"], "the next request starts with the next key")
+        with mock.patch.object(lineup, "read_with", lambda cfg, key, image: (_ for _ in ()).throw(lineup.Busy("429"))):
+            self.assertEqual(self.owner.call("post", self.scan, {"image": IMG}).status_code, 429, "all keys busy")
+        from superadmin.store import masked
+        m = masked("ai")
+        self.assertTrue(m["gemini_key2_set"] and not m["gemini_key4_set"])
+        self.assertFalse(any(v in ("k1", "k2", "k3") for v in m.values()), "keys never go to browsers")
+
+    def test_platform_cap(self):
+        store.update("ai", {"vision_daily_total": 2})
+        with mock.patch.object(lineup, "read_with", lambda cfg, key, image: READ):
+            self.assertEqual(self.owner.call("post", self.scan, {"image": IMG}).status_code, 200)
+            self.assertEqual(self.owner.call("post", self.scan, {"image": IMG}).status_code, 200)
+            r = self.owner.call("post", self.scan, {"image": IMG})
+        self.assertEqual(r.status_code, 429)
+        self.assertIn("platform has read all", r.json()["error"])
