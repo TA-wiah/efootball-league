@@ -4,6 +4,7 @@ Every endpoint is wrapped in `admin()`, which requires a logged-in user with is_
 Anyone else gets 403 (and the attempt is written to the audit log), whatever URL they type.
 """
 import re
+import time
 import platform as py_platform
 from email.utils import parseaddr
 from datetime import date, datetime, timedelta
@@ -23,7 +24,7 @@ from competitions.models import Announcement, Competition, Entry, Match, MatchEv
 from league import emailer
 from league.http import ApiError, body, endpoint, ms, site_url, text
 from league.logic import EMAIL_RE, audit
-from league.models import Audit
+from league.models import Audit, Hit
 from orgs.models import Invitation, Membership, Organization, OrgEvent
 from orgs.permissions import ROLE_INFO, matrix
 
@@ -796,6 +797,7 @@ def platform_settings(request, user, ip):
     from sms import providers as smsp
     return {"site": store.masked("site"), "email": store.masked("email"), "payments": store.masked("payments"), "sms": store.masked("sms"),
             "rankings": store.masked("rankings"), "proleague": store.masked("proleague"), "siteLogo": store.site_logo_url(), "ai": store.masked("ai"),
+            "aiReadToday": Hit.objects.filter(key="lineup:read:all", ts__gte=time.time() - 86400).count(),
             "smsStatus": {"ready": smsp.ready(), "providers": smsp.PROVIDERS},
             "paymentStatus": {"ready": paynova.ready(pay), "mode": paynova.mode(pay["secret_key"]) or None, "source": pay["source"] or None},
             "emailStatus": {"ready": emailer.ready(cfg), "provider": cfg["provider"] or None, "source": cfg["source"]}}
