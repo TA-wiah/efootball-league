@@ -124,14 +124,16 @@ def team_json(t, players=False):
     d = {**team_brief(t), "city": t.city, "venue": t.venue, "founded": t.founded, "colors": t.colors, "description": t.description,
          "playerCount": t.players.count()}
     if players:
-        d["players"] = [player_json(p) for p in t.players.order_by("number", "name")]
+        order = {"starter": 0, "sub": 1, "": 2}
+        d["players"] = sorted([player_json(p) for p in t.players.all()], key=lambda x: (order[x["lineup"]], x["number"] is None, x["number"] or 0, x["name"].lower()))
+        d["lineupAt"] = ms(t.lineup_at) if t.lineup_at else None
         d["competitions"] = [{"name": e.competition.name, "slug": e.competition.slug, "group": e.group, "visibility": e.competition.visibility}
                              for e in t.entries.select_related("competition")]
     return d
 
 
 def player_json(p, team=False):
-    d = {"id": p.id, "name": p.name, "number": p.number, "position": p.position, "active": p.active}
+    d = {"id": p.id, "name": p.name, "number": p.number, "position": p.position, "active": p.active, "rating": p.rating, "lineup": p.lineup}
     if team:
         d["team"] = team_brief(p.team)
     return d
@@ -199,7 +201,24 @@ def summary(request, user, ip, slug):
             "recentResults": [match_json(x) for x in matches.filter(status="finished").order_by("-kickoff", "-updated")[:5]],
             "members": org.memberships.count(), "staff": org.memberships.filter(role__in=STAFF_ROLES).count(),
             "pendingInvitations": org.invitations.filter(status="pending", expires__gt=now).count() if can(m.role, "members.invite", org) else None,
-            "activity": [{"ts": ms(e.ts), "actor": e.actor, "action": e.action} for e in org.events.order_by("-id")[:8]]}
+            "activity": [{"ts": ms(e.ts), "actor": e.actor, "action": e.action} for e in org.events.order_by("-id")[:8]],
+            "squadTodo": squad_todo_for(org, m)}
+
+
+def squad_todo_for(org, m):
+    """Squads that need completing, for the people who can do it: the member's own teams, or (for people who manage
+    all teams) the organization's teams in active competitions."""
+    from .lineup import squad_todo
+    if can(m.role, "teams.manage", org):
+        teams = org.teams.filter(entries__competition__status="active", suspended=False).distinct()
+    else:
+        teams = m.teams.filter(org=org)
+    out = []
+    for t in teams.prefetch_related("players")[:60]:
+        why = squad_todo(t)
+        if why:
+            out.append({**team_brief(t), "missing": why})
+    return out[:20]
 
 
 # ---------- competitions ----------

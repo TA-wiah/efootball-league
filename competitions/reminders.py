@@ -60,6 +60,50 @@ def text_team(team, message, kind="notice"):
         return 0
 
 
+SQUAD_EVERY_DAYS = 7
+_squad_last = {"t": 0.0}
+
+
+def squad_teams():
+    """Teams in an active competition whose squad is missing something (see lineup.squad_todo)."""
+    from .lineup import squad_todo
+    from .models import Team
+    out = []
+    for t in Team.objects.select_related("org").prefetch_related("players").filter(entries__competition__status="active", suspended=False).distinct()[:500]:
+        why = squad_todo(t)
+        if why:
+            out.append((t, why))
+    return out
+
+
+def send_squad_due(force=False):
+    """Remind teams to complete their squad (upload the eFootball lineup screenshot): email, and SMS when the
+    organization switched on automatic text messages. Each team at most once a week."""
+    now_t = time.monotonic()
+    if not force and now_t - _squad_last["t"] < 3600:
+        return 0
+    _squad_last["t"] = now_t
+    from .models import Team
+    now = timezone.now()
+    base = site_url()
+    done = 0
+    for t, why in squad_teams():
+        if t.squad_reminded and t.squad_reminded > now - timezone.timedelta(days=SQUAD_EVERY_DAYS):
+            continue
+        if not Team.objects.filter(id=t.id, squad_reminded=t.squad_reminded).update(squad_reminded=now):
+            continue
+        link = f"{base}/app/org/{t.org.slug}/teams/{t.id}"
+        email_teams([t.id], f"Complete {t.name}'s squad",
+                    [f"{t.name}'s squad has {why}.", "Upload a screenshot of your eFootball lineup (Game Plan) on the team page, or add the players and their positions by hand.",
+                     "Positions decide who is picked for the Team of the Season: the goalkeeper and defenders come from the teams with the best defence."],
+                    link, "Open the squad")
+        text_team(t, f"{t.name}: your squad has {why}. Upload your eFootball lineup screenshot or add players and positions: {link}", kind="reminder")
+        done += 1
+        if done >= 20:
+            break
+    return done
+
+
 def send_due(force=False):
     now_t = time.monotonic()
     if not force and now_t - _last["t"] < 600:
