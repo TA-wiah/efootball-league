@@ -768,6 +768,8 @@ def platform_settings(request, user, ip):
                 raise ApiError(400, "Choose the image model.")
             if "vision" in changes and changes["vision"] not in ("openai", "gemini"):
                 raise ApiError(400, "Choose who reads screenshots.")
+            if "gemini_model" in changes and not re.fullmatch(r"[a-z0-9][a-z0-9.\-]{2,60}", str(changes["gemini_model"]).strip()):
+                raise ApiError(400, "Type a Gemini model name, like gemini-flash-latest.")
             if "lineup_per_day" in changes and (not isinstance(changes["lineup_per_day"], int) or not 1 <= changes["lineup_per_day"] <= 20):
                 raise ApiError(400, "Lineup uploads per person per day must be from 1 to 20.")
             if "vision_daily_total" in changes and (not isinstance(changes["vision_daily_total"], int) or not 0 <= changes["vision_daily_total"] <= 100000):

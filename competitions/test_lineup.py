@@ -193,3 +193,26 @@ class GeminiKeysTest(Helpers, TestCase):
             r = self.owner.call("post", self.scan, {"image": IMG})
         self.assertEqual(r.status_code, 429)
         self.assertIn("platform has read all", r.json()["error"])
+
+
+class MergeTest(TestCase):
+    def test_pairing_one_card_can_settle_another(self):
+        """From real screenshots: AMF 103 (starter) and AMF 99 (sub) on the lineup; Bergkamp AMF 97 and Fermín López
+        AMF 95 in the players list. The usual boost (+4) pairs López with 99, which leaves only Bergkamp for 103."""
+        p = lambda pos, r, name="", st=False: {"position": pos, "rating": r, "name": name, "starter": st}
+        lineup_shot = {"screen": "lineup", "formation": "", "players": [p("GK", 97, st=True), p("SS", 104, st=True), p("CMF", 100, st=True),
+                                                                         p("AMF", 103, st=True), p("AMF", 99)]}
+        cards = {"screen": "collection", "formation": "", "players": [p("GK", 94, "Gianluigi Donnarumma"), p("SS", 100, "Lionel Messi"),
+                                                                       p("CMF", 96, "Declan Rice"), p("AMF", 97, "Dennis Bergkamp"), p("AMF", 95, "Fermín López")]}
+        rows, extras, _ = lineup.merge([lineup_shot, cards])
+        self.assertEqual([r["name"] for r in rows], ["Gianluigi Donnarumma", "Lionel Messi", "Declan Rice", "Dennis Bergkamp", "Fermín López"])
+        self.assertEqual(extras, [])
+
+    def test_flags_and_badges_pair_players_used_out_of_position(self):
+        p = lambda pos, r, badge, name="", st=True: {"position": pos, "rating": r, "name": name, "starter": st, "badge": badge}
+        shot = {"screen": "lineup", "formation": "", "players": [p("CB", 99, "croatia"), p("CB", 99, "barcelona"), p("CB", 100, "paris saintgermain")]}
+        cards = {"screen": "collection", "formation": "", "players": [p("LB", 95, "croatia", "Josko Gvardiol", False), p("CMF", 95, "barcelona", "Frenkie de Jong", False),
+                                                                       p("CB", 95, "psg", "Willian Pacho", False), p("CB", 94, "germany", "Nico Schlotterbeck", False)]}
+        rows, _, _ = lineup.merge([shot, cards])
+        self.assertEqual([r["name"] for r in rows][:2], ["Josko Gvardiol", "Frenkie de Jong"], "an LB and a CMF card played at CB")
+        self.assertIn(rows[2]["name"], ("", "Willian Pacho"), "the same club written differently never blocks a pairing")
