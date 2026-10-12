@@ -26,12 +26,12 @@ DEFAULTS = {
     # AI logo images in the logo studio (optional; the platform pays the AI service)
     "ai": {"enabled": False, "api_key": "", "model": "gpt-image-1", "daily_limit": 5, "vision": "openai", "gemini_key": "",
            "gemini_key2": "", "gemini_key3": "", "gemini_key4": "", "gemini_key5": "",   # backups: used in turn, and when one is busy
-           "vision_daily_total": 0},                                                          # screenshots per day, whole platform (0 = no cap)
+           "vision_daily_total": 0, "lineup_per_day": 1},                                    # lineup uploads per person per day                                                          # screenshots per day, whole platform (0 = no cap)
 }
 SECRETS = {"email": {"password", "api_key"}, "payments": {"secret_key"}, "sms": {"api_key"}, "ai": {"api_key", "gemini_key", "gemini_key2", "gemini_key3", "gemini_key4", "gemini_key5"}}
 TYPES = {"allow_signups": bool, "require_org_approval": bool, "max_orgs_per_user": int, "port": int, "enabled": bool, "fee_enabled": bool,
          "min_credits": int, "min_matches": int, "size": int, "move": int, "legs": int, "org_id": int,
-         "walkovers": bool, "walkover_hours": int, "walkover_score": int, "daily_limit": int, "vision_daily_total": int}
+         "walkovers": bool, "walkover_hours": int, "walkover_score": int, "daily_limit": int, "vision_daily_total": int, "lineup_per_day": int}
 
 
 def get(section):
