@@ -666,9 +666,88 @@ function playerOverview(){var ids=myTeamIds(),mgr=ORG.me.role!=="player";
       '<div class="card"><div class="gh">LATEST RESULTS</div>'+(past.length?'<div class="tbl"><table class="dt"><tbody>'+past.map(row).join("")+'</tbody></table></div>':'<p class="note">No results yet.</p>')+'</div>'+
       '<div id="prank"></div><div id="pawards"></div>'+teams.map(teamFriendlies).join("")+
       '<div class="card"><div class="gh">RUN YOUR OWN CLUB</div><p class="note" style="margin-top:0">Want your own club to arrange friendlies, invite players and enter competitions? Create your own organization: you’ll be its owner. You keep your place here too.</p><a class="btn" href="/app/new?intent=team" data-nav>'+ic("plus")+' Create my club</a></div>';
-    rankingsCard("prank");orgAwardsCard("pawards");
+    rankingsCard("prank");orgAwardsCard("pawards");if(!$("pfly")&&$("prank")){$("prank").insertAdjacentHTML("beforebegin",'<div id="pfly"></div>');}flyersCard("pfly");
     [["data-dok","approve","Approved: the match is set"],["data-dno","decline","Declined"]].forEach(function(a){document.querySelectorAll("["+a[0]+"]").forEach(function(b){b.onclick=function(){busy(b,true,"…");
       api(api0("/friendly-board/"+b.getAttribute(a[0])+"/"+a[1]),"POST",{}).then(function(x){busy(b,false);toast(x.ok?a[2]:x.data.error,!x.ok);if(x.ok)playerOverview()})}})})})}
+// ---------- flyers: the big knockout matches and lineups, drawn as PNG images to download and share ----------
+var FCOND='"Barlow Condensed","Arial Narrow",sans-serif',FBODY='"Barlow",system-ui,sans-serif';
+function flFonts(){if(!document.fonts||!document.fonts.load)return Promise.resolve();return Promise.all(['800 120px "Barlow Condensed"','700 40px "Barlow Condensed"','600 30px "Barlow"'].map(function(f){return document.fonts.load(f).catch(function(){})}))}
+function flImg(src){return new Promise(function(ok){if(!src)return ok(null);var i=new Image();i.onload=function(){ok(i)};i.onerror=function(){ok(null)};i.src=src})}
+function flHue(name){var h=0;for(var i=0;i<name.length;i++)h+=name.charCodeAt(i);return h*31%360}
+function flFit(x,text,max,size,weight,font){do{x.font=weight+" "+size+"px "+font;if(x.measureText(text).width<=max)break;size-=2}while(size>14);return size}
+function flWrap(x,text,cx,y,max,lh,lines){var words=String(text||"").split(" "),line="",out=[];words.forEach(function(w){var t=line?line+" "+w:w;if(x.measureText(t).width>max&&line){out.push(line);line=w}else line=t});if(line)out.push(line);
+  out.slice(0,lines).forEach(function(l,i){x.fillText(l,cx,y+i*lh)})}
+// the night pitch: navy, a floodlight from the top corner, faint mowing stripes, a slanted gold bar
+function flGround(x,W,H){var g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,"#07132b");g.addColorStop(1,"#0b1d3f");x.fillStyle=g;x.fillRect(0,0,W,H);
+  var r=x.createRadialGradient(W*.88,-H*.1,10,W*.88,-H*.1,Math.max(W,H)*.75);r.addColorStop(0,"rgba(255,240,200,.16)");r.addColorStop(1,"rgba(255,240,200,0)");x.fillStyle=r;x.fillRect(0,0,W,H);
+  x.fillStyle="rgba(255,255,255,.022)";for(var sx=0;sx<W;sx+=176)x.fillRect(sx,0,88,H);
+  x.save();x.translate(0,H);x.transform(1,0,-.42,1,0,0);x.fillStyle="#f5c400";x.fillRect(40,-26,Math.min(420,W*.3),10);x.restore()}
+function flCrest(x,t,img,cx,cy,r){x.save();x.beginPath();x.arc(cx,cy,r+8,0,Math.PI*2);x.fillStyle="#f5f8ff";x.fill();x.beginPath();x.arc(cx,cy,r,0,Math.PI*2);x.clip();
+  if(img){x.fillStyle="#fff";x.fillRect(cx-r,cy-r,r*2,r*2);var k=Math.max(r*2/img.width,r*2/img.height);x.drawImage(img,cx-img.width*k/2,cy-img.height*k/2,img.width*k,img.height*k)}
+  else{x.fillStyle="hsl("+(t.hue!=null?t.hue:flHue(t.name))+",55%,38%)";x.fillRect(cx-r,cy-r,r*2,r*2);x.fillStyle="#fff";x.textAlign="center";x.textBaseline="middle";x.font="800 "+Math.round(r*.72)+"px "+FCOND;x.fillText(t.initials||t.name.slice(0,3).toUpperCase(),cx,cy+r*.04)}
+  x.restore()}
+function flBug(x,text,cx,cy,size){x.font="800 "+size+"px "+FCOND;var w=x.measureText(text).width+size*.9,h=size*1.15,sl=h*.32;x.fillStyle="#f5c400";x.beginPath();x.moveTo(cx-w/2+sl,cy-h/2);x.lineTo(cx+w/2,cy-h/2);x.lineTo(cx+w/2-sl,cy+h/2);x.lineTo(cx-w/2,cy+h/2);x.closePath();x.fill();
+  x.fillStyle="#07132b";x.textAlign="center";x.textBaseline="middle";x.fillText(text,cx,cy+size*.05)}
+function flFooter(x,W,H,orgName,orgImg,pad){var y=H-pad*.9;x.textBaseline="middle";if(orgImg){x.save();x.beginPath();x.arc(pad+22,y,22,0,Math.PI*2);x.clip();x.drawImage(orgImg,pad,y-22,44,44);x.restore()}
+  x.textAlign="left";x.fillStyle="#f5f8ff";x.font="700 30px "+FCOND;x.fillText(orgName.toUpperCase(),pad+(orgImg?58:0),y);x.textAlign="right";x.fillStyle="#9fb2d6";x.font="600 24px "+FBODY;x.fillText(SITE.name||"Competition Manager",W-pad,y)}
+function flWhen(iso){if(!iso)return"DATE TO BE SET";var d=new Date(iso);return d.toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"short"}).toUpperCase()+" · "+d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}
+function drawMatchFlyer(f,cap,wide){var W=wide?1920:1080,H=1080,c=document.createElement("canvas");c.width=W;c.height=H;var x=c.getContext("2d");
+  return Promise.all([flFonts(),flImg(f.home.logo),flImg(f.away.logo),flImg(f.orgLogo)]).then(function(im){flGround(x,W,H);var pad=wide?90:70,cx=W/2;x.textAlign="center";x.textBaseline="alphabetic";
+    x.fillStyle="#9fb2d6";x.font="700 "+(wide?38:34)+"px "+FCOND;var comp=(f.competition.name+(f.competition.season?" · "+f.competition.season:"")).toUpperCase();flFit(x,comp,W-pad*2,wide?38:34,700,FCOND);x.fillText(comp,cx,wide?120:116);
+    var stage=(f.played?(f.stage==="Grand Final"?"Final":f.stage):f.stage).toUpperCase()+(f.leg>1?" · 2ND LEG":"");x.fillStyle="#f5c400";var ss=flFit(x,stage,W-pad*2,wide?170:150,800,FCOND);x.fillText(stage,cx,wide?285:270);
+    var cy=wide?560:545,r=wide?150:128,dx=wide?560:W*.24,nameY=cy+r+(wide?80:74);
+    flCrest(x,f.home,im[1],cx-dx,cy,r);flCrest(x,f.away,im[2],cx+dx,cy,r);
+    [[f.home,cx-dx],[f.away,cx+dx]].forEach(function(o){x.fillStyle="#f5f8ff";var n=o[0].name.toUpperCase();flFit(x,n,wide?560:430,wide?62:54,800,FCOND);x.textAlign="center";x.fillText(n,o[1],nameY)});
+    flBug(x,f.played?f.hs+" – "+f.as:"VS",cx,cy,wide?110:96);
+    if(f.played&&f.hp!=null){x.fillStyle="#d5e0f7";x.font="700 34px "+FCOND;x.textAlign="center";x.fillText("PENALTIES "+f.hp+"–"+f.ap,cx,cy+(wide?110:96))}
+    var info=f.played?"FULL TIME":flWhen(f.kickoff),iy=wide?852:842;x.font="700 38px "+FCOND;var iw=x.measureText(info).width+56;x.fillStyle="rgba(255,255,255,.08)";x.fillRect(cx-iw/2,iy-38,iw,58);x.strokeStyle="rgba(245,196,0,.55)";x.lineWidth=2;x.strokeRect(cx-iw/2,iy-38,iw,58);
+    x.fillStyle="#f5f8ff";x.textAlign="center";x.fillText(info,cx,iy+5);
+    if(cap){x.fillStyle="#d5e0f7";x.font="600 "+(wide?34:31)+"px "+FBODY;flWrap(x,cap,cx,iy+(wide?78:76),W-pad*2.4,40,2)}
+    flFooter(x,W,H,f.org.name,im[3],pad);return c})}
+// the lineup: the starting XI on a pitch, the subs underneath
+var FL_ROW={GK:0,CB:1,LB:1,RB:1,DF:1,DMF:2,CMF:3,LMF:3,RMF:3,MF:3,AMF:4,LWF:5,RWF:5,SS:5,CF:6,FW:6},FL_SIDE={LB:0,LMF:0,LWF:0,RB:2,RMF:2,RWF:2};
+function drawLineupFlyer(t,wide){var W=wide?1920:1080,H=wide?1080:1350,c=document.createElement("canvas");c.width=W;c.height=H;var x=c.getContext("2d");
+  var xi=t.players.filter(function(p){return p.lineup==="starter"}),subs=t.players.filter(function(p){return p.lineup==="sub"});
+  var lines={};xi.forEach(function(p){var r=FL_ROW[p.position];r=r==null?3:r;(lines[r]=lines[r]||[]).push(p)});
+  var count=function(a,b){return xi.filter(function(p){var r=FL_ROW[p.position];return r>=a&&r<=b}).length},form=[count(1,1),count(2,4),count(5,6)].filter(Boolean).join("-");
+  return Promise.all([flFonts(),flImg(t.logo),flImg(ORG&&ORG.org.logo)]).then(function(im){flGround(x,W,H);var pad=wide?80:60;
+    flCrest(x,{name:t.name,initials:(t.shortName||t.name).replace(/[^A-Za-z0-9]/g,"").slice(0,3).toUpperCase()},im[1],pad+50,wide?110:115,46);
+    x.textAlign="left";x.textBaseline="alphabetic";x.fillStyle="#f5f8ff";flFit(x,t.name.toUpperCase(),W-pad*2-140,72,800,FCOND);x.fillText(t.name.toUpperCase(),pad+120,wide?120:122);
+    x.fillStyle="#f5c400";x.font="700 34px "+FCOND;x.fillText("STARTING XI"+(form?" · "+form:"")+(t.gameName?" · AS "+t.gameName.toUpperCase():""),pad+120,wide?160:164);
+    // the pitch
+    var P=wide?{x:pad,y:200,w:1200,h:780}:{x:pad,y:210,w:W-pad*2,h:880};x.save();x.fillStyle="#17703a";x.fillRect(P.x,P.y,P.w,P.h);x.fillStyle="rgba(255,255,255,.05)";
+    for(var k=0;k<12;k+=2){if(wide)x.fillRect(P.x+P.w*k/12,P.y,P.w/12,P.h);else x.fillRect(P.x,P.y+P.h*k/12,P.w,P.h/12)}
+    x.strokeStyle="rgba(255,255,255,.7)";x.lineWidth=3;x.strokeRect(P.x+10,P.y+10,P.w-20,P.h-20);
+    if(wide){x.beginPath();x.moveTo(P.x+P.w/2,P.y+10);x.lineTo(P.x+P.w/2,P.y+P.h-10);x.stroke();x.beginPath();x.arc(P.x+P.w/2,P.y+P.h/2,90,0,Math.PI*2);x.stroke();x.strokeRect(P.x+10,P.y+P.h/2-170,150,340);x.strokeRect(P.x+P.w-160,P.y+P.h/2-170,150,340)}
+    else{x.beginPath();x.moveTo(P.x+10,P.y+P.h/2);x.lineTo(P.x+P.w-10,P.y+P.h/2);x.stroke();x.beginPath();x.arc(P.x+P.w/2,P.y+P.h/2,90,0,Math.PI*2);x.stroke();x.strokeRect(P.x+P.w/2-200,P.y+P.h-160,400,150);x.strokeRect(P.x+P.w/2-200,P.y+10,400,150)}
+    x.restore();
+    var rows=Object.keys(lines).map(Number).sort(function(a,b){return a-b});
+    rows.forEach(function(rv,ri){var ps=lines[rv].sort(function(a,b){return(FL_SIDE[a.position]==null?1:FL_SIDE[a.position])-(FL_SIDE[b.position]==null?1:FL_SIDE[b.position])});
+      var depth=rows.length>1?ri/(rows.length-1):0;
+      ps.forEach(function(p,pi){var across=(pi+1)/(ps.length+1),px,py;
+        if(wide){px=P.x+80+depth*(P.w-160);py=P.y+across*P.h}else{px=P.x+across*P.w;py=P.y+P.h-80-depth*(P.h-160)}
+        x.fillStyle="rgba(7,19,43,.88)";x.beginPath();x.arc(px,py,40,0,Math.PI*2);x.fill();x.strokeStyle="#f5c400";x.lineWidth=3;x.stroke();
+        x.fillStyle="#f5c400";x.textAlign="center";x.textBaseline="middle";x.font="800 26px "+FCOND;x.fillText(p.position||"",px,py-6);
+        if(p.rating){x.fillStyle="#f5f8ff";x.font="700 20px "+FCOND;x.fillText(p.rating,px,py+17)}
+        x.textBaseline="alphabetic";x.fillStyle="#fff";var nm=p.name;flFit(x,nm,wide?220:170,26,700,FCOND);x.shadowColor="rgba(0,0,0,.6)";x.shadowBlur=6;x.fillText(nm,px,py+70);x.shadowBlur=0})});
+    // subs
+    x.textAlign="left";x.textBaseline="alphabetic";
+    if(wide){var sx=P.x+P.w+60,sy=P.y+30;x.fillStyle="#f5c400";x.font="800 40px "+FCOND;x.fillText("SUBSTITUTES",sx,sy);x.font="600 28px "+FBODY;
+      subs.slice(0,14).forEach(function(p,i){x.fillStyle="#f5c400";x.font="800 24px "+FCOND;x.fillText(p.position||"",sx,sy+56+i*48);x.fillStyle="#f5f8ff";x.font="600 27px "+FBODY;var n=p.name+(p.rating?"  "+p.rating:"");flFit(x,n,W-sx-pad-70,27,600,FBODY);x.fillText(n,sx+70,sy+56+i*48)})}
+    else if(subs.length){x.fillStyle="#f5c400";x.font="800 32px "+FCOND;x.fillText("SUBS",pad,P.y+P.h+52);x.fillStyle="#d5e0f7";x.font="600 25px "+FBODY;
+      flWrap(x,subs.map(function(p){return p.name+(p.position?" ("+p.position+")":"")}).join(" · "),pad,P.y+P.h+90,W-pad*2,34,2)}
+    flFooter(x,W,H,ORG?ORG.org.name:"",im[2],pad);return c})}
+function flSave(canvas,name){canvas.toBlob(function(b){var a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=name.replace(/[^A-Za-z0-9 _-]+/g,"").trim().replace(/\s+/g,"-").toLowerCase()+".png";document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},2000)},"image/png")}
+var FLCAP={};
+function flyersCard(box){api(api0("/flyers")).then(function(r){if(!r.ok||!r.data.flyers.length||!$(box))return;var fs=r.data.flyers;
+  $(box).innerHTML='<div class="card"><div class="gh">FLYERS</div><p class="note" style="margin-top:0">Quarter-finals, semi-finals and finals, ready to share: download a square image for WhatsApp, or a wide one (PC, 1920×1080).</p><div class="tbl"><table class="dt"><tbody>'+fs.map(function(f,i){
+    return'<tr><td><span class="pill'+(f.stage==="Grand Final"?" owner":"")+'">'+esc(f.stage)+(f.leg>1?" · 2nd leg":"")+'</span> <b>'+esc(f.home.name)+' v '+esc(f.away.name)+'</b><small>'+esc(f.competition.name)+' · '+(f.played?f.hs+"–"+f.as+" full time":esc(when(f.kickoff)))+'</small></td>'+
+      '<td style="text-align:right;white-space:nowrap"><button type="button" class="btn sm" data-fly="'+i+'">'+ic("share")+' Square</button> <button type="button" class="btn g sm" data-flyw="'+i+'">Wide (PC)</button></td></tr>'}).join("")+'</tbody></table></div></div>';
+  var go=function(b,i,wide){var f=fs[i];busy(b,true,"Making…");
+    var cap=FLCAP[f.id]?Promise.resolve(FLCAP[f.id]):api(api0("/flyers/"+f.id+"/caption"),"POST",{}).then(function(x){return FLCAP[f.id]=x.ok?x.data.caption:""});
+    cap.then(function(c){return drawMatchFlyer(f,c,wide)}).then(function(cv){busy(b,false);flSave(cv,f.stage+" "+f.home.name+" v "+f.away.name+(wide?" wide":""));toast("Flyer downloaded")},function(){busy(b,false);toast("Couldn’t make the flyer. Try again.",true)})};
+  document.querySelectorAll("[data-fly]").forEach(function(b){b.onclick=function(){go(b,+b.dataset.fly,false)}});
+  document.querySelectorAll("[data-flyw]").forEach(function(b){b.onclick=function(){go(b,+b.dataset.flyw,true)}})})}
 // put an action card in its place on the dashboard ("Needs you now"); nothing happens if the person has moved on
 function putCard(slot,el){var s=$(slot);if(!s)return false;s.innerHTML="";s.appendChild(el);return true}
 function pendingResultsCard(){if(!has("results.enter"))return;api(api0("/pending-results")).then(function(r){if(!r.ok||!r.data.matches.length)return;var box=document.createElement("div");
@@ -733,7 +812,7 @@ function overview(){var o=ORG.org;if(teamOnly()){setTimeout(squadTodoCard,700);r
       '<div class="kpis kpis4">'+(s.awaitingResults?K(s.awaitingResults,"Waiting for a result","/fixtures","Kicked off, no score yet","warn"):"")+K(s.upcoming,"Upcoming matches","/fixtures")+
         K(s.activeCompetitions,"Active competitions","/competitions",s.competitions+" in total")+K(s.teams,"Teams","/teams",n(s.players)+" players")+'</div>'+
       '<div id="nd-sq"></div><div class="qa" aria-label="Quick actions">'+qa.join("")+'</div><div id="prolg"></div>'+
-      '<div id="dremind"></div><div id="dmine"></div><div id="drank"></div><div id="dawards"></div>'+
+      '<div id="dremind"></div><div id="dmine"></div><div id="dfly"></div><div id="drank"></div><div id="dawards"></div>'+
       (!s.competitions&&has("competitions.manage")?'<div class="card"><div class="gh">Get started</div><ol style="margin:0;padding-left:20px;line-height:1.9"><li><a href="'+app0("/teams?new=1")+'" data-nav>Add your teams</a></li><li><a href="'+app0("/competitions?new=1")+'" data-nav>Create a competition</a> and enter the teams</li><li>Generate the fixtures, then enter results as matches are played</li><li>Share your <a href="'+app0("/link")+'" data-nav>public link</a>: the tables update by themselves</li></ol></div>':'')+
       '<div class="agrid"><div class="card"><div class="gh">Upcoming matches</div>'+matchList(s.nextMatches||[],{comp:1,by:"date",empty:"No upcoming matches with a date."})+'</div>'+
       '<div class="card"><div class="gh">Recent results</div>'+matchList(s.recentResults||[],{comp:1,by:"date",empty:"No results yet."})+'</div></div>'+
@@ -741,7 +820,7 @@ function overview(){var o=ORG.org;if(teamOnly()){setTimeout(squadTodoCard,700);r
       '<details class="card"><summary class="gh" style="cursor:pointer">Your access</summary><p>'+pill(ORG.me.role,ORG.me.roleLabel)+' <span class="note">'+esc((ROLES.roles.filter(function(x){return x.key===ORG.me.role})[0]||{}).description||"")+'</span></p><ul class="note" style="margin:0;padding-left:18px;line-height:1.7">'+
         (ROLES.permissions||[]).filter(function(p){return has(p.key)}).map(function(p){return'<li>'+esc(p.label)+'</li>'}).join("")+'</ul></details></div>';proCard();
     pendingResultsCard();pendingFriendliesCard();squadTodoCard(s);
-    remindersCard(s,"dremind");myMatchesCard("dmine");rankingsCard("drank");orgAwardsCard("dawards")})}
+    remindersCard(s,"dremind");myMatchesCard("dmine");flyersCard("dfly");rankingsCard("drank");orgAwardsCard("dawards")})}
 
 // ---------- activity & notifications ----------
 function activitySec(){var all=[],more=function(before){api(api0("/activity"+(before?"?before="+before:""))).then(function(r){if(!r.ok)return fail(r);all=all.concat(r.data.events);
@@ -1090,14 +1169,20 @@ function lineupCard(t,id,reload){var box=$("lnbox");if(!box)return;var url=api0(
     box.innerHTML=(r.data.enabled?(r.data.left>0?'<label for="lnfile" class="drop">'+ic("plus")+'<b>Upload your screenshots</b><span>Game Plan + players list · up to '+(r.data.perUse||10)+' at once · '+r.data.left+' left today</span><input id="lnfile" class="vh" type="file" accept="image/png,image/jpeg,image/webp" multiple></label>':'<p class="note">You’ve used today’s screenshots. Try again tomorrow, or type the lineup.</p>'):'<p class="note">Reading screenshots isn’t switched on for this platform yet, but you can type the lineup.</p>')+'<button type="button" class="btn g sm" id="lnhand">'+ic("plus")+' Type the lineup instead</button>';
     $("lnhand").onclick=function(){rows=[];var any=t.players.some(function(p){return p.lineup}),n=0;t.players.forEach(function(p){if(any?p.lineup:p.active){var st=any?p.lineup==="starter":n<11;n++;rows.push({position:p.position&&POS.indexOf(p.position)>=0?p.position:"CMF",rating:p.rating,starter:st,name:p.name,playerId:p.id})}});if(!rows.length)rows.push({position:"GK",rating:null,starter:true,name:"",playerId:null});draw()};
     if($("lnfile"))$("lnfile").onchange=function(){var fs=[].slice.call(this.files,0,r.data.perUse||10);if(!fs.length)return;if(this.files.length>fs.length)toast("Only the first "+fs.length+" screenshots are used",true);
-      var reads=[],shrink=function(f){return new Promise(function(ok,no){var img=new Image(),fr=new FileReader();fr.onload=function(){img.onload=function(){var w=Math.min(1600,img.width),h=Math.round(img.height*w/img.width),c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);ok(c.toDataURL("image/jpeg",.85))};img.onerror=function(){no("That file isn’t an image")};img.src=fr.result};fr.readAsDataURL(f)})};
-      var next=function(i){if(i>=fs.length)return finish();box.innerHTML='<div class="prog" role="progressbar" aria-valuemin="0" aria-valuemax="'+fs.length+'" aria-valuenow="'+i+'"><i style="width:'+Math.max(6,Math.round(100*i/fs.length))+'%"></i></div><p class="note" aria-live="polite">Reading screenshot '+(i+1)+' of '+fs.length+'… usually 5–20 seconds each. Keep this page open.</p>';
-        shrink(fs[i]).then(function(data){return api(url,"POST",{image:data})}).then(function(x){if(!x.ok){toast("Screenshot "+(i+1)+": "+x.data.error,true);if(x.status===429)return finish()}else if(x.data.players.length)reads.push(x.data);next(i+1)},function(e){toast("Screenshot "+(i+1)+": "+e,true);next(i+1)})};
+      var reads=[],shrink=function(f){return new Promise(function(ok,no){var img=new Image(),fr=new FileReader();fr.onload=function(){img.onload=function(){var w=Math.min(1280,img.width),h=Math.round(img.height*w/img.width),c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);ok(c.toDataURL("image/jpeg",.8))};img.onerror=function(){no("That file isn’t an image")};img.src=fr.result};fr.readAsDataURL(f)})};
+      var done=0,stop=false,started=0,show=function(){box.innerHTML='<div class="prog" role="progressbar" aria-valuemin="0" aria-valuemax="'+fs.length+'" aria-valuenow="'+done+'"><i style="width:'+Math.max(6,Math.round(100*done/fs.length))+'%"></i></div><p class="note" aria-live="polite">Reading '+fs.length+' screenshot'+(fs.length===1?"":"s")+'… '+done+' done. Keep this page open.</p>'};
+      // three at a time: an upload of 10 takes about a third as long
+      var worker=function(){if(stop||started>=fs.length)return Promise.resolve();var i=started++;
+        return shrink(fs[i]).then(function(data){return api(url,"POST",{image:data})}).then(function(x){done++;show();if(!x.ok){toast("Screenshot "+(i+1)+": "+x.data.error,true);if(x.status===429)stop=true}else if(x.data.players.length)reads[i]=x.data},
+          function(e){done++;show();toast("Screenshot "+(i+1)+": "+e,true)}).then(worker)};
+      var next=function(){show();Promise.all([worker(),worker(),worker()]).then(function(){reads=reads.filter(Boolean);finish()})};
       var finish=function(){if(!reads.length){start();return}api(api0("/teams/"+id+"/lineup-merge"),"POST",{reads:reads}).then(function(x){if(!x.ok){toast(x.data.error,true);start();return}rows=x.data.players;extras=x.data.extras||[];
         names=names.concat(extras.map(function(e){return e.name}));
         toast("Read "+rows.length+" players"+(x.data.formation?" ("+x.data.formation+")":"")+(x.data.collections?", names from "+x.data.collections+" players list screenshot"+(x.data.collections>1?"s":""):"")+". Check, then save.");draw()})};
-      next(0)}})};
-  start();if(location.hash==="#lineup")setTimeout(function(){var l=$("lineup");if(l)l.scrollIntoView({behavior:"smooth"})},300)}
+      next()}})};
+  start();if(location.hash==="#lineup")setTimeout(function(){var l=$("lineup");if(l)l.scrollIntoView({behavior:"smooth"})},300);
+  if(t.players.some(function(p){return p.lineup==="starter"})){var lc=$("lineup");if(lc){lc.insertAdjacentHTML("beforeend",'<div class="actions" style="margin-top:10px"><span class="note">Lineup flyer:</span><button type="button" class="btn g sm" id="lfs">'+ic("share")+' Square</button><button type="button" class="btn g sm" id="lfw">Wide (PC)</button></div>');
+    [["lfs",false],["lfw",true]].forEach(function(o){$(o[0]).onclick=function(){var b=this;busy(b,true,"Making…");drawLineupFlyer(t,o[1]).then(function(cv){busy(b,false);flSave(cv,t.name+" lineup"+(o[1]?" wide":""));toast("Lineup flyer downloaded")},function(){busy(b,false);toast("Couldn’t make the flyer. Try again.",true)})}})}}}
 function teamPage(id){api(api0("/teams/"+id)).then(function(r){if(!r.ok)return fail(r);var t=r.data.team,full=has("teams.manage"),can=full||(has("teams.manage_assigned")&&ORG.me.teams.indexOf(id)>=0);
   var dis=can?"":" disabled",ps=t.players,posOk=can||myTeamIds().indexOf(id)>=0,gs=t.guesses||{};
   var guessTip=function(p){var g=gs[p.id];return g?'<small class="note" style="display:block;margin-top:3px">Auto: <b>'+esc(g.label)+'</b> ('+esc(g.why)+')'+(posOk?' <button type="button" class="btn g sm" data-pg="'+p.id+'" data-v="'+esc(g.pos)+'">Use</button>':'')+'</small>':''};
@@ -2353,6 +2438,7 @@ function aSettings(){var sec=A("Platform settings",[["System"],["Settings"]]);
       '<div class="row"><label for="aivis">Reading lineup screenshots<select id="aivis">'+opts({openai:"OpenAI (uses the key above)",gemini:"Google Gemini (free tier available)"},r.data.ai.vision||"openai")+'</select></label><label for="aigem">Gemini API key '+(r.data.ai.gemini_key_set?'<span class="sb green">saved</span>':'')+'<input id="aigem" type="password" autocomplete="off" placeholder="'+(r.data.ai.gemini_key_set?"Leave blank to keep the saved key":"From aistudio.google.com")+'"></label></div>'+
       '<details style="margin-top:8px"><summary class="note" style="cursor:pointer">Backup Gemini keys ('+[2,3,4,5].filter(function(i){return r.data.ai["gemini_key"+i+"_set"]}).length+' saved)</summary><p class="note">Keys are used in turn, and when one is busy or fails the next one is tried. Google’s limits are per project, so keys from the same project share one limit. Don’t create extra projects or accounts just to get more free use: Google’s terms don’t allow it. For many users, turn on billing for your key instead (it costs a fraction of a cent per screenshot, and paid use isn’t used to improve Google’s products).</p>'+
         [2,3,4,5].map(function(i){var set=r.data.ai["gemini_key"+i+"_set"];return'<div class="row" style="align-items:end"><label for="aigem'+i+'">Backup key '+(i-1)+' '+(set?'<span class="sb green">saved</span>':'')+'<input id="aigem'+i+'" type="password" autocomplete="off" placeholder="'+(set?"Leave blank to keep the saved key":"Optional")+'"></label>'+(set?'<div><button type="button" class="btn g sm" data-gk="'+i+'">Remove</button></div>':'<div></div>')+'</div>'}).join("")+'</details>'+
+      '<div class="row" style="margin-top:8px"><label for="aitx">Writing (flyer captions)<select id="aitx">'+opts({aries:"Aries (default, free, no key)",off:"Off: built-in wording"},r.data.ai.text||"aries")+'</select></label><label for="aiam">Aries model<select id="aiam">'+opts({"aries-1.3":"Aries 1.3 Fast","aries-1.3-pro":"Aries 1.3 Pro","henmond":"Henmond","cosmic-apple":"Cosmic Apple"},r.data.ai.aries_model||"aries-1.3")+'</select></label></div><p class="note">Aries writes text only; it can’t read images, so screenshots stay with the reader above. Only public match details are sent (teams, round, competition, date).</p>'+
       '<label for="aigm" style="max-width:340px;margin-top:8px">Gemini model<input id="aigm" maxlength="60" value="'+esc(r.data.ai.gemini_model||"gemini-flash-latest")+'"></label><p class="note">Keep <b>gemini-flash-latest</b>: it always uses Google’s current Flash model, so reading keeps working when Google retires an old version.</p>'+
       '<div class="row" style="margin-top:8px"><label for="ailpd">Lineup uploads per person per day (each up to 10 screenshots)<input id="ailpd" type="number" min="1" max="20" value="'+esc(r.data.ai.lineup_per_day||1)+'"></label>'+
       '<label for="aitot">Screenshots per day for the whole platform (0 = no cap) <span class="note" style="display:block;font-weight:400">'+(r.data.aiReadToday||0)+' read in the last 24 hours. Only successful reads count. This limit is shared by everyone; leave it at 0 unless you need to cap costs.</span><input id="aitot" type="number" min="0" max="100000" value="'+esc(r.data.ai.vision_daily_total||0)+'"></label></div>'+
@@ -2367,7 +2453,7 @@ function aSettings(){var sec=A("Platform settings",[["System"],["Settings"]]);
       '<div class="actions"><button class="btn">Save rankings settings</button><a class="btn g" href="/rankings" target="_blank" rel="noopener">Preview ↗</a></div></form>';
     var showBoxes=function(){var p=$("ep").value;$("smtpbox").style.display=p==="smtp"?"block":"none";$("apibox").style.display=p==="brevo"||p==="resend"?"block":"none"};showBoxes();$("ep").onchange=showBoxes;
     var save=function(section,changes){return act("/api/admin/settings","PATCH",{section:section,changes:changes},"Settings saved").then(function(x){if(x)route()})};
-    $("aif").onsubmit=function(ev){ev.preventDefault();var ch={enabled:$("aien").checked,model:val("aimod"),vision:val("aivis"),daily_limit:parseInt(val("ailim"),10)||5};if(val("aikey").trim())ch.api_key=val("aikey").trim();if(val("aigem").trim())ch.gemini_key=val("aigem").trim();[2,3,4,5].forEach(function(i){if(val("aigem"+i).trim())ch["gemini_key"+i]=val("aigem"+i).trim()});ch.vision_daily_total=parseInt(val("aitot"),10)||0;ch.lineup_per_day=parseInt(val("ailpd"),10)||1;ch.gemini_model=val("aigm").trim()||"gemini-flash-latest";save("ai",ch)};
+    $("aif").onsubmit=function(ev){ev.preventDefault();var ch={enabled:$("aien").checked,model:val("aimod"),vision:val("aivis"),daily_limit:parseInt(val("ailim"),10)||5};if(val("aikey").trim())ch.api_key=val("aikey").trim();if(val("aigem").trim())ch.gemini_key=val("aigem").trim();[2,3,4,5].forEach(function(i){if(val("aigem"+i).trim())ch["gemini_key"+i]=val("aigem"+i).trim()});ch.vision_daily_total=parseInt(val("aitot"),10)||0;ch.lineup_per_day=parseInt(val("ailpd"),10)||1;ch.gemini_model=val("aigm").trim()||"gemini-flash-latest";ch.text=val("aitx");ch.aries_model=val("aiam");save("ai",ch)};
     document.querySelectorAll("[data-gk]").forEach(function(b){b.onclick=function(){var c={};c["gemini_key"+b.dataset.gk+"_clear"]=true;save("ai",c)}});
     $("rkf").onsubmit=function(ev){ev.preventDefault();var ch={enabled:$("rken").checked,min_matches:parseInt($("rkmin").value,10)||1,friendly_weight:val("rkfw")};["poty","boot","assists","defence","team","fairplay"].forEach(function(k){if($("aw_"+k))ch["award_"+k]=val("aw_"+k).trim()});save("rankings",ch)};
     $("smsf").onsubmit=function(ev){ev.preventDefault();save("sms",{enabled:$("sen").checked,provider:$("spr").value,sender:$("ssn").value,api_key:$("skey").value,country_code:$("scc").value,min_credits:parseInt($("smin").value,10)||1,credit_price:$("spc").value,currency:$("scur").value})};
