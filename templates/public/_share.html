@@ -1,6 +1,6 @@
 {% with msg=share_text|add:" · "|add:join_text %}
 <div class="share" aria-label="Share">
-  <a class="btn sm" href="https://wa.me/?text={{ msg|urlencode }}%20{{ share_url|urlencode }}" target="_blank" rel="noopener noreferrer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 19.2z"/><path d="M9 10c.5 2 2.2 3.7 4.2 4.2l1.3-1.2 2 .9-.5 1.8c-3.6.3-7.7-3.8-7.4-7.4l1.8-.5.9 2z"/></svg> Share on WhatsApp</a>
+  <a class="btn sm" data-wa data-join="{{ join_text }}" data-url="{{ share_url }}" href="https://wa.me/?text={{ msg|urlencode }}%20{{ share_url|urlencode }}" target="_blank" rel="noopener noreferrer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 19.2z"/><path d="M9 10c.5 2 2.2 3.7 4.2 4.2l1.3-1.2 2 .9-.5 1.8c-3.6.3-7.7-3.8-7.4-7.4l1.8-.5.9 2z"/></svg> Share on WhatsApp</a>
   <button class="btn g sm" type="button" data-share="{{ share_url }}" data-title="{{ share_text }}" data-text="{{ msg }}">Share</button>
   <details class="more"><summary class="btn g sm">More</summary><div class="more-m">
     <button type="button" data-copy="{{ share_url }}">Copy link</button>

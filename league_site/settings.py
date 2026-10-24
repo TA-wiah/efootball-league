@@ -140,3 +140,8 @@ LOGGING = {
     "root": {"handlers": ["console"], "level": "INFO"},
     "loggers": {"django.security.DisallowedHost": {"level": "ERROR"}},
 }
+
+
+# Tests never call outside AI services (the tests that check the writing use stand-in answers).
+import sys as _sys
+AI_OFFLINE = len(_sys.argv) > 1 and _sys.argv[1] == "test"

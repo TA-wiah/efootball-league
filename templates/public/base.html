@@ -283,6 +283,10 @@ th{font-family:var(--cond);font-size:13px}
     if(navigator.clipboard)navigator.clipboard.writeText(u).then(function(){toast("Link copied")},function(){prompt("Copy this link:",u)});else prompt("Copy this link:",u)})});
   document.querySelectorAll("[data-share]").forEach(function(b){if(!navigator.share){b.style.display="none";return}
     b.addEventListener("click",function(){navigator.share({title:b.getAttribute("data-title"),text:b.getAttribute("data-text")||"",url:b.getAttribute("data-share")}).catch(function(){})})});
+  // WhatsApp: a fresh line written for this page (when the platform's writer has one), then the invitation and the link
+  document.querySelectorAll("[data-wa]").forEach(function(a){a.addEventListener("click",function(e){var win=window.open("about:blank","_blank");if(!win)return;e.preventDefault();
+    var done=false,go=function(line){if(done)return;done=true;var t=(line?line+" · ":"")+a.getAttribute("data-join")+" "+a.getAttribute("data-url");win.location.href=line?"https://wa.me/?text="+encodeURIComponent(t):a.href};
+    setTimeout(function(){go("")},2500);fetch("/api/share-text?path="+encodeURIComponent(location.pathname),{credentials:"same-origin"}).then(function(r){return r.json()}).then(function(d){go(d.text||"")},function(){go("")})})});
 })();
 </script>
 </body></html>
