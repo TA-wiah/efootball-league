@@ -117,11 +117,17 @@ def flyer_caption(request, user, ip, slug, match_id):
     prompt = (f"You write one hype line for an eFootball {f['stage']} flyer. The flyer already shows the team names, the competition, "
               f"the date and the score, so do not mention any of them. Write one punchy line (6 to 12 words) {about}. "
               "Plain text only: no hashtags, no emojis, no quotation marks. Reply with the line only.")
-    try:
-        raw = ask_grok(prompt, cfg["model"], cfg["key"]) if cfg["provider"] == "grok" else ask_aries(prompt, cfg["model"])
-        caption = clean_text(raw, 120)
-    except (urllib.error.URLError, TimeoutError, ValueError, KeyError, IndexError, json.JSONDecodeError):
-        caption = ""
-    if len(caption) < 8 or "high load" in caption.lower():   # Aries sometimes answers that it's busy: use our own words
-        return {**base, "by": "built-in"}
-    return {"headline": base["headline"], "caption": caption, "by": cfg["provider"]}
+    # the chain: Grok (when chosen and its key is saved) → Aries → our own words
+    from superadmin import store
+    writers = []
+    if cfg["provider"] == "grok":
+        writers.append(("grok", lambda: ask_grok(prompt, cfg["model"], cfg["key"])))
+    writers.append(("aries", lambda: ask_aries(prompt, store.get("ai").get("aries_model") or "aries-1.3")))
+    for name, ask in writers:
+        try:
+            caption = clean_text(ask(), 120)
+        except (urllib.error.URLError, TimeoutError, ValueError, KeyError, IndexError, json.JSONDecodeError):
+            continue
+        if len(caption) >= 8 and "high load" not in caption.lower():    # Aries sometimes answers that it's busy
+            return {"headline": base["headline"], "caption": caption, "by": name}
+    return {**base, "by": "built-in"}

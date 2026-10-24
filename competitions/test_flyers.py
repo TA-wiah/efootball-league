@@ -74,5 +74,10 @@ class FlyersTest(Helpers, TestCase):
         with mock.patch.object(flyers, "ask_grok", lambda prompt, model, key: "One last step to glory."):
             r = self.boss.call("post", f"/api/orgs/{self.slug}/flyers/{self.semi.id}/caption").json()
         self.assertEqual((r["by"], r["caption"]), ("grok", "One last step to glory."))
-        with mock.patch.object(flyers, "ask_grok", lambda prompt, model, key: "Aries neural service is currently under high load."):
-            self.assertEqual(self.boss.call("post", f"/api/orgs/{self.slug}/flyers/{self.semi.id}/caption").json()["by"], "built-in")
+        def grok_down(prompt, model, key):
+            raise urllib.error.URLError("down")
+        with mock.patch.object(flyers, "ask_grok", grok_down), mock.patch.object(flyers, "ask_aries", lambda prompt, model: "Win this and the final is yours."):
+            r = self.boss.call("post", f"/api/orgs/{self.slug}/flyers/{self.semi.id}/caption").json()
+        self.assertEqual((r["by"], r["caption"]), ("aries", "Win this and the final is yours."), "Grok fails: Aries writes")
+        with mock.patch.object(flyers, "ask_grok", grok_down), mock.patch.object(flyers, "ask_aries", lambda prompt, model: "Aries neural service is currently under high load."):
+            self.assertEqual(self.boss.call("post", f"/api/orgs/{self.slug}/flyers/{self.semi.id}/caption").json()["by"], "built-in", "both fail: our own words")
