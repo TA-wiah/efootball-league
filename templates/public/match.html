@@ -24,6 +24,7 @@
 {% if decided == "abandoned" %}<section class="card"><span class="pill cancelled">Abandoned</span> <span class="note">{{ m.notes|default:"The match was stopped and has no result." }}</span></section>{% endif %}
 {% if decided == "walkover" %}<section class="card"><span class="pill warn">Walkover</span> <span class="note">Decided because only one team showed up.</span></section>{% elif decided == "no_show" %}<section class="card"><span class="pill cancelled">Not played</span> <span class="note">Neither team showed up.</span></section>{% endif %}
 
+{% if report_text %}<section class="card"><div class="gh">Match report</div><p style="margin:0;max-width:65ch">{{ report_text }}</p></section>{% endif %}
 <div class="two">
   <div>
     <section class="card"><div class="gh">Match events</div>

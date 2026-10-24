@@ -79,7 +79,14 @@ def clean_text(s, limit):
     return re.sub(r"\s+", " ", s).strip().strip('"').strip()[:limit]
 
 
+def offline():
+    from django.conf import settings
+    if getattr(settings, "AI_OFFLINE", False):
+        raise urllib.error.URLError("AI is offline while testing")
+
+
 def ask_grok(prompt, model, key):
+    offline()
     from .lineup import GROK
     req = urllib.request.Request(GROK, data=json.dumps({"model": model, "messages": [{"role": "user", "content": prompt}], "temperature": .8}).encode(),
                                  method="POST", headers={"Content-Type": "application/json", "Authorization": f"Bearer {key}"})
@@ -88,6 +95,7 @@ def ask_grok(prompt, model, key):
 
 
 def ask_aries(prompt, model):
+    offline()
     req = urllib.request.Request(ARIES, data=json.dumps({"prompt": prompt, "model": model}).encode(), method="POST",
                                  headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=20) as r:

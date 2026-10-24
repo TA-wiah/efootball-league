@@ -231,6 +231,8 @@ def confirm(request, m, p, by_user, how):
     m.save()
     goals = add_goals(m, p.events)
     bracket.resolve(m.competition)
+    from .writer import write_report
+    write_report(m)
     log(m.competition.org, by_user, f"confirmed {m.home.team.name} {p.home_score}–{p.away_score} {m.away.team.name} from {team}'s screenshot"
         + (f" ({goals} goal{'' if goals == 1 else 's'} added)" if goals else ""))
     from league.http import site_url

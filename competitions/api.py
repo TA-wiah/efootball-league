@@ -160,6 +160,8 @@ def match_json(m, detail=False):
         d["events"] = [event_json(e) for e in m.events.select_related("player", "assist")]
         d["players"] = {side: [player_json(p) for p in (e.team.players.filter(active=True).order_by("number", "name") if e else [])]
                         for side, e in (("home", m.home), ("away", m.away))}
+    if detail:
+        d["report"], d["reportBy"] = m.report or None, m.report_by or None
     return d
 
 
@@ -897,6 +899,9 @@ def match_detail(request, user, ip, slug, match_id):
     mt.save()
     bracket.resolve(mt.competition)                       # a finished group or tie fills in the next knockout matches
     after = {"score": [mt.home_score, mt.away_score], "status": mt.status}
+    if after != before and mt.status == "finished" and mt.home_score is not None:
+        from .writer import write_report
+        write_report(mt)                                 # a short report for the match page (an edited one is kept)
     if after != before and mt.home and mt.away:
         log(org, user, f"result {mt.home.team.name} vs {mt.away.team.name} in {mt.competition.name}", old=before, new=after)
     return {"ok": True, "match": match_json(mt, detail=True)}

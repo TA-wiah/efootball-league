@@ -146,6 +146,8 @@ class Match(models.Model):
     home_pens = models.PositiveSmallIntegerField(null=True, blank=True)
     away_pens = models.PositiveSmallIntegerField(null=True, blank=True)
     room_code = models.CharField(max_length=24, blank=True)      # the eFootball room to join (only the two teams and staff see it)
+    report = models.TextField(blank=True, max_length=600)          # a short match report (written by the text AI or by hand)
+    report_by = models.CharField(max_length=10, blank=True)        # aries / grok / built-in / edited
     slug = models.SlugField(max_length=140, unique=True)
     notes = models.TextField(blank=True, max_length=2000)
     created = models.DateTimeField(auto_now_add=True)
