@@ -5,6 +5,7 @@ from unittest import mock
 from django.test import TestCase
 
 from league import emailer
+from league.http import ApiError
 from orgs.models import Membership
 from orgs.tests import Helpers
 from superadmin import store
@@ -258,3 +259,24 @@ class FormationTest(Helpers, TestCase):
         cfg = lineup.config()
         self.assertEqual((cfg["enabled"], cfg["vision"], cfg["keys"]), (True, "grok", ["xai-test"]))
         self.assertEqual(lineup.json_in('Here you go:\n```json\n{"players": []}\n```'), {"players": []})
+
+
+class ReaderChainTest(TestCase):
+    def test_openai_then_gemini_then_grok(self):
+        store.update("ai", {"enabled": True, "api_key": "sk-o", "gemini_key": "g1", "grok_key": "x1"})
+        cfg = lineup.config()
+        self.assertEqual([n for n, k in cfg["chain"]], ["openai", "gemini", "grok"])
+        tried = []
+
+        def fake(c, key, image):
+            tried.append(c["vision"])
+            if c["vision"] == "openai":
+                raise lineup.Busy("429")
+            if c["vision"] == "gemini":
+                raise ApiError(400, "couldn't read")
+            return READ
+        with mock.patch.object(lineup, "read_with", fake):
+            self.assertEqual(lineup.read_image(cfg, IMG), READ)
+        self.assertEqual(tried, ["openai", "gemini", "grok"], "each hands over to the next")
+        store.update("ai", {"api_key_clear": True})
+        self.assertEqual([n for n, k in lineup.config()["chain"]], ["gemini", "grok"], "no OpenAI key: it starts with Gemini")
