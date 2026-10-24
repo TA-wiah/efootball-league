@@ -92,6 +92,10 @@ class Team(Logo):
     suspended = models.BooleanField(default=False)          # set by a super admin: no public page
     lineup_at = models.DateTimeField(null=True, blank=True)        # last lineup saved (screenshot or by hand)
     game_name = models.CharField(max_length=60, blank=True)        # the team they play as in eFootball (shown on result screens)
+    formation_style = models.CharField(max_length=8, blank=True, default="")   # "standard" or "fluid" (eFootball's Fluid Formation)
+    formation = models.CharField(max_length=12, blank=True)        # standard formation, e.g. 4-3-3
+    formation_attack = models.CharField(max_length=12, blank=True)  # fluid: in possession
+    formation_defence = models.CharField(max_length=12, blank=True) # fluid: out of possession
     squad_reminded = models.DateTimeField(null=True, blank=True)   # last "complete your squad" reminder
 
     def __str__(self):

@@ -122,6 +122,7 @@ def team_friendlies(t):
 
 def team_json(t, players=False):
     d = {**team_brief(t), "city": t.city, "venue": t.venue, "founded": t.founded, "colors": t.colors, "description": t.description, "gameName": t.game_name,
+         "formation": {"style": t.formation_style or "standard", "standard": t.formation, "attack": t.formation_attack, "defence": t.formation_defence},
          "playerCount": t.players.count()}
     if players:
         order = {"starter": 0, "sub": 1, "": 2}

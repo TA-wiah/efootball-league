@@ -767,9 +767,11 @@ def platform_settings(request, user, ip):
         if section == "ai":
             if "model" in changes and changes["model"] not in ("gpt-image-1", "dall-e-3"):
                 raise ApiError(400, "Choose the image model.")
-            if "vision" in changes and changes["vision"] not in ("openai", "gemini"):
+            if "vision" in changes and changes["vision"] not in ("openai", "gemini", "grok"):
                 raise ApiError(400, "Choose who reads screenshots.")
-            if "text" in changes and changes["text"] not in ("aries", "off"):
+            if "grok_model" in changes and not re.fullmatch(r"[a-z0-9][a-z0-9.\-]{2,60}", str(changes["grok_model"]).strip()):
+                raise ApiError(400, "Type a Grok model name, like grok-4.")
+            if "text" in changes and changes["text"] not in ("aries", "grok", "off"):
                 raise ApiError(400, "Choose the text AI.")
             if "aries_model" in changes and changes["aries_model"] not in ("aries-1.3", "aries-1.3-pro", "henmond", "cosmic-apple"):
                 raise ApiError(400, "Choose an Aries model.")

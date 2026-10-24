@@ -235,3 +235,26 @@ class FailedReadsTest(Helpers, TestCase):
             self.assertEqual(owner.call("post", scan, {"image": IMG}).status_code, 200, "the platform cap still has room")
             self.assertEqual(owner.call("post", scan, {"image": IMG}).status_code, 429, "now the shared cap of 1 is used")
         self.assertEqual(self.signup("root").get("/api/admin/settings").status_code in (403, 404), True)
+
+
+class FormationTest(Helpers, TestCase):
+    def test_standard_and_fluid_formations(self):
+        owner = self.signup("boss")
+        slug = self.new_org(owner)
+        tid = owner.call("post", f"/api/orgs/{slug}/teams", {"name": "Lions"}).json()["team"]["id"]
+        url = f"/api/orgs/{slug}/teams/{tid}/formation"
+        pl = self.signup("ama")
+        self.invite_and_join(owner, slug, pl, "player")
+        Membership.objects.get(user__username="ama").teams.add(Team.objects.get(id=tid))
+        self.assertEqual(pl.call("post", url, {"style": "standard", "standard": "4–3–3"}).json()["formation"]["standard"], "4-3-3", "players can set it")
+        self.assertEqual(owner.call("post", url, {"style": "standard", "standard": "4-4-4"}).status_code, 400, "10 outfield players")
+        self.assertEqual(owner.call("post", url, {"style": "fluid", "attack": "3-4-3"}).status_code, 400, "fluid needs both shapes")
+        r = owner.call("post", url, {"style": "fluid", "standard": "4-3-3", "attack": "3-4-3", "defence": "4-4-2"}).json()["formation"]
+        self.assertEqual((r["style"], r["attack"], r["defence"]), ("fluid", "3-4-3", "4-4-2"))
+        self.assertEqual(owner.get(f"/api/orgs/{slug}/teams/{tid}").json()["team"]["formation"]["style"], "fluid")
+
+    def test_grok_reads_screenshots_and_answers_in_a_code_block(self):
+        store.update("ai", {"enabled": True, "vision": "grok", "grok_key": "xai-test"})
+        cfg = lineup.config()
+        self.assertEqual((cfg["enabled"], cfg["vision"], cfg["keys"]), (True, "grok", ["xai-test"]))
+        self.assertEqual(lineup.json_in('Here you go:\n```json\n{"players": []}\n```'), {"players": []})

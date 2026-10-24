@@ -56,4 +56,23 @@ class FlyersTest(Helpers, TestCase):
         self.assertEqual(self.boss.call("post", f"/api/orgs/{self.slug}/flyers/999999/caption").status_code, 404)
 
     def test_aries_is_the_default_text_ai(self):
-        self.assertEqual(flyers.text_ai(), {"provider": "aries", "model": "aries-1.3"})
+        self.assertEqual(flyers.text_ai(), {"provider": "aries", "model": "aries-1.3", "key": ""})
+
+    def test_champions_and_winner_on_penalties(self):
+        Match.objects.filter(id=self.final.id).update(home_score=1, away_score=1, home_pens=3, away_pens=4, status="finished")
+        f = {x["id"]: x for x in self.boss.get(f"/api/orgs/{self.slug}/flyers").json()["flyers"]}[self.final.id]
+        self.assertEqual(f["winner"], "away", "won on penalties")
+        store.update("ai", {"text": "off"})
+        r = self.boss.call("post", f"/api/orgs/{self.slug}/flyers/{self.final.id}/caption").json()
+        self.assertEqual(r["headline"], "Champions")
+
+    def test_grok_writes_only_with_a_key(self):
+        store.update("ai", {"text": "grok"})
+        self.assertEqual(flyers.text_ai()["provider"], "aries", "no Grok key saved: Aries writes")
+        store.update("ai", {"grok_key": "xai-test"})
+        self.assertEqual(flyers.text_ai()["provider"], "grok")
+        with mock.patch.object(flyers, "ask_grok", lambda prompt, model, key: "One last step to glory."):
+            r = self.boss.call("post", f"/api/orgs/{self.slug}/flyers/{self.semi.id}/caption").json()
+        self.assertEqual((r["by"], r["caption"]), ("grok", "One last step to glory."))
+        with mock.patch.object(flyers, "ask_grok", lambda prompt, model, key: "Aries neural service is currently under high load."):
+            self.assertEqual(self.boss.call("post", f"/api/orgs/{self.slug}/flyers/{self.semi.id}/caption").json()["by"], "built-in")

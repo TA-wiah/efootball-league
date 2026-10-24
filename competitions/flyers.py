@@ -22,13 +22,28 @@ ARIES = "https://aries.doy.best/api/v1/aries/chat"
 def text_ai():
     from superadmin import store
     s = store.get("ai")
-    return {"provider": s.get("text") if s.get("text") in ("aries", "off") else "aries", "model": s.get("aries_model") or "aries-1.3"}
+    provider = s.get("text") if s.get("text") in ("aries", "grok", "off") else "aries"
+    if provider == "grok" and not s.get("grok_key"):
+        provider = "aries"                                   # no Grok key saved: Aries writes instead
+    return {"provider": provider, "model": s.get("grok_model") or "grok-4" if provider == "grok" else s.get("aries_model") or "aries-1.3",
+            "key": s.get("grok_key", "") if provider == "grok" else ""}
+
+
+def winner(m):
+    """The winning side of a played match (penalties count), or None for a draw."""
+    if m.home_score is None or m.away_score is None:
+        return None
+    if m.home_score != m.away_score:
+        return "home" if m.home_score > m.away_score else "away"
+    if m.home_pens is not None and m.away_pens is not None and m.home_pens != m.away_pens:
+        return "home" if m.home_pens > m.away_pens else "away"
+    return None
 
 
 def flyer_json(m):
     t = lambda e: {**team_view(e.team, set()), "id": e.team_id} if e else None
     org = m.competition.org
-    return {"id": m.id, "stage": BIG_ROUNDS.get(m.round_name, m.round_name), "leg": m.leg, "kickoff": m.kickoff.isoformat() if m.kickoff else None,
+    return {"id": m.id, "stage": BIG_ROUNDS.get(m.round_name, m.round_name), "leg": m.leg, "winner": winner(m), "kickoff": m.kickoff.isoformat() if m.kickoff else None,
             "played": m.home_score is not None and m.away_score is not None, "hs": m.home_score, "as": m.away_score, "hp": m.home_pens, "ap": m.away_pens,
             "competition": {"name": m.competition.name, "season": m.competition.season, "logo": logo_url("competition", m.competition)},
             "home": t(m.home), "away": t(m.away), "org": {"name": org.name, "color": org.brand_color or None},
@@ -50,6 +65,8 @@ def org_flyers(request, user, ip, slug):
 
 def fallback(f):
     big = f["stage"]
+    if f["played"] and f["winner"] and big == "Grand Final":
+        return {"headline": "Champions", "caption": "Crowned. Every match, every goal, all for this."}
     if f["played"]:
         return {"headline": "Full time", "caption": f"{f['competition']['name']} {big.lower()}: what a match."}
     lines = {"Grand Final": "One match. One trophy. Who lifts it?", "Semi-final": "One step from the final.",
@@ -60,6 +77,14 @@ def fallback(f):
 def clean_text(s, limit):
     s = re.sub(r"[^\w\s.,:;!?'’\-–&()/]", "", str(s or ""), flags=re.UNICODE)       # no emojis, hashtags or markup
     return re.sub(r"\s+", " ", s).strip().strip('"').strip()[:limit]
+
+
+def ask_grok(prompt, model, key):
+    from .lineup import GROK
+    req = urllib.request.Request(GROK, data=json.dumps({"model": model, "messages": [{"role": "user", "content": prompt}], "temperature": .8}).encode(),
+                                 method="POST", headers={"Content-Type": "application/json", "Authorization": f"Bearer {key}"})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return str(json.loads(r.read().decode())["choices"][0]["message"]["content"] or "")
 
 
 def ask_aries(prompt, model):
@@ -85,15 +110,18 @@ def flyer_caption(request, user, ip, slug, match_id):
     if cfg["provider"] == "off":
         return {**base, "by": "built-in"}
     stage = f["stage"].lower()
-    about = (f"celebrating a {stage} that has just been played (the final score is already shown)" if f["played"]
+    champions = f["played"] and f["winner"] and f["stage"] == "Grand Final"
+    about = ("crowning the champions of the competition (their name is already shown)" if champions else
+             f"celebrating a {stage} that has just been played (the final score is already shown)" if f["played"]
              else f"about what is at stake in a {stage}")
     prompt = (f"You write one hype line for an eFootball {f['stage']} flyer. The flyer already shows the team names, the competition, "
               f"the date and the score, so do not mention any of them. Write one punchy line (6 to 12 words) {about}. "
               "Plain text only: no hashtags, no emojis, no quotation marks. Reply with the line only.")
     try:
-        caption = clean_text(ask_aries(prompt, cfg["model"]), 120)
-    except (urllib.error.URLError, TimeoutError, ValueError, json.JSONDecodeError):
+        raw = ask_grok(prompt, cfg["model"], cfg["key"]) if cfg["provider"] == "grok" else ask_aries(prompt, cfg["model"])
+        caption = clean_text(raw, 120)
+    except (urllib.error.URLError, TimeoutError, ValueError, KeyError, IndexError, json.JSONDecodeError):
         caption = ""
-    if len(caption) < 8:
+    if len(caption) < 8 or "high load" in caption.lower():   # Aries sometimes answers that it's busy: use our own words
         return {**base, "by": "built-in"}
-    return {"headline": base["headline"], "caption": caption, "by": "aries"}
+    return {"headline": base["headline"], "caption": caption, "by": cfg["provider"]}
