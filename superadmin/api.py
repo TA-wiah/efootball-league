@@ -769,6 +769,10 @@ def platform_settings(request, user, ip):
                 raise ApiError(400, "Choose the image model.")
             if "vision" in changes and changes["vision"] not in ("openai", "gemini"):
                 raise ApiError(400, "Choose who reads screenshots.")
+            if "text" in changes and changes["text"] not in ("aries", "off"):
+                raise ApiError(400, "Choose the text AI.")
+            if "aries_model" in changes and changes["aries_model"] not in ("aries-1.3", "aries-1.3-pro", "henmond", "cosmic-apple"):
+                raise ApiError(400, "Choose an Aries model.")
             if "gemini_model" in changes and not re.fullmatch(r"[a-z0-9][a-z0-9.\-]{2,60}", str(changes["gemini_model"]).strip()):
                 raise ApiError(400, "Type a Gemini model name, like gemini-flash-latest.")
             if "lineup_per_day" in changes and (not isinstance(changes["lineup_per_day"], int) or not 1 <= changes["lineup_per_day"] <= 20):

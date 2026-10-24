@@ -13,6 +13,7 @@ from proleague import api as pro
 from competitions import reports as rep
 from competitions import friendlies as fr
 from competitions import ailogo
+from competitions import flyers
 from competitions import lineup
 from superadmin import api as sa
 from superadmin import updates as upd
@@ -177,6 +178,8 @@ urlpatterns = [
     path("api/orgs/<slug:slug>/teams/<int:team_id>/lineup", lineup.lineup_save),
     path("api/orgs/<slug:slug>/teams/<int:team_id>/lineup-merge", lineup.lineup_merge),
     path("api/orgs/<slug:slug>/teams/<int:team_id>/game-name", lineup.team_game_name),
+    path("api/orgs/<slug:slug>/flyers", flyers.org_flyers),
+    path("api/orgs/<slug:slug>/flyers/<int:match_id>/caption", flyers.flyer_caption),
     path("api/orgs/<slug:slug>/teams/<int:team_id>/name-check", c.team_name_check),
     path("api/orgs/<slug:slug>/teams/<int:team_id>/invitations", c.team_invitations),
     path("api/orgs/<slug:slug>/teams/<int:team_id>/players", c.team_players),
