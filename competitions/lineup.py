@@ -61,18 +61,19 @@ player's printed name and "ownGoal": true). Use "" when an assist isn't shown. I
 return {"isResult": false}."""
 
 
+GEMINI_KEYS = ("gemini_key", "gemini_key2", "gemini_key3", "gemini_key4", "gemini_key5")
+
+
 def config():
-    """Reading screenshots: Gemini (free tier), Grok (xAI) or OpenAI, as the platform chose."""
+    """Reading screenshots: a chain of readers, OpenAI → Gemini → Grok, using each one that has a key saved. When one
+    fails or is busy, the next takes over (Gemini's backup keys take turns among themselves first)."""
     from superadmin import store
     s = store.get("ai")
-    vision = s.get("vision") if s.get("vision") in ("openai", "gemini", "grok") else "openai"
-    if vision == "gemini":
-        keys = [s.get(k, "") for k in ("gemini_key", "gemini_key2", "gemini_key3", "gemini_key4", "gemini_key5") if s.get(k, "")]
-    elif vision == "grok":
-        keys = [s["grok_key"]] if s.get("grok_key") else []
-    else:
-        keys = [s["api_key"]] if s.get("api_key") else []
-    return {"enabled": bool(s.get("enabled")) and bool(keys), "vision": vision, "keys": keys,
+    chain = [(name, keys) for name, keys in (("openai", [s.get("api_key", "")]), ("gemini", [s.get(k, "") for k in GEMINI_KEYS]),
+                                              ("grok", [s.get("grok_key", "")])) if any(keys)]
+    chain = [(name, [k for k in keys if k]) for name, keys in chain]
+    first = chain[0] if chain else ("openai", [])
+    return {"enabled": bool(s.get("enabled")) and bool(chain), "chain": chain, "vision": first[0], "keys": first[1],
             "gemini_model": s.get("gemini_model") or GEMINI_MODEL, "grok_model": s.get("grok_model") or "grok-4",
             "daily_limit": int(s.get("lineup_per_day") or 1) * MAX_IMAGES,   # each upload can be up to 10 screenshots
             "daily_total": int(s.get("vision_daily_total") or 0)}
@@ -101,17 +102,24 @@ class Busy(Exception):
 
 
 def read_image(cfg, image):
-    """Try the keys in turn (each request starts with the next key, spreading the load); a busy or failing key hands
-    over to the next one."""
-    keys = cfg["keys"]
-    start = _turn["n"] % len(keys)
-    _turn["n"] += 1
+    """Each reader in the chain in turn (OpenAI → Gemini → Grok); within a reader, its keys take turns (each request
+    starts with the next key, spreading the load). A busy or failing reader hands over to the next one."""
+    chain = cfg.get("chain") or [(cfg["vision"], cfg["keys"])]
     last = None
-    for i in range(len(keys)):
-        try:
-            return read_with(cfg, keys[(start + i) % len(keys)], image)
-        except Busy as e:
-            last = e
+    for name, keys in chain:
+        sub = dict(cfg, vision=name, keys=keys)
+        start = _turn["n"] % len(keys)
+        _turn["n"] += 1
+        for i in range(len(keys)):
+            try:
+                return read_with(sub, keys[(start + i) % len(keys)], image)
+            except Busy as e:
+                last = e
+            except ApiError as e:                             # this reader couldn't read it: the next one may
+                last = e
+                break
+    if isinstance(last, ApiError):
+        raise last
     if isinstance(last, Busy) and str(last) == "429":
         raise ApiError(429, "The AI service is busy (its limit may be used up for now). Try again in a minute.")
     if isinstance(last, Busy) and str(last) == "404":
