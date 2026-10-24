@@ -27,7 +27,8 @@ from .models import POSITIONS, Player
 API = "https://api.openai.com/v1/chat/completions"
 MODEL = "gpt-4.1-mini"
 GEMINI = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-GEMINI_MODEL = "gemini-flash-latest"      # always Google's current Flash model, so a retired version never breaks reading
+GEMINI_MODEL = "gemini-flash-latest"
+GROK = "https://api.x.ai/v1/chat/completions"           # xAI's Grok: the same request shape as OpenAI's      # always Google's current Flash model, so a retired version never breaks reading
 log = logging.getLogger("league")
 MAX_IMAGES = 10
 CODES = {k for k, _ in POSITIONS if k}
@@ -61,16 +62,18 @@ return {"isResult": false}."""
 
 
 def config():
-    """Reading screenshots: Gemini when the platform chose it (free tier), otherwise OpenAI."""
+    """Reading screenshots: Gemini (free tier), Grok (xAI) or OpenAI, as the platform chose."""
     from superadmin import store
     s = store.get("ai")
-    vision = s.get("vision") if s.get("vision") in ("openai", "gemini") else "openai"
+    vision = s.get("vision") if s.get("vision") in ("openai", "gemini", "grok") else "openai"
     if vision == "gemini":
         keys = [s.get(k, "") for k in ("gemini_key", "gemini_key2", "gemini_key3", "gemini_key4", "gemini_key5") if s.get(k, "")]
+    elif vision == "grok":
+        keys = [s["grok_key"]] if s.get("grok_key") else []
     else:
         keys = [s["api_key"]] if s.get("api_key") else []
     return {"enabled": bool(s.get("enabled")) and bool(keys), "vision": vision, "keys": keys,
-            "gemini_model": s.get("gemini_model") or GEMINI_MODEL,
+            "gemini_model": s.get("gemini_model") or GEMINI_MODEL, "grok_model": s.get("grok_model") or "grok-4",
             "daily_limit": int(s.get("lineup_per_day") or 1) * MAX_IMAGES,   # each upload can be up to 10 screenshots
             "daily_total": int(s.get("vision_daily_total") or 0)}
 
@@ -118,6 +121,18 @@ def read_image(cfg, image):
     raise ApiError(502, "The AI service isn't working right now. Please contact the platform administrator.")
 
 
+def json_in(text):
+    """The JSON object in a model's answer (some wrap it in a code block or a sentence)."""
+    text = str(text or "").strip()
+    try:
+        return json.loads(text)
+    except ValueError:
+        a, b = text.find("{"), text.rfind("}")
+        if a < 0 or b <= a:
+            raise
+        return json.loads(text[a:b + 1])
+
+
 def read_with(cfg, key, image, think=False):
     if cfg["vision"] == "gemini":
         mime, b64 = image[5:].split(";base64,", 1)
@@ -127,11 +142,14 @@ def read_with(cfg, key, image, think=False):
         payload = {"contents": [{"parts": [{"text": cfg.get("prompt") or PROMPT}, {"inline_data": {"mime_type": mime, "data": b64}}]}], "generationConfig": gen}
         req = urllib.request.Request(GEMINI.format(model=cfg.get("gemini_model") or GEMINI_MODEL), data=json.dumps(payload).encode(), method="POST",
                                      headers={"Content-Type": "application/json", "x-goog-api-key": key})
-    else:
-        payload = {"model": MODEL, "response_format": {"type": "json_object"}, "temperature": 0,
+    else:                                                   # OpenAI, or Grok (same request shape, its own address and model)
+        grok = cfg["vision"] == "grok"
+        payload = {"model": cfg.get("grok_model") or "grok-4" if grok else MODEL, "temperature": 0,
                    "messages": [{"role": "user", "content": [{"type": "text", "text": cfg.get("prompt") or PROMPT},
                                                              {"type": "image_url", "image_url": {"url": image, "detail": "high"}}]}]}
-        req = urllib.request.Request(API, data=json.dumps(payload).encode(), method="POST",
+        if not grok:
+            payload["response_format"] = {"type": "json_object"}
+        req = urllib.request.Request(GROK if grok else API, data=json.dumps(payload).encode(), method="POST",
                                      headers={"Content-Type": "application/json", "Authorization": f"Bearer {key}"})
     try:
         with urllib.request.urlopen(req, timeout=75) as r:
@@ -139,7 +157,7 @@ def read_with(cfg, key, image, think=False):
         if cfg["vision"] == "gemini":
             parts = data["candidates"][0]["content"]["parts"]
             return json.loads("".join(p.get("text", "") for p in parts if not p.get("thought")))
-        return json.loads(data["choices"][0]["message"]["content"])
+        return json_in(data["choices"][0]["message"]["content"])
     except urllib.error.HTTPError as e:
         detail = e.read().decode("utf-8", "replace")[:300]
         log.warning("Reading a lineup screenshot failed (%s, HTTP %s): %s", cfg["vision"], e.code, detail)   # for the admin: the real reason
@@ -391,7 +409,14 @@ def lineup_save(request, user, ip, slug, team_id):
             if p not in squad:
                 squad.append(p)
         t.lineup_at = timezone.now()
-        t.save(update_fields=["lineup_at"])
+        formation = str(body(request, 20_000).get("formation") or "")
+        try:
+            formation = clean_formation(formation)
+        except ApiError:
+            formation = ""
+        if formation and not t.formation and t.formation_style != "fluid":
+            t.formation, t.formation_style = formation, "standard"
+        t.save(update_fields=["lineup_at", "formation", "formation_style"])
     from .api import log
     log(org, user, f"updated {t.name}'s lineup ({starters} starting, {len(clean_rows) - starters} subs)")
     return {"ok": True, "added": added, "updated": updated}
@@ -490,3 +515,31 @@ def team_game_name(request, user, ip, slug, team_id):
     from .api import log
     log(org, user, f"set {t.name}'s eFootball name to {t.game_name}" if t.game_name else f"cleared {t.name}'s eFootball name")
     return {"ok": True, "gameName": t.game_name}
+
+
+FORMATION_RE = re.compile(r"^[1-6](-[1-6]){2,4}$")
+
+
+def clean_formation(v):
+    v = re.sub(r"[^0-9-]", "", str(v or "").replace(" ", "-").replace("–", "-")).strip("-")
+    if v and (not FORMATION_RE.match(v) or sum(map(int, v.split("-"))) != 10):
+        raise ApiError(400, f"{v} isn't a formation: use numbers that add up to 10 outfield players, like 4-3-3.")
+    return v
+
+
+@endpoint("POST", login_required=True)
+def team_formation(request, user, ip, slug, team_id):
+    """The team's formation: standard (one shape) or fluid (one shape with the ball, one without)."""
+    org, m, t = member_access(user, slug, team_id)
+    b = body(request)
+    style = b.get("style") if b.get("style") in ("standard", "fluid") else "standard"
+    t.formation_style = style
+    t.formation = clean_formation(b.get("standard"))
+    t.formation_attack = clean_formation(b.get("attack")) if style == "fluid" else ""
+    t.formation_defence = clean_formation(b.get("defence")) if style == "fluid" else ""
+    if style == "fluid" and not (t.formation_attack and t.formation_defence):
+        raise ApiError(400, "A fluid formation needs both shapes: with the ball and without it.")
+    t.save(update_fields=["formation_style", "formation", "formation_attack", "formation_defence"])
+    from .api import log
+    log(org, user, f"set {t.name}'s formation")
+    return {"ok": True, "formation": {"style": style, "standard": t.formation, "attack": t.formation_attack, "defence": t.formation_defence}}
