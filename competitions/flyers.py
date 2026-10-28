@@ -52,15 +52,41 @@ def flyer_json(m):
 
 @endpoint("GET", login_required=True)
 def org_flyers(request, user, ip, slug):
-    """The quarter-finals, semi-finals and finals with both teams known. Team members see their own team's."""
+    """Flyers made automatically as things happen: the quarter-finals, semi-finals and finals once both teams are known,
+    every match about to be played (next 3 days) and every result (last 7 days), and each of my teams' lineup.
+    Team members see their own team's. Newest event first; "new" when it happened in the last two days."""
+    from django.db.models import Q
+    from django.utils import timezone
     org, m = access(user, slug, "org.view")
-    qs = MATCHES.select_related("competition__org").filter(competition__org=org, stage="knockout", round_name__in=list(BIG_ROUNDS),
-                                                         home__isnull=False, away__isnull=False)
-    if m.role in TEAM_ROLES:
-        mine = list(m.teams.values_list("id", flat=True))
-        qs = qs.filter(home__team_id__in=mine) | qs.filter(away__team_id__in=mine)
-    rows = sorted(qs.distinct()[:60], key=lambda x: (x.home_score is not None, x.kickoff is None, x.kickoff.timestamp() if x.kickoff else 0))
-    return {"flyers": [flyer_json(x) for x in rows[:30]], "textAi": text_ai()["provider"] != "off"}
+    now = timezone.now()
+    base = MATCHES.select_related("competition__org").filter(competition__org=org, home__isnull=False, away__isnull=False)
+    mine = list(m.teams.values_list("id", flat=True)) if m.role in TEAM_ROLES else None
+    if mine is not None:
+        base = base.filter(Q(home__team_id__in=mine) | Q(away__team_id__in=mine))
+    big = base.filter(stage="knockout", round_name__in=list(BIG_ROUNDS))
+    soon = base.filter(home_score__isnull=True, status__in=["scheduled", "live"], kickoff__gte=now - timezone.timedelta(hours=3),
+                       kickoff__lte=now + timezone.timedelta(days=3))
+    done = base.filter(home_score__isnull=False, finished_at__gte=now - timezone.timedelta(days=7))
+    seen, rows = set(), []
+    for x in list(big[:40]) + list(soon[:30]) + list(done[:30]):
+        if x.id not in seen:
+            seen.add(x.id)
+            rows.append(x)
+    when = lambda x: (x.finished_at if x.home_score is not None else x.updated) or x.kickoff or now
+    rows.sort(key=lambda x: when(x), reverse=True)
+    out = []
+    for x in rows[:30]:
+        f = flyer_json(x)
+        f["kind"] = "champions" if f["played"] and f["winner"] and f["stage"] == "Grand Final" else "result" if f["played"] else "match"
+        f["new"] = when(x) >= now - timezone.timedelta(hours=48)
+        out.append(f)
+    # lineups: my teams' (team members), or any team that saved its lineup in the last week (staff)
+    from .models import Team
+    teams = Team.objects.filter(org=org, players__lineup="starter").distinct()
+    teams = teams.filter(id__in=mine) if mine is not None else teams.filter(lineup_at__gte=now - timezone.timedelta(days=7))
+    lineups = [{"teamId": t.id, "name": t.name, "logo": team_view(t, set())["logo"], "new": bool(t.lineup_at and t.lineup_at >= now - timezone.timedelta(hours=48))}
+               for t in teams[:12]]
+    return {"flyers": out, "lineups": lineups, "textAi": text_ai()["provider"] != "off"}
 
 
 def fallback(f):

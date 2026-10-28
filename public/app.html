@@ -291,6 +291,13 @@ table .btn.bad[data-armed],.dt .btn.bad[data-armed],table .btn.bad:hover,.dt .bt
 
 .xi{display:inline-flex;align-items:center;gap:6px;margin:0;padding:6px 10px;border:1px solid var(--line2);border-radius:8px;font:700 14px var(--cond);letter-spacing:.4px;cursor:pointer}
 .xi input{width:18px;height:18px;margin:0;accent-color:var(--gold)}.xi:has(input:checked){border-color:var(--gold);background:rgba(245,196,0,.12);color:var(--tx)}
+
+.readlist{list-style:none;margin:0 0 8px;padding:0;display:flex;flex-direction:column;gap:4px;font-size:13px}.readlist li{display:flex;justify-content:space-between;gap:10px;padding:6px 10px;border-radius:7px;background:var(--card2)}
+.readlist li span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx2)}.readlist b{font-weight:700;color:var(--soft)}.readlist .reading b{color:var(--gold)}.readlist .ok b{color:#5fe39a}.readlist .fail b,.readlist .slow b{color:#ff9aa9}
+
+.flygrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}.fly{display:grid;grid-template-columns:96px minmax(0,1fr);gap:10px;align-items:start;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--card2)}
+.fly b{display:block;margin-top:6px;font-family:var(--cond);font-size:17px;line-height:1.15;color:var(--tx);overflow-wrap:anywhere}.fly small{display:block;color:var(--soft)}.fly .actions{margin-top:8px;gap:6px}
+.flyimg{width:96px;aspect-ratio:1;border-radius:7px;background:linear-gradient(135deg,#0b1d3f,#07132b);overflow:hidden}.flyimg img{width:100%;height:100%;object-fit:cover;display:block}
 </style></head><body>
 <header class="top"><a class="brand" href="/"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3M12 13v3M8 20h8M9.5 20l.5-4h4l.5 4"/></svg><span>Competition Manager</span></a><nav id="topnav" aria-label="Account"></nav></header>
 <main class="w" id="main"><div class="card note">Loading…</div></main>
@@ -778,16 +785,28 @@ function drawLineupFlyer(t,wide,cap){var W=wide?1920:1080,H=wide?1080:1350,c=doc
     flFooter(x,W,H,ORG?ORG.org.name:"",im[2],pad);return c})}
 function flSave(canvas,name){canvas.toBlob(function(b){var a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=name.replace(/[^A-Za-z0-9 _-]+/g,"").trim().replace(/\s+/g,"-").toLowerCase()+".png";document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},2000)},"image/png")}
 var FLCAP={};
-function flyersCard(box){api(api0("/flyers")).then(function(r){if(!r.ok||!r.data.flyers.length||!$(box))return;var fs=r.data.flyers;
-  $(box).innerHTML='<div class="card"><div class="gh">FLYERS</div><p class="note" style="margin-top:0">Quarter-finals, semi-finals and finals, ready to share: download a square image for WhatsApp, or a wide one (PC, 1920×1080).</p><div class="tbl"><table class="dt"><tbody>'+fs.map(function(f,i){
-    var champ=f.played&&f.winner&&f.stage==="Grand Final";
-    return'<tr><td><span class="pill'+(f.stage==="Grand Final"?" owner":"")+'">'+(champ?"Champions":esc(f.stage))+(f.leg>1?" · 2nd leg":"")+'</span> <b>'+(champ?esc(f[f.winner].name)+' win the '+esc(f.competition.name):esc(f.home.name)+' v '+esc(f.away.name))+'</b><small>'+esc(f.competition.name)+' · '+(f.played?f.hs+"–"+f.as+" full time":"Yet to play · "+esc(when(f.kickoff)))+'</small></td>'+
-      '<td style="text-align:right;white-space:nowrap"><button type="button" class="btn sm" data-fly="'+i+'">'+ic("share")+' Square</button> <button type="button" class="btn g sm" data-flyw="'+i+'">Wide (PC)</button></td></tr>'}).join("")+'</tbody></table></div></div>';
+function flyersCard(box){api(api0("/flyers")).then(function(r){if(!r.ok||!$(box))return;var fs=r.data.flyers,ls=r.data.lineups||[];if(!fs.length&&!ls.length)return;
+  // made automatically as things happen: each one is drawn here as a preview, ready to download
+  var label=function(f){return f.kind==="champions"?"Champions":f.kind==="result"?"Full time":f.stage},
+    title=function(f){return f.kind==="champions"?esc(f[f.winner].name)+" win the "+esc(f.competition.name):esc(f.home.name)+(f.played?" "+f.hs+"–"+f.as+" ":" v ")+esc(f.away.name)};
+  $(box).innerHTML='<div class="card"><div class="gh">FLYERS</div><p class="note" style="margin-top:0">Made for you as things happen: big knockout matches, upcoming matches, results, champions and lineups. Square for WhatsApp, wide for PC (1920×1080).</p><div class="flygrid">'+
+    ls.map(function(l,i){return'<div class="fly"><div class="flyimg" data-lthumb="'+i+'"></div><div><span class="pill">Lineup</span>'+(l.new?' <span class="pill live">New</span>':'')+'<b>'+esc(l.name)+'</b><div class="actions"><button type="button" class="btn sm" data-lfly="'+i+'">Square</button><button type="button" class="btn g sm" data-lflyw="'+i+'">Wide (PC)</button></div></div></div>'}).join("")+
+    fs.map(function(f,i){return'<div class="fly"><div class="flyimg" data-thumb="'+i+'"></div><div><span class="pill'+(f.stage==="Grand Final"?" owner":"")+'">'+esc(label(f))+'</span>'+(f.new?' <span class="pill live">New</span>':'')+'<b>'+title(f)+'</b><small>'+esc(f.competition.name)+(f.played?'':' · '+esc(when(f.kickoff)))+'</small>'+
+      '<div class="actions"><button type="button" class="btn sm" data-fly="'+i+'">Square</button><button type="button" class="btn g sm" data-flyw="'+i+'">Wide (PC)</button></div></div></div>'}).join("")+'</div></div>';
+  var thumb=function(el,cv){if(el){var im=new Image();im.alt="";im.src=cv.toDataURL("image/jpeg",.7);el.appendChild(im)}};
+  // previews, a few at a time so a phone stays smooth
+  fs.slice(0,8).reduce(function(p,f,i){return p.then(function(){return drawMatchFlyer(f,"",false).then(function(cv){thumb(document.querySelector('[data-thumb="'+i+'"]'),cv)},function(){})})},Promise.resolve());
+  var teamOf=function(l){return api(api0("/teams/"+l.teamId)).then(function(x){if(!x.ok)throw 0;return x.data.team})};
+  ls.slice(0,4).forEach(function(l,i){teamOf(l).then(function(t){return drawLineupFlyer(t,false,"")}).then(function(cv){thumb(document.querySelector('[data-lthumb="'+i+'"]'),cv)},function(){})});
   var go=function(b,i,wide){var f=fs[i];busy(b,true,"Making…");
     var cap=FLCAP[f.id]?Promise.resolve(FLCAP[f.id]):api(api0("/flyers/"+f.id+"/caption"),"POST",{}).then(function(x){return FLCAP[f.id]=x.ok?x.data.caption:""});
-    cap.then(function(c){return drawMatchFlyer(f,c,wide)}).then(function(cv){busy(b,false);flSave(cv,f.stage+" "+f.home.name+" v "+f.away.name+(wide?" wide":""));toast("Flyer downloaded")},function(){busy(b,false);toast("Couldn’t make the flyer. Try again.",true)})};
+    cap.then(function(c){return drawMatchFlyer(f,c,wide)}).then(function(cv){busy(b,false);flSave(cv,label(f)+" "+f.home.name+" v "+f.away.name+(wide?" wide":""));toast("Flyer downloaded")},function(){busy(b,false);toast("Couldn’t make the flyer. Try again.",true)})};
+  var lgo=function(b,i,wide){var l=ls[i];busy(b,true,"Making…");teamOf(l).then(function(t){return api(api0("/teams/"+l.teamId+"/lineup-caption"),"POST",{}).then(function(x){return drawLineupFlyer(t,wide,x.ok?x.data.caption:"")})})
+    .then(function(cv){busy(b,false);flSave(cv,l.name+" lineup"+(wide?" wide":""));toast("Lineup flyer downloaded")},function(){busy(b,false);toast("Couldn’t make the flyer. Try again.",true)})};
   document.querySelectorAll("[data-fly]").forEach(function(b){b.onclick=function(){go(b,+b.dataset.fly,false)}});
-  document.querySelectorAll("[data-flyw]").forEach(function(b){b.onclick=function(){go(b,+b.dataset.flyw,true)}})})}
+  document.querySelectorAll("[data-flyw]").forEach(function(b){b.onclick=function(){go(b,+b.dataset.flyw,true)}});
+  document.querySelectorAll("[data-lfly]").forEach(function(b){b.onclick=function(){lgo(b,+b.dataset.lfly,false)}});
+  document.querySelectorAll("[data-lflyw]").forEach(function(b){b.onclick=function(){lgo(b,+b.dataset.lflyw,true)}})})}
 // put an action card in its place on the dashboard ("Needs you now"); nothing happens if the person has moved on
 function putCard(slot,el){var s=$(slot);if(!s)return false;s.innerHTML="";s.appendChild(el);return true}
 function pendingResultsCard(){if(!has("results.enter"))return;api(api0("/pending-results")).then(function(r){if(!r.ok||!r.data.matches.length)return;var box=document.createElement("div");
@@ -876,12 +895,14 @@ function updatesSec(){var seen=0;try{seen=+localStorage.getItem("upd_seen")||0}c
       (us.length?us.map(function(u){var fresh=u.created>seen&&seen>0;return'<div class="card"><div class="note" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0"><b style="color:var(--gold)">'+esc(new Date(u.date+"T12:00:00").toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"}))+'</b>'+u.audience.map(function(a){return'<span class="pill">'+esc(a)+'</span>'}).join("")+(fresh?'<span class="pill live">New</span>':'')+'</div><h3 style="margin:8px 0 0">'+esc(u.title)+'</h3>'+updBlocks(u.blocks)+'</div>'}).join(""):'<div class="card"><p class="note">No updates yet.</p></div>');
     try{localStorage.setItem("upd_seen",String(Date.now()))}catch(e){}})}
 function notificationsSec(){var since=0;try{since=+localStorage.getItem(seenKey())||0}catch(e){}
-  Promise.all([api(api0("/summary")),api(api0("/activity"))]).then(function(res){if(!res[0].ok)return fail(res[0]);var s=res[0].data,evs=(res[1].data||{}).events||[],items=[],soon=Date.now()+48*3600e3;
+  Promise.all([api(api0("/summary")),api(api0("/activity")),api(api0("/flyers"))]).then(function(res){if(!res[0].ok)return fail(res[0]);var s=res[0].data,evs=(res[1].data||{}).events||[],items=[],soon=Date.now()+48*3600e3;
     var I=function(icon,title,sub,path){items.push('<a href="'+app0(path)+'" data-nav>'+ic(icon)+'<span><b>'+title+'</b><small>'+sub+'</small></span></a>')};
     if(ORG.org.status==="pending")I("globe","Waiting for approval","Your public website goes live once a platform admin approves the organization.","/site");
     if(s.awaitingResults&&has("results.enter"))I("check",s.awaitingResults+" match"+(s.awaitingResults===1?"":"es")+" waiting for a result","They've kicked off but have no score yet.","/fixtures");
     (s.nextMatches||[]).filter(function(m){return m.kickoff&&new Date(m.kickoff).getTime()<soon}).forEach(function(m){I("cal","Kick-off soon: "+esc(m.home?m.home.name:"TBD")+" vs "+esc(m.away?m.away.name:"TBD"),esc(when(m.kickoff))+" · "+esc(m.competition.name),"/match/"+m.id)});
     (s.squadTodo||[]).forEach(function(t){I("shield","Complete "+esc(t.name)+"’s squad",esc(t.missing)+": upload your eFootball lineup screenshot or add players with positions.","/teams/"+t.id)});
+    var nf=res[2]&&res[2].ok?res[2].data.flyers.filter(function(f){return f.new}).length+(res[2].data.lineups||[]).filter(function(l){return l.new}).length:0;
+    if(nf)I("share",nf+" new flyer"+(nf===1?"":"s")+" ready","Made for you from the latest matches, results and lineups. Download and share them from your dashboard.","");
     if(s.pendingInvitations)I("mail",s.pendingInvitations+" invitation"+(s.pendingInvitations===1?"":"s")+" not accepted yet","Resend or share the link again if needed.","/invitations");
     var fresh=evs.filter(function(e){return e.ts>since&&e.actor!==ME.username});
     $("sec").innerHTML='<div class="card"><div class="gh">Needs your attention</div>'+(items.length?'<div class="nlist">'+items.join("")+'</div>':'<p class="note">'+ic("check")+' All clear. Nothing needs your attention.</p>')+'</div>'+
@@ -1214,12 +1235,19 @@ function lineupCard(t,id,reload){var box=$("lnbox");if(!box)return;var url=api0(
     $("lnhand").onclick=function(){rows=[];var any=t.players.some(function(p){return p.lineup}),n=0;t.players.forEach(function(p){if(any?p.lineup:p.active){var st=any?p.lineup==="starter":n<11;n++;rows.push({position:p.position&&POS.indexOf(p.position)>=0?p.position:"CMF",rating:p.rating,starter:st,name:p.name,playerId:p.id,number:p.number})}});if(!rows.length)rows.push({position:"GK",rating:null,starter:true,name:"",playerId:null});draw()};
     if($("lnfile"))$("lnfile").onchange=function(){var fs=[].slice.call(this.files,0,r.data.perUse||10);if(!fs.length)return;if(this.files.length>fs.length)toast("Only the first "+fs.length+" screenshots are used",true);
       var reads=[],shrink=function(f){return new Promise(function(ok,no){var img=new Image(),fr=new FileReader();fr.onload=function(){img.onload=function(){var w=Math.min(1280,img.width),h=Math.round(img.height*w/img.width),c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);ok(c.toDataURL("image/jpeg",.8))};img.onerror=function(){no("That file isn’t an image")};img.src=fr.result};fr.readAsDataURL(f)})};
-      var done=0,stop=false,started=0,show=function(){box.innerHTML='<div class="prog" role="progressbar" aria-valuemin="0" aria-valuemax="'+fs.length+'" aria-valuenow="'+done+'"><i style="width:'+Math.max(6,Math.round(100*done/fs.length))+'%"></i></div><p class="note" aria-live="polite">Reading '+fs.length+' screenshot'+(fs.length===1?"":"s")+'… '+done+' done. Keep this page open.</p>'};
-      // three at a time: an upload of 10 takes about a third as long
-      var worker=function(){if(stop||started>=fs.length)return Promise.resolve();var i=started++;
-        return shrink(fs[i]).then(function(data){return api(url,"POST",{image:data})}).then(function(x){done++;show();if(!x.ok){toast("Screenshot "+(i+1)+": "+x.data.error,true);if(x.status===429)stop=true}else if(x.data.players.length)reads[i]=x.data},
-          function(e){done++;show();toast("Screenshot "+(i+1)+": "+e,true)}).then(worker)};
-      var next=function(){show();Promise.all([worker(),worker(),worker()]).then(function(){reads=reads.filter(Boolean);finish()})};
+      var done=0,stop=false,started=0,finished=false,st=fs.map(function(){return"waiting"}),SL={waiting:"Waiting",reading:"Reading…",ok:"Read",none:"No player cards",fail:"Failed",slow:"Took too long"};
+      var show=function(){if(finished)return;box.innerHTML='<div class="prog" role="progressbar" aria-valuemin="0" aria-valuemax="'+fs.length+'" aria-valuenow="'+done+'"><i style="width:'+Math.max(6,Math.round(100*done/fs.length))+'%"></i></div>'+
+        '<ul class="readlist">'+fs.map(function(f,i){return'<li class="'+st[i]+'"><span>'+esc(f.name)+'</span><b>'+SL[st[i]]+'</b></li>'}).join("")+'</ul>'+
+        '<p class="note" aria-live="polite">'+done+' of '+fs.length+' done. Each screenshot gets at most about a minute.</p>'+(done<fs.length&&reads.some(Boolean)?'<button type="button" class="btn g sm" id="lnstop">Stop and use what’s read</button>':'');
+        if($("lnstop"))$("lnstop").onclick=function(){stop=true;wrap()}};
+      // one screenshot never holds up the rest: after 75 seconds it counts as failed and the next one goes
+      var timed=function(p){return Promise.race([p,new Promise(function(ok){setTimeout(function(){ok({ok:false,status:408,data:{error:"Took too long"}})},75000)})])};
+      var worker=function(){if(stop||started>=fs.length)return Promise.resolve();var i=started++;st[i]="reading";show();
+        return shrink(fs[i]).then(function(data){return timed(api(url,"POST",{image:data}))}).then(function(x){done++;
+            if(!x.ok){st[i]=x.status===408||x.status===504?"slow":"fail";if(x.status===429){stop=true;toast(x.data.error,true)}}else if(x.data.players.length){reads[i]=x.data;st[i]="ok"}else st[i]="none";show()},
+          function(e){done++;st[i]="fail";show()}).then(worker)};
+      var wrap=function(){if(finished)return;finished=true;reads=reads.filter(Boolean);var bad=st.filter(function(x){return x==="fail"||x==="slow"}).length;if(bad)toast(bad+" screenshot"+(bad===1?"":"s")+" couldn’t be read; the rest are used.",true);finish()};
+      var next=function(){show();Promise.all([worker(),worker(),worker()]).then(wrap)};
       var finish=function(){if(!reads.length){start();return}api(api0("/teams/"+id+"/lineup-merge"),"POST",{reads:reads}).then(function(x){if(!x.ok){toast(x.data.error,true);start();return}rows=x.data.players;extras=x.data.extras||[];lnForm=x.data.formation||"";
         names=names.concat(extras.map(function(e){return e.name}));
         toast("Read "+rows.length+" players"+(x.data.formation?" ("+x.data.formation+")":"")+(x.data.collections?", names from "+x.data.collections+" players list screenshot"+(x.data.collections>1?"s":""):"")+". Check, then save.");draw()})};
@@ -1845,7 +1873,7 @@ function reportView(id){document.title="Match report · Competition Manager";UM(
       $("gadd").onclick=function(){G.push({side:R.sides[0]||"home",kind:"goal",name:"",minute:null,assist:""});drawG()}};
     var readShot=function(){var f=$("pim").files[0];if(!R.aiRead||val("pkd")!=="result"||!f)return;$("pai").innerHTML='<div class="prog"><i style="width:35%"></i></div><p class="note">Reading the result screen… usually 5–20 seconds.</p>';
       var mySide=$("psd")?val("psd"):R.sides[0];
-      shrinkShot(f,function(img){api("/api/report/"+id+"/read","POST",{image:img,side:mySide,playedAs:val("pas2")}).then(function(r){if(!r.ok){$("pai").innerHTML='<p class="note">'+esc(r.data.error)+'</p>';return}var d=r.data,alt=d.other;
+      shrinkShot(f,function(img){Promise.race([api("/api/report/"+id+"/read","POST",{image:img,side:mySide,playedAs:val("pas2")}),new Promise(function(ok){setTimeout(function(){ok({ok:false,status:408,data:{error:"Reading took too long. Enter the score yourself, or try again."}})},75000)})]).then(function(r){if(!r.ok){$("pai").innerHTML='<p class="note">'+esc(r.data.error)+'</p>';return}var d=r.data,alt=d.other;
         // which team on the screen was us? (the game shows eFootball names, not ours); the choice turns the result the right way round
         var use=function(x){$("phs").value=x.homeScore;$("pas").value=x.awayScore;G=x.events.slice();drawG();playedAs=x.printed[mySide]||"";
           $("pai").innerHTML='<div class="okline">'+ic("check")+'<span>Read from the screenshot: <b>'+esc(M.home)+' '+x.homeScore+'–'+x.awayScore+' '+esc(M.away)+'</b>'+(x.events.length?' and '+x.events.length+' goal'+(x.events.length===1?"":"s"):'')+'. Check everything below before sending.</span></div>'+

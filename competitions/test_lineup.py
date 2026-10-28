@@ -305,3 +305,34 @@ class XiAndNumbersTest(Helpers, TestCase):
         owner.call("post", f"/api/orgs/{slug}/teams/{tid}/lineup", {"players": [{"name": "Kofi Striker", "position": "CF", "starter": True, "number": 9}]})
         self.assertEqual(Player.objects.get(name="Kofi Striker").number, 9)
         self.assertEqual(owner.call("post", f"/api/orgs/{slug}/teams/{tid}/lineup", {"players": [{"name": "Kofi Striker", "position": "CF", "number": 1000}]}).status_code, 400)
+
+
+class ReaderSpeedTest(TestCase):
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        store.update("ai", {"enabled": True, "api_key": "sk-o", "gemini_key": "g1"})
+
+    def test_a_broken_reader_is_skipped_for_a_while(self):
+        tried = []
+
+        def fake(c, key, image):
+            tried.append(c["vision"])
+            if c["vision"] == "openai":
+                raise lineup.Busy("401")                       # a bad key
+            return READ
+        with mock.patch.object(lineup, "read_with", fake):
+            lineup.read_image(lineup.config(), IMG)
+            lineup.read_image(lineup.config(), IMG)
+        self.assertEqual(tried, ["openai", "gemini", "gemini"], "the second screenshot doesn't wait for the broken key")
+
+    def test_one_screenshot_has_a_time_limit(self):
+        clock = [0.0]
+        def slow(c, key, image):
+            clock[0] += 30                                     # every reader takes 30 seconds and fails
+            raise lineup.Busy("503")
+        with mock.patch.object(lineup, "read_with", slow), mock.patch.object(lineup.time, "monotonic", lambda: clock[0]):
+            with self.assertRaises(ApiError) as e:
+                lineup.read_image(lineup.config(), IMG)
+        self.assertLessEqual(clock[0], 60, "it gives up instead of trying every reader for minutes")
+        self.assertIn(e.exception.status, (502, 504))

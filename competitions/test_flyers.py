@@ -81,3 +81,21 @@ class FlyersTest(Helpers, TestCase):
         self.assertEqual((r["by"], r["caption"]), ("aries", "Win this and the final is yours."), "Grok fails: Aries writes")
         with mock.patch.object(flyers, "ask_grok", grok_down), mock.patch.object(flyers, "ask_aries", lambda prompt, model: "Aries neural service is currently under high load."):
             self.assertEqual(self.boss.call("post", f"/api/orgs/{self.slug}/flyers/{self.semi.id}/caption").json()["by"], "built-in", "both fail: our own words")
+
+    def test_flyers_made_as_things_happen(self):
+        from django.utils import timezone
+        c = self.final.competition
+        e = {x.team_id: x for x in c.entries.all()}
+        played = Match.objects.create(competition=c, stage="league", round=1, round_name="Matchday 1", home=e[self.ids[0]], away=e[self.ids[3]],
+                                      slug="md1", home_score=2, away_score=0, status="finished", finished_at=timezone.now())
+        soon = Match.objects.create(competition=c, stage="league", round=2, round_name="Matchday 2", home=e[self.ids[1]], away=e[self.ids[2]],
+                                    slug="md2", kickoff=timezone.now() + timezone.timedelta(days=1))
+        Team.objects.filter(id=self.ids[0]).update(lineup_at=timezone.now())
+        from .models import Player
+        Player.objects.create(team_id=self.ids[0], name="Kofi", position="CF", lineup="starter")
+        r = self.boss.get(f"/api/orgs/{self.slug}/flyers").json()
+        kinds = {f["id"]: f["kind"] for f in r["flyers"]}
+        self.assertEqual(kinds[played.id], "result")
+        self.assertEqual(kinds[soon.id], "match")
+        self.assertTrue({f["id"]: f for f in r["flyers"]}[played.id]["new"], "a result from today is new")
+        self.assertEqual([l["name"] for l in r["lineups"]], ["Lions"], "a lineup saved this week")
