@@ -31,6 +31,7 @@ GEMINI_MODEL = "gemini-flash-latest"
 GROK = "https://api.x.ai/v1/chat/completions"           # xAI's Grok: the same request shape as OpenAI's      # always Google's current Flash model, so a retired version never breaks reading
 log = logging.getLogger("league")
 MAX_IMAGES = 10
+READ_DEADLINE = 50          # seconds one screenshot may take across the whole chain of readers
 CODES = {k for k, _ in POSITIONS if k}
 GAME = CODES - {"DF", "MF", "FW"}
 MAX_PLAYERS = 40
@@ -105,17 +106,27 @@ class Busy(Exception):
 def read_image(cfg, image):
     """Each reader in the chain in turn (OpenAI → Gemini → Grok); within a reader, its keys take turns (each request
     starts with the next key, spreading the load). A busy or failing reader hands over to the next one."""
+    from django.core.cache import cache
     chain = cfg.get("chain") or [(cfg["vision"], cfg["keys"])]
+    # a reader whose key or model just failed is skipped for a while (unless every reader is in that state)
+    live = [(n, k) for n, k in chain if not cache.get(f"reader-down:{n}")] or chain
+    deadline = time.monotonic() + READ_DEADLINE              # one screenshot never waits more than this, whatever fails
     last = None
-    for name, keys in chain:
+    for name, keys in live:
         sub = dict(cfg, vision=name, keys=keys)
         start = _turn["n"] % len(keys)
         _turn["n"] += 1
         for i in range(len(keys)):
+            left = deadline - time.monotonic()
+            if left < 5:
+                raise ApiError(504, "Reading this screenshot took too long. Try it again, or type the lineup.")
             try:
-                return read_with(sub, keys[(start + i) % len(keys)], image)
+                return read_with(dict(sub, timeout=min(40, left)), keys[(start + i) % len(keys)], image)
             except Busy as e:
                 last = e
+                if str(e) in ("401", "403", "404", "key"):       # a bad key or a retired model won't fix itself in a minute
+                    cache.set(f"reader-down:{name}", True, 600)
+                    break
             except ApiError as e:                             # this reader couldn't read it: the next one may
                 last = e
                 break
@@ -161,7 +172,7 @@ def read_with(cfg, key, image, think=False):
         req = urllib.request.Request(GROK if grok else API, data=json.dumps(payload).encode(), method="POST",
                                      headers={"Content-Type": "application/json", "Authorization": f"Bearer {key}"})
     try:
-        with urllib.request.urlopen(req, timeout=75) as r:
+        with urllib.request.urlopen(req, timeout=cfg.get("timeout") or 40) as r:
             data = json.loads(r.read().decode())
         if cfg["vision"] == "gemini":
             parts = data["candidates"][0]["content"]["parts"]
