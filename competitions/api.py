@@ -1224,6 +1224,12 @@ def apply_player(p, b):
         p.position = b["position"]
     if "active" in b:
         p.active = bool(b["active"])
+    if "lineup" in b:
+        if b["lineup"] not in ("starter", "sub", ""):
+            raise ApiError(400, "Choose starting XI, substitute or neither.")
+        if b["lineup"] == "starter" and p.lineup != "starter" and p.team.players.filter(lineup="starter").exclude(id=p.id).count() >= 11:
+            raise ApiError(400, "Eleven players already start. Take one out of the XI first.")
+        p.lineup = b["lineup"]
 
 
 @endpoint("POST", login_required=True)
@@ -1252,8 +1258,8 @@ def player_detail(request, user, ip, slug, player_id):
     b = body(request) if request.method == "PATCH" else {}
     try:
         team_access(user, slug, p.team_id)
-    except ApiError as e:                                   # players and staff of this team may set positions (only)
-        if e.status != 403 or request.method != "PATCH" or set(b) != {"position"} or not m.teams.filter(id=p.team_id).exists():
+    except ApiError as e:                                   # players and staff of this team may set positions and the XI (only)
+        if e.status != 403 or request.method != "PATCH" or not b or not set(b) <= {"position", "lineup"} or not m.teams.filter(id=p.team_id).exists():
             raise
     if request.method == "DELETE":
         p.delete()

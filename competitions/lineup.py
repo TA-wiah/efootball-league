@@ -44,7 +44,8 @@ national flag or club badge under the position, and, on collection cards, the pl
 For "badge" give the country of that flag (e.g. "Argentina") or the club of that badge (e.g. "Barcelona"), or "" if
 there is none or you can't tell. Read names only from printed text. Never identify or guess who a person is from
 their face or appearance, and never use the flag or badge to guess a name. If a card has no printed name, use "".
-Return JSON: {"screen": "lineup", "players": [{"position": "CF", "rating": 102, "starter": true, "name": "", "badge": "Barcelona"}], "formation": "4-2-1-3"}
+If a card prints the player's shirt number, give it as "number" (a whole number), otherwise null.
+Return JSON: {"screen": "lineup", "players": [{"position": "CF", "rating": 102, "starter": true, "name": "", "badge": "Barcelona", "number": 9}], "formation": "4-2-1-3"}
 On a lineup screen list the starters first (from the goalkeeper forward), then the substitutes in the order shown.
 On a collection screen every card has "starter": false and there is no formation. If it isn't an eFootball screen,
 return {"screen": "", "players": []}."""
@@ -201,7 +202,12 @@ def clean(raw):
         starters += starter
         name = re.sub(r"\s+", " ", str(p.get("name") or "")).strip()[:80]
         badge = re.sub(r"[^a-z0-9 ]+", "", str(p.get("badge") or "").lower()).strip()[:40]
-        out.append({"position": pos, "rating": rating, "starter": starter, "name": name, "badge": badge})
+        try:
+            number = int(p.get("number"))
+            number = number if 0 <= number <= 99 else None
+        except (TypeError, ValueError):
+            number = None
+        out.append({"position": pos, "rating": rating, "starter": starter, "name": name, "badge": badge, "number": number})
         if len(out) >= MAX_PLAYERS:
             break
     formation = str(raw.get("formation") or "")[:12] if isinstance(raw, dict) else ""
@@ -228,6 +234,7 @@ def merge(reads):
             k = (" ".join(sorted(engine.name_tokens(p["name"]))), p["position"])
             if k in seen:                                    # the same card on two screenshots
                 seen[k]["rating"] = max(seen[k]["rating"] or 0, p["rating"] or 0) or None
+                seen[k]["number"] = seen[k].get("number") if seen[k].get("number") is not None else p.get("number")
                 continue
             seen[k] = dict(p, starter=False)
             pool.append(seen[k])
@@ -263,6 +270,8 @@ def merge(reads):
                 c = cands(row)
                 if len(c) == 1:
                     row["name"], row["fromShot"] = pool[c[0]]["name"], True
+                    if row.get("number") is None:
+                        row["number"] = pool[c[0]].get("number")
                     used.add(c[0])
                     gaps.append(row["rating"] - pool[c[0]]["rating"])
                     changed = True
@@ -299,6 +308,8 @@ def suggest(team, rows):
                 r["playerId"], r["name"] = hit_[0].id, hit_[0].name
         if r["playerId"]:
             used.add(r["playerId"])
+            if r.get("number") is None:
+                r["number"] = next((x.number for x in squad if x.id == r["playerId"]), None)
     return rows
 
 
@@ -389,7 +400,12 @@ def lineup_save(request, user, ip, slug, team_id):
             raise ApiError(400, f"{name}'s rating must be a number from 40 to 130.")
         starter = bool(r.get("starter"))
         starters += starter
-        clean_rows.append((r.get("playerId"), name, pos, rating, starter))
+        number = r.get("number")
+        if number in ("", None):
+            number = None
+        elif isinstance(number, bool) or not isinstance(number, int) or not 0 <= number <= 999:
+            raise ApiError(400, f"{name}'s number must be a whole number from 0 to 999.")
+        clean_rows.append((r.get("playerId"), name, pos, rating, starter, number))
     if not clean_rows:
         raise ApiError(400, "Type the players' names first.")
     if starters > 11:
@@ -401,7 +417,7 @@ def lineup_save(request, user, ip, slug, team_id):
     with transaction.atomic():
         Player.objects.filter(team=t).update(lineup="")
         taken = set()
-        for pid, name, pos, rating, starter in clean_rows:
+        for pid, name, pos, rating, starter, number in clean_rows:
             p = next((x for x in squad if x.id == pid and x.id not in taken), None) if isinstance(pid, int) else None
             p = p or next((x for x in squad if x.id not in taken and engine.same_player(name, x.name)), None)
             if p is None:
@@ -412,6 +428,8 @@ def lineup_save(request, user, ip, slug, team_id):
             else:
                 updated += 1
             p.name, p.position, p.rating, p.lineup, p.active = name, pos, rating, "starter" if starter else "sub", True
+            if number is not None:
+                p.number = number
             p.save()
             taken.add(p.id)
             if p not in squad:

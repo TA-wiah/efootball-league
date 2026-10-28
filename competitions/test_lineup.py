@@ -280,3 +280,28 @@ class ReaderChainTest(TestCase):
         self.assertEqual(tried, ["openai", "gemini", "grok"], "each hands over to the next")
         store.update("ai", {"api_key_clear": True})
         self.assertEqual([n for n, k in lineup.config()["chain"]], ["gemini", "grok"], "no OpenAI key: it starts with Gemini")
+
+
+class XiAndNumbersTest(Helpers, TestCase):
+    def test_tick_the_xi_and_numbers_from_screenshots(self):
+        owner = self.signup("boss")
+        slug = self.new_org(owner)
+        tid = owner.call("post", f"/api/orgs/{slug}/teams", {"name": "Lions"}).json()["team"]["id"]
+        pids = [owner.call("post", f"/api/orgs/{slug}/teams/{tid}/players", {"name": f"Player {i}"}).json()["player"]["id"] for i in range(13)]
+        pl = self.signup("ama")
+        self.invite_and_join(owner, slug, pl, "player")
+        Membership.objects.get(user__username="ama").teams.add(Team.objects.get(id=tid))
+        for pid in pids[:11]:
+            self.assertEqual(pl.call("patch", f"/api/orgs/{slug}/players/{pid}", {"lineup": "starter"}).status_code, 200, "players tick the XI")
+        r = pl.call("patch", f"/api/orgs/{slug}/players/{pids[11]}", {"lineup": "starter"})
+        self.assertEqual(r.status_code, 400, "only eleven start")
+        self.assertEqual(pl.call("patch", f"/api/orgs/{slug}/players/{pids[0]}", {"lineup": "sub"}).status_code, 200)
+        self.assertEqual(pl.call("patch", f"/api/orgs/{slug}/players/{pids[11]}", {"lineup": "starter"}).status_code, 200)
+        self.assertEqual(pl.call("patch", f"/api/orgs/{slug}/players/{pids[0]}", {"lineup": "starter", "name": "x"}).status_code, 403, "players: XI and positions only")
+        # numbers: read from the screenshot when printed, saved with the lineup
+        rows, _ = lineup.clean({"players": [{"position": "CF", "rating": 100, "starter": True, "name": "Kofi", "number": 9},
+                                            {"position": "GK", "rating": 90, "starter": True, "name": "Ama", "number": "x"}]})
+        self.assertEqual([r["number"] for r in rows], [9, None])
+        owner.call("post", f"/api/orgs/{slug}/teams/{tid}/lineup", {"players": [{"name": "Kofi Striker", "position": "CF", "starter": True, "number": 9}]})
+        self.assertEqual(Player.objects.get(name="Kofi Striker").number, 9)
+        self.assertEqual(owner.call("post", f"/api/orgs/{slug}/teams/{tid}/lineup", {"players": [{"name": "Kofi Striker", "position": "CF", "number": 1000}]}).status_code, 400)
